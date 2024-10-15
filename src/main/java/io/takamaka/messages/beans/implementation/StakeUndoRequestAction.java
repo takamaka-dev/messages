@@ -16,8 +16,6 @@
 package io.takamaka.messages.beans.implementation;
 
 import io.takamaka.messages.beans.MessageAction;
-import io.takamaka.messages.beans.MessageAddress;
-import java.math.BigInteger;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,30 +23,27 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  *
- * @author Giovanni Antino giovanni.antino@takamaka.io
+ * @author iris
  */
 @AllArgsConstructor
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Slf4j
-public class PayRequestAction extends MessageAction {
-
-    /**
-     * default pay request constructor
-     *
-     * @param to The address of the recipient of the transaction
-     * @param greenValueNanoTkg the value in nano tkg or null
-     * @param redValueNanoTkr the value in nano tkr or null
-     * @param message a message or null
+public class StakeUndoRequestAction extends MessageAction{
+    
+    /***
+     * default stake undo request constructor
+     * 
+     * @param notBefore
+     * @param message 
      */
-    public PayRequestAction(MessageAddress to, BigInteger greenValueNanoTkg, BigInteger redValueNanoTkr, String message) {
-        super.setDate(null);
+    public StakeUndoRequestAction(Long notBefore, String message) {
+        super.setDate(notBefore);
         super.setFrom(null);
         super.setTextMessage(message);
-        super.setTo(to);
-        super.setGreen(greenValueNanoTkg);
-        super.setRed(redValueNanoTkr);
+        super.setTo(null);
+        super.setGreen(null);
+        super.setRed(null);
         super.setEncodedWallet(null);
     }
-    
 }

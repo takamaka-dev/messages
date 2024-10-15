@@ -18,6 +18,8 @@ package io.takamaka.messages.utils;
 import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.beans.MessageAddress;
 import io.takamaka.messages.beans.implementation.PayRequestAction;
+import io.takamaka.messages.beans.implementation.StakeRequestAction;
+import io.takamaka.messages.beans.implementation.StakeUndoRequestAction;
 import io.takamaka.messages.beans.implementation.WalletEncryptedAction;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
@@ -67,6 +69,23 @@ public class SimpleRequestModels {
                         SimpleRequestHelper.getAddress(to),
                         greenValueNanoTkg,
                         redValueNanoTkr,
+                        message),
+                ActionType.REQUEST_PAY.getShortCode());
+    }
+    
+    public static final BaseBean getSimpleStakeRequest_V_1_0(String to, BigInteger greenValueNanoTkg, String message) throws MessageException {
+        return new BaseBean("1.0",
+                new StakeRequestAction(
+                        SimpleRequestHelper.getAddress(to),
+                        greenValueNanoTkg,
+                        message),
+                ActionType.REQUEST_PAY.getShortCode());
+    }
+    
+    public static final BaseBean getSimpleStakeUndoRequest_V_1_0(Long notBefore, String message) throws MessageException {
+        return new BaseBean("1.0",
+                new StakeUndoRequestAction(
+                        notBefore,
                         message),
                 ActionType.REQUEST_PAY.getShortCode());
     }

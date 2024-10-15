@@ -25,30 +25,28 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  *
- * @author Giovanni Antino giovanni.antino@takamaka.io
+ * @author iris
  */
 @AllArgsConstructor
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Slf4j
-public class PayRequestAction extends MessageAction {
-
-    /**
-     * default pay request constructor
-     *
-     * @param to The address of the recipient of the transaction
-     * @param greenValueNanoTkg the value in nano tkg or null
-     * @param redValueNanoTkr the value in nano tkr or null
-     * @param message a message or null
+public class StakeRequestAction extends MessageAction{
+    
+    /***
+     * default stake request constructor
+     * 
+     * @param to
+     * @param greenValueNanoTkg
+     * @param message 
      */
-    public PayRequestAction(MessageAddress to, BigInteger greenValueNanoTkg, BigInteger redValueNanoTkr, String message) {
+    public StakeRequestAction(MessageAddress to, BigInteger greenValueNanoTkg, String message) {
         super.setDate(null);
         super.setFrom(null);
         super.setTextMessage(message);
         super.setTo(to);
         super.setGreen(greenValueNanoTkg);
-        super.setRed(redValueNanoTkr);
+        super.setRed(null);
         super.setEncodedWallet(null);
     }
-    
 }
