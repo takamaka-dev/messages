@@ -34,8 +34,8 @@ public class SimpleQRGenerator {
         try {
             BufferedImage qRbyString = SimpleQRHelper.getQRbyString(message, w, h);
             File outputfile = new File(path.toString());
-            ImageIO.write(qRbyString, "png", outputfile);
-
+            boolean write = ImageIO.write(qRbyString, "png", outputfile);
+            System.err.println(write);
         } catch (IOException ex) {
             throw new QrException(ex);
         }
