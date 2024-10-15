@@ -38,9 +38,9 @@ import lombok.Getter;
  */
 public class SimpleRequestHelper {
 
-    public static final String ADDRESS_CHECK_ED25519_STRING = "^[a-zA-Z-_.]{44}$";
-    public static final String ADDRESS_CHECK_QTESLA_STRING = "^[a-zA-Z-_.]{19840}$";
-    public static final String ADDRESS_CHECK_COMPACT_STRING = "^[a-zA-Z-_.]{64}$";
+    public static final String ADDRESS_CHECK_ED25519_STRING = "^[a-zA-Z0-9-_.]{44}$";
+    public static final String ADDRESS_CHECK_QTESLA_STRING = "^[a-zA-Z0-9-_.]{19840}$";
+    public static final String ADDRESS_CHECK_COMPACT_STRING = "^[a-zA-Z0-9-_.]{64}$";
     public static final Pattern ADDRESS_CHECK_ED25519_PATTERN = Pattern.compile(ADDRESS_CHECK_ED25519_STRING);
     public static final Pattern ADDRESS_CHECK_QTESLA_PATTERN = Pattern.compile(ADDRESS_CHECK_QTESLA_STRING);
     public static final Pattern ADDRESS_CHECK_COMPACT_PATTERN = Pattern.compile(ADDRESS_CHECK_COMPACT_STRING);
