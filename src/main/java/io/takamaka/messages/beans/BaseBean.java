@@ -30,8 +30,6 @@ public class BaseBean {
      */
     @JsonProperty("v")
     private String version;
-    @JsonProperty("s")
-    private String scope;
     @JsonProperty("a")
     private MessageAction messageAction;
     /**
