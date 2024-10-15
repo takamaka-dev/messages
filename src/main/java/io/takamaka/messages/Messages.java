@@ -89,13 +89,21 @@ public class Messages {
         System.out.println(requestJsonPretty_v7);
         
         
-//        BaseBean simplePayRequest_v8 = SimpleRequestModels.getSimplePayRequest_V_1_0("VDHnTcY7iq5BD6f3x8gtsldSL4ESut66nUf4ItnRdw.",
-//                BigInteger.TEN,
-//                BigInteger.ZERO, 
-//                "chiave sbagliata ed25519 + green + zero red");
-//        System.out.println(simplePayRequest_v8.toString());
-//        String requestJsonPretty_v8 = SimpleRequestHelper.getRequestJsonPretty(simplePayRequest_v8);
-//        System.out.println(requestJsonPretty_v8);
+        BaseBean simplePayRequest_v8 = SimpleRequestModels.getSimplePayRequest_V_1_0("VcDHnTcY7iq5BD6f3x8gtsldSL4ESut66nUf4ItnRdw.",
+                BigInteger.TEN,
+                BigInteger.ZERO, 
+                "");
+        System.out.println(simplePayRequest_v8.toString());
+        String requestJsonPretty_v8 = SimpleRequestHelper.getRequestJsonPretty(simplePayRequest_v8);
+        System.out.println(requestJsonPretty_v8);
+        
+        BaseBean simplePayRequest_v9 = SimpleRequestModels.getSimplePayRequest_V_1_0("VcDHnTcY7iq5BD6f3x8gtsldSL4ESut66nUf4ItnRdw.",
+                BigInteger.TEN,
+                BigInteger.ZERO, 
+                null);
+        System.out.println(simplePayRequest_v9.toString());
+        String requestJsonPretty_v9 = SimpleRequestHelper.getRequestJsonPretty(simplePayRequest_v9);
+        System.out.println(requestJsonPretty_v9);
         
         
     }
