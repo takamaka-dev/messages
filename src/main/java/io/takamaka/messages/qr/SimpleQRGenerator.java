@@ -15,34 +15,30 @@
  */
 package io.takamaka.messages.qr;
 
-import java.awt.image.BufferedImage;
-
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.WriterException;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import io.takamaka.messages.exception.QrException;
-import lombok.extern.slf4j.Slf4j;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-@Slf4j
-public class SimpleQRHelper {
+public class SimpleQRGenerator {
 
-    public static BufferedImage getQRbyString(String message, int w, int h) throws QrException {
-        BufferedImage qrBufferedImage;
+    public static final void writeQRToPNG(Path path, int w, int h, String message) throws QrException {
         try {
-            QRCodeWriter qcw = new QRCodeWriter();
-            BitMatrix qrBitMatrix;
-            qrBitMatrix = qcw.encode(message, BarcodeFormat.QR_CODE, w, h);
-            qrBufferedImage = MatrixToImageWriter.toBufferedImage(qrBitMatrix);
-        } catch (WriterException ex) {
+            BufferedImage qRbyString = SimpleQRHelper.getQRbyString(message, w, h);
+            File outputfile = new File(path.toString());
+            ImageIO.write(qRbyString, "png", outputfile);
+
+        } catch (IOException ex) {
             throw new QrException(ex);
         }
-        return qrBufferedImage;
-    }    
-    
+    }
+
 }
