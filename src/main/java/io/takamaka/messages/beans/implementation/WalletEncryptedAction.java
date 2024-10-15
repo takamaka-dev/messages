@@ -13,28 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.beans.implementation;
 
-import lombok.Getter;
+import io.takamaka.messages.beans.MessageAction;
+import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.beans.EncKeyBean;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum ActionType {
-    /**
-     * request pay
-     */
-    REQUEST_PAY("rp"),
-    STAKE("st"),
-    STAKE_UNDO("su"),
-    BLOB("b"),
-    EXPORT_WALLET_ENCRYPTED("we");
-    @Getter
-    private final String shortCode;
+public class WalletEncryptedAction extends MessageAction {
 
-    private ActionType(String shortCode) {
-        this.shortCode = shortCode;
+    public WalletEncryptedAction(EncKeyBean ecryptedWallet) {
+        super.setDate(null);
+        super.setFrom(null);
+        super.setTextMessage(null);
+        super.setTo(null);
+        super.setGreen(null);
+        super.setRed(null);
+        super.setEncodedWallet(ecryptedWallet);
     }
 
 }

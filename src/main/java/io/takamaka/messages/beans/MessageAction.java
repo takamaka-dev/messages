@@ -6,6 +6,7 @@ package io.takamaka.messages.beans;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.wallet.beans.EncKeyBean;
 import java.math.BigInteger;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -44,5 +45,7 @@ public abstract class MessageAction {
     @JsonProperty("tm")
     @EqualsAndHashCode.Include
     private String textMessage;
+    @JsonProperty("ew")
+    private EncKeyBean encodedWallet;
 
 }

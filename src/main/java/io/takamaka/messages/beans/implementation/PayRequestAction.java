@@ -54,6 +54,7 @@ public class PayRequestAction extends MessageAction {
         super.setTo(to);
         super.setGreen(greenValueNanoTkg);
         super.setRed(redValueNanoTkr);
+        super.setEncodedWallet(null);
     }
-
+    
 }
