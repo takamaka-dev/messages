@@ -63,6 +63,8 @@ Source Address
 
 #### Blob
 
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/BLOB.png)
+
 ```json
 {
   "v" : "1.0",
