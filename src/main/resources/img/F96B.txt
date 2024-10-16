@@ -1,0 +1,7 @@
+{
+  "v" : "1.0",
+  "a" : {
+    "tm" : "this is a message to be loaded in blockchain"
+  },
+  "t" : "b"
+}
