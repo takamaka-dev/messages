@@ -12,6 +12,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * Type of message, "c":compact:shortened address, "f":full lenght
+ * Message address in base 64 Url with "." padding
  *
  * @author giovanni.antino@takamaka.io
  */

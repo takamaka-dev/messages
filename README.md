@@ -15,6 +15,8 @@ highest version number.
 - **version**, key:"v", string like "1.0"
 - **[action](#Action)**, key: "a", the data needed to perform the action
     - [fr](#From) from
+        - [t](#Address-Type) type
+        - [ma](#Address-String) string
     - [to](#To) to
     - [dt](#Date) date
     - [g](#Green) TKG value in nanoTK
@@ -33,10 +35,31 @@ highest version number.
 
 ### Fields
 
+
+#### Address
+
+If it is an ed25519 the base64 URL encoding, if it is a qTesla the sha3-384 
+encoded base64 URL. If it is an unrecognized object (e.g., an incorrect "to" 
+field in which a string has been entered that does not fall into the previous 
+cases) the sha3-384 encoded base64 URL of the same. If the address is in 
+bas64url format and is 64 characters long it is considered as a compact address 
+and used directly.
+
+##### Address Type
+
+ - **f** full address
+ - **c** compact sha3-384 encoded base64 URL
+
+
+##### Address String
+
 #### From
 
 Source Address
 
+#### To
+
+Destination address
 
 ## Type
 
