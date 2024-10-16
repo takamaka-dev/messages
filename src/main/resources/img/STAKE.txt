@@ -1,0 +1,12 @@
+{
+  "v" : "1.0",
+  "a" : {
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    },
+    "g" : 10,
+    "tm" : "test stake request"
+  },
+  "t" : "rp"
+}
