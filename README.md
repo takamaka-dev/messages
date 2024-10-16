@@ -63,6 +63,9 @@ Destination address
 
 ## Type
 
+The type of request action that the JSon or QR includes. This field is 
+obbligatory.
+
 ### Fields
 
 #### Stake To Node
@@ -118,3 +121,35 @@ Destination address
 }
 ```
 
+#### Stake Undo
+
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/STAKE_UNDO.png)
+
+```json
+{
+  "v" : "1.0",
+  "a" : {
+    "dt" : 1729099034727,
+    "tm" : "test stake undo request"
+  },
+  "t" : "rp"
+}
+```
+
+#### Wallet Encrypted
+
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/WALLET_ENC.png)
+
+```json
+{
+  "v" : "1.0",
+  "a" : {
+    "ew" : {
+      "version" : "0.1",
+      "algorithm" : "AES",
+      "wallet" : [ "+DtiaqI+/xyAE7a/PCNW7w==", "AonDNdZsJFlbHznjAlPgufpL+OwnfMbPwJTOLqcFB+ZaxlB9O21SBn7xF11ah1UNXS4JtsTjfsbkXB2+NZsTPyYohbQmDp3iqSrkV2qPEPZkn6iU8+lbk93tvOubObgvNiYFY+9FhPWUFWi1tW8jbp0zzTF51vRGuDTTcaNjh7xYDu0VgsAhr4ogsg/bR97b2my6V5ulSW404f76bh9NUbEadcFS0zlyQr3C2tLmaFbTdRVd8XKA0Yn4iltUZF5SrppkS8eY+bYRr3sxstkpGZkeEl5ajsoBv5rSVMbn4SuN9l5sJZeoa8yr9RmZ7UKHRP9FdjaoVtsQfwioawxDBXcPoRcO96Kf0mB4lrkLdkpn9c8zhSfpwZ+AIAUkPHRurdufFFG3C8TaEpv+6SoeecNNuAGxOg4oQT1myabZqHSs9ei6PGzQpTIRuDzvLp5vj1kkghUvs265Tsl7LQ4W4sb859oxgIHqRV/IV682gdg=" ]
+    }
+  },
+  "t" : "we"
+}
+```

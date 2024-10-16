@@ -113,7 +113,7 @@ public class Messages {
         BaseBean simpleStakeUndoRequest_v0 = SimpleRequestModels.getSimpleStakeUndoRequest_V_1_0(
                 (new Date()).getTime(),
                 "test stake undo request");
-        SimpleQRHelper.getJsonAsQRPNGAndTXT(simpleStakeRequest_v0);
+        SimpleQRHelper.getJsonAsQRPNGAndTXT(simpleStakeUndoRequest_v0);
 
     }
 }

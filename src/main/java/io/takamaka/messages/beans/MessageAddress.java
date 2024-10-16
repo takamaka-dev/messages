@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 public class MessageAddress{
 
     /**
-     * Type of message, "c":compact:shortened address, "f":full lenght
+     * Type of message, "c":compact:shortened address, "f":full length
      */
     @JsonProperty("t")
     private String type;
