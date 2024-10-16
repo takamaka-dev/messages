@@ -22,8 +22,19 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.exception.QrException;
+import io.takamaka.messages.utils.SimpleRequestHelper;
+import io.takamaka.wallet.utils.FileHelper;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 
 /**
  *
@@ -32,7 +43,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SimpleQRHelper {
 
-    public static BufferedImage getQRbyString(String message, int w, int h) throws QrException {
+    public static final BufferedImage getQRbyString(String message, int w, int h) throws QrException {
         BufferedImage qrBufferedImage;
         try {
             QRCodeWriter qcw = new QRCodeWriter();
@@ -43,6 +54,31 @@ public class SimpleQRHelper {
             throw new QrException(ex);
         }
         return qrBufferedImage;
-    }    
-    
+    }
+
+    public static final void getJsonAsQRPNGAndTXT(BaseBean simpleRequest) throws QrException {
+        try {
+            String destFolder = Paths.get(FileHelper.getDefaultApplicationDirectoryPath().toString(), "test_qr").toString();
+            FileHelper.createFolderAtPathIfNoneExist(Path.of(destFolder));
+            String requestJsonPretty = SimpleRequestHelper.getRequestJsonPretty(simpleRequest);
+            String filename = getNameFromText(requestJsonPretty);
+            String destFile = Paths.get(destFolder, filename).toString();
+            System.out.println(SimpleQRGenerator.writeQRToPNG(Path.of(destFile), 256, 256, requestJsonPretty));
+            System.out.println("Json File: " + filename + ".txt");
+            System.out.println(requestJsonPretty);
+            SimpleQRGenerator.writeJsonToTXT(Path.of(destFolder), requestJsonPretty, filename);
+            System.out.println("-------------------------------------------------------------------------------------------");
+
+        } catch (IOException ex) {
+            throw new QrException(ex);
+        }
+    }
+
+    public static final String getNameFromText(String value) {
+        String myHash = DigestUtils
+                .md5Hex(value).toUpperCase();
+        return myHash.substring(0, 4);
+
+    }
+
 }

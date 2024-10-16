@@ -16,6 +16,7 @@
 package io.takamaka.messages.qr;
 
 import io.takamaka.messages.exception.QrException;
+import io.takamaka.wallet.utils.FileHelper;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -30,12 +31,30 @@ import javax.imageio.ImageIO;
  */
 public class SimpleQRGenerator {
 
-    public static final void writeQRToPNG(Path path, int w, int h, String message) throws QrException {
+    public static final String writeQRToPNG(Path path, int w, int h, String message) throws QrException {
         try {
             BufferedImage qRbyString = SimpleQRHelper.getQRbyString(message, w, h);
             File outputfile = new File(path.toString());
             boolean write = ImageIO.write(qRbyString, "png", outputfile);
-            System.err.println(write);
+            if (write) {
+                return "destination file: " + path.toString();
+            } else {
+                return "unable to write png file";
+            }
+        } catch (IOException ex) {
+            throw new QrException(ex);
+        }
+    }
+
+    public static final String writeJsonToTXT(Path path, String message, String nameNoExtension) throws QrException {
+        try {
+            boolean writeStringToFileUTF8 = FileHelper.writeStringToFileUTF8(path, nameNoExtension + ".txt", message, true);
+            //boolean write = ImageIO.write(message, "txt", outputfile);
+            if (writeStringToFileUTF8) {
+                return "destination file: " + path.toString();
+            } else {
+                return "unable to write txt file";
+            }
         } catch (IOException ex) {
             throw new QrException(ex);
         }
