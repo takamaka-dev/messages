@@ -132,6 +132,9 @@ public class Messages {
         //System.out.println(SimpleRequestHelper.getRequestJsonPretty(walletEncrypted_V_1_0));
         SimpleQRHelper.getJsonAsQRPNGAndTXT(walletEncrypted_V_1_0);
 
+        BaseBean simpleBlobRequest_V_1_0 = SimpleRequestModels.getSimpleBlobRequest_V_1_0("this is a message to be loaded in blockchain");
+        SimpleQRHelper.getJsonAsQRPNGAndTXT(simpleBlobRequest_V_1_0);
+
 //        destFile = Paths.get(destFolder, "enc_wallet_1.png").toString();
 //        SimpleQRGenerator.writeQRToPNG(Path.of(destFile), 256, 256, SimpleRequestHelper.getRequestJsonPretty(walletEncrypted_V_1_0));
         BaseBean simpleStakeRequest_v0 = SimpleRequestModels.getSimpleStakeRequest_V_1_0(

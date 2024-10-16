@@ -15,6 +15,16 @@ import lombok.NoArgsConstructor;
 
 /**
  *
+ * <ul>
+ * <li><b>Pay Request</b> request a pay <i> (v1.0)</i></li>
+ * <li><b>Re</b> blob <i> (v1.0)</i></li>
+ * <li><b>rp</b> request pay <i> (v1.0)</i></li>
+ * <li><b>st</b> stake to node <i> (v1.0)</i></li>
+ * <li><b>su</b> stake undo <i> (v1.0)</i></li>
+ * <li><b>we</b> wallet encrypted <i> (v1.0)</i></li>
+ * </ul>
+ *
+ *
  * @author giovanni.antino@takamaka.io
  */
 @Data
@@ -30,9 +40,6 @@ public abstract class MessageAction {
     @JsonProperty("to")
     @EqualsAndHashCode.Include
     private MessageAddress to;
-    /**
-     * notBefore field of the transaction if required
-     */
     @JsonProperty("dt")
     @EqualsAndHashCode.Include
     private Long date;
