@@ -77,6 +77,8 @@ Source Address
 
 #### Pay
 
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/PAY.png)
+
 ```json
 {
   "v" : "1.0",
