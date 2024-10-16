@@ -44,7 +44,7 @@ Source Address
 
 #### Stake To Node
 
-
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/STAKE.png)
 
 ```json
 {
