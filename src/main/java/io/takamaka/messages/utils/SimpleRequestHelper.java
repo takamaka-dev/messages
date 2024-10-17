@@ -38,7 +38,14 @@ import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.KeyContexts;
 import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Ed25519;
 import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Tink;
+import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
+import java.io.IOException;
+import java.net.ProtocolException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import lombok.Getter;
 
@@ -178,26 +185,45 @@ public class SimpleRequestHelper {
         switch (baseBean.getTypeOfSignature()) {
             case "Ed25519BC":
 
-                TkmCypherBean verify = TkmCypherProviderBCED25519.verify(
+                TkmCypherBean verifyEd = TkmCypherProviderBCED25519.verify(
                         baseBean.getMessageAction().getFrom().getAddress(),
                         baseBean.getSignature(),
                         requestJsonCompact
                 );
 
-                if (verify.isValid()) {
+                if (verifyEd.isValid()) {
                     return true;
                 }
 
                 break;
 
             case "BCQTESLA_PS_1":
-                if (TkmTextUtils.isNullOrBlank(fullPublicKey)) {
-                    throw new AssertionError("missing dflated public key");
+                String addressQTR1 = fullPublicKey;
+                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
+                    addressQTR1 = retrieveBookmark("test", fullPublicKey);
                 }
+                TkmCypherBean verifyQTR1 = TkmCypherProviderBCQTESLAPSSC1Round1.verify(
+                        addressQTR1,
+                        baseBean.getSignature(),
+                        requestJsonCompact
+                );
+                if (verifyQTR1.isValid()) {
+                    return true;
+                }
+
                 break;
             case "BCQTESLA_PS_1_R2":
-                if (TkmTextUtils.isNullOrBlank(fullPublicKey)) {
-                    throw new AssertionError("missing dflated public key");
+                String addressQTR2 = fullPublicKey;
+                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
+                    addressQTR2 = retrieveBookmark("test", fullPublicKey);
+                }
+                TkmCypherBean verifyQTR2 = TkmCypherProviderBCQTESLAPSSC1Round2.verify(
+                        addressQTR2,
+                        baseBean.getSignature(),
+                        requestJsonCompact
+                );
+                if (verifyQTR2.isValid()) {
+                    return true;
                 }
                 break;
             default:
@@ -205,6 +231,48 @@ public class SimpleRequestHelper {
 
         }
         return false;
+    }
+
+    private static String retrieveBookmark(String environment, String address384) {
+        String result = null;
+        try {
+            if (address384 != null) {
+                if (address384.length() == 96 && isHexadecimal(address384)) {
+                    result = callBookmarkApi(environment, address384);
+                } else {
+                    String hexAddress = TkmSignUtils.fromB64UrlToHEX(address384);
+                    if (hexAddress.length() == 96 && isHexadecimal(hexAddress)) {
+                        result = callBookmarkApi(environment, hexAddress);
+                    }
+                }
+            } else {
+                return result;
+            }
+        } catch (IOException ex) {
+            return result;
+        }
+
+        return result;
+    }
+
+    private static String callBookmarkApi(String environment, String address) throws ProtocolException, IOException {
+        String result = null;
+        String apiEndpointTest = "https://test.takamaka.org/api/v1/bookmark/retrieve/";
+        String apiEndpointProd = "https://takamaka.io/api/v1/bookmark/retrieve/";
+        Map<String, String> params = new LinkedHashMap<>();
+        switch (environment.toLowerCase()) {
+            case "test":
+                result = Post.Post(apiEndpointTest + address, params);
+                break;
+            default:
+                result = Post.Post(apiEndpointProd + address, params);
+                throw new AssertionError();
+        }
+        return result;
+    }
+
+    public static boolean isHexadecimal(String text) {
+        return text.matches("[0-9A-Fa-f]+");
     }
 
 }
