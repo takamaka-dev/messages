@@ -293,6 +293,32 @@ Signed messages are a modification of normal messages where:
  - the ts field contains the signature type
  - the sg field contains the signature
 
+### Signed Pay Example
+
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/SIGNED_PAY.png)
+
+```json
+{
+  "v" : "1.0",
+  "a" : {
+    "fr" : {
+      "t" : "f",
+      "ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
+    },
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    },
+    "g" : 10000000000,
+    "r" : 2000000000,
+    "tm" : "chiave qTesla + green + red"
+  },
+  "t" : "rp",
+  "ts" : "Ed25519BC",
+  "sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
+}
+```
+
 ### Sign Details
 
 The signature covers only the **[a](#Action)** bean of the message. The value of the top-level key **[a](#Action)** must be taken to generate the message to be signed/verified. This json should be sorted by keys in its most compact form, without spaces or indentations.
