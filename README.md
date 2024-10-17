@@ -304,21 +304,21 @@ The external bean coming from the QR (or another message):
 
 ```json
 {
-  “v” : ‘1.0’,
+  “v” : "1.0",
   “a” : {
     “fr” : {
-      “t” : ‘f’,
+      “t” : "f",
       “ma” : ”v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4.”
     },
     “to” : {
-      “t” : ‘c’,
+      “t” : "c",
       “ma” : ”Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r”
     },
     “g” : 10000000000,
     “r” : 2000000000,
     “tm” : “key qTesla + green + red”
   },
-  “t” : ‘rp’,
+  “t” : "rp",
   “ts” : “ed25519BC”,
   “sg” : ”XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg..”
 }
@@ -330,11 +330,11 @@ message).
 ```json
 {
     “fr” : {
-      “t” : ‘f’,
+      “t” : "f",
       “ma” : ”v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4.”
     },
     “to” : {
-      “t” : ‘c’,
+      “t” : "c",
       “ma” : ”Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r”
     },
     “g” : 10000000000,
