@@ -4,6 +4,8 @@
 package io.takamaka.messages;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.takamaka.extra.identicon.exceptions.AddressNotRecognizedException;
+import io.takamaka.extra.identicon.exceptions.AddressTooLongException;
 import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.qr.SimpleQRGenerator;
@@ -43,7 +45,7 @@ public class Messages {
 
     }
 
-    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException {
+    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException {
         System.out.println("Hello World!");
         //force param load
         System.out.println(ReflectionToStringBuilder.toString(new DefaultInitParameters(),

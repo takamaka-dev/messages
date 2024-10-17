@@ -34,6 +34,9 @@ import io.takamaka.wallet.TkmCypherProviderBCED25519;
 import io.takamaka.wallet.TkmCypherProviderBCQTESLAPSSC1Round1;
 import io.takamaka.wallet.TkmCypherProviderBCQTESLAPSSC1Round2;
 import io.takamaka.wallet.beans.TkmCypherBean;
+import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
+import io.takamaka.wallet.exceptions.HashEncodeException;
+import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.KeyContexts;
 import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Ed25519;
@@ -168,7 +171,7 @@ public class SimpleRequestHelper {
         }
     }
 
-    public static final boolean verifyMessageSignature(BaseBean baseBean, String fullPublicKey) throws JsonProcessingException {
+    public static final boolean verifyMessageSignature(BaseBean baseBean, String fullPublicKey) throws JsonProcessingException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException, MessageException {
         if (TkmTextUtils.isNullOrBlank(baseBean.getTypeOfSignature())) {
             System.err.println("missing signature type");
             return false;
@@ -203,17 +206,23 @@ public class SimpleRequestHelper {
                 break;
 
             case "BCQTESLA_PS_1":
+
                 String addressQTR1 = fullPublicKey;
                 if (fullPublicKey != null && fullPublicKey.length() != 19840) {
                     addressQTR1 = retrieveBookmark("test", fullPublicKey);
                 }
-                TkmCypherBean verifyQTR1 = TkmCypherProviderBCQTESLAPSSC1Round1.verify(
-                        addressQTR1,
-                        baseBean.getSignature(),
-                        requestJsonCompact
-                );
-                if (verifyQTR1.isValid()) {
-                    return true;
+                String testQTR1 = TkmAddressUtils.toCompactAddress(addressQTR1).getDefaultShort();
+                if (testQTR1.equals(baseBean.getMessageAction().getFrom().getAddress())) {
+                    TkmCypherBean verifyQTR1 = TkmCypherProviderBCQTESLAPSSC1Round1.verify(
+                            addressQTR1,
+                            baseBean.getSignature(),
+                            requestJsonCompact
+                    );
+                    if (verifyQTR1.isValid()) {
+                        return true;
+                    }
+                } else {
+                    throw new MessageException("Key verification error!");
                 }
 
                 break;
@@ -222,14 +231,20 @@ public class SimpleRequestHelper {
                 if (fullPublicKey != null && fullPublicKey.length() != 19840) {
                     addressQTR2 = retrieveBookmark("test", fullPublicKey);
                 }
-                TkmCypherBean verifyQTR2 = TkmCypherProviderBCQTESLAPSSC1Round2.verify(
-                        addressQTR2,
-                        baseBean.getSignature(),
-                        requestJsonCompact
-                );
-                if (verifyQTR2.isValid()) {
-                    return true;
+                String testQTR2 = TkmAddressUtils.toCompactAddress(addressQTR2).getDefaultShort();
+                if (testQTR2.equals(baseBean.getMessageAction().getFrom().getAddress())) {
+                    TkmCypherBean verifyQTR2 = TkmCypherProviderBCQTESLAPSSC1Round2.verify(
+                            addressQTR2,
+                            baseBean.getSignature(),
+                            requestJsonCompact
+                    );
+                    if (verifyQTR2.isValid()) {
+                        return true;
+                    }
+                } else {
+                    throw new MessageException("Key verification error!");
                 }
+
                 break;
             default:
                 throw new AssertionError("unknown cypher");
