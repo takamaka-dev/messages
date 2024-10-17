@@ -3,7 +3,7 @@
 The examples are provided with prettified json, in the real application the 
 jsons have to be minimized.
 
-## External json envelope
+## External Json Envelope
 
 All jsons with the same major version (e.g., 1.X) maintain backward 
 compatibility; a parser created to read version 1.0 will be able to decode 
@@ -12,7 +12,7 @@ In the event that a field is introduced that breaks compatibility a new major
 version must be created. The json version corresponds to the field with the 
 highest version number.
 
-- **version**, key:"v", string like "1.0"
+- **[version](#External-Json-Envelope)**, key:"v", string like "1.0"
 - **[action](#Action)**, key: "a", the data needed to perform the action
     - *[message of action](#Message-Of-Action)*
         - **[fr](#From)**, key: "fr", from, the sender address in [Address](#Address) format
@@ -34,6 +34,7 @@ highest version number.
         - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
         - *[su](#Steke-Undo), value: "su"*, stake undo (v1.0)
         - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
+- **[Type Of Signature](#Type-Of-Signature)**, key:"ts", string like "Ed25519BC" defined by the takamaka.io core wallet library
 
 ## Action
 
@@ -219,4 +220,62 @@ mandatory.
   },
   "t" : "we"
 }
+```
+
+## Type Of Signature
+
+key **ts**
+
+Defined by the takamaka.io core wallet library
+
+```java
+package io.takamaka.wallet.utils;
+
+[...]
+
+    public final class KeyContexts {
+
+    [...]
+
+        public final class KeyContexts {
+
+        [...]
+
+        public static enum WalletCypher {
+
+            /**
+             * currently not in use
+             */
+            Ed25519,
+            /**
+             * currently not in use
+             */
+            Tink,
+            /**
+             * current takamaka ed implementation
+             */
+            Ed25519BC,
+            /**
+             * bouncy castle, provable secure, I, Round 1
+             */
+            BCQTESLA_PS_1,
+            /**
+             * bouncy castle, provable secure, I, Round 2
+             */
+            BCQTESLA_PS_1_R2,
+            /**
+            * not for signature, key exchange
+            */
+            Curve25519BC
+
+        }
+
+        [...]
+
+        }
+
+    [...]
+
+    }
+
 ```
