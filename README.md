@@ -14,30 +14,32 @@ highest version number.
 
 - **version**, key:"v", string like "1.0"
 - **[action](#Action)**, key: "a", the data needed to perform the action
-    - [fr](#From), key: "fr", from, the sender address in [Address](#Address) format
-        - [t](#Address-Type) type
-        - [ma](#Address-String) string
-    - [to](#To) key: "to", to, the reciever address in [Address](#Address) format
-        - [t](#Address-Type), key: "t", type
-        - [ma](#Address-String), key: "ma", message address
-    - [dt](#Date), key: "dt", date, unix time stamp millis
-    - [g](#Green), key: "g", green, TKG value in nanoTK
-    - [r](#Red), key: "r", red, value in nanoTK
-    - [tm](#Text-Message), key: "tm", text message, UTF8 Text Message
-    - [ew](#Encoded-Wallet), key: "ew", encoded wallet, Wallet encrypted with password
+    - *[message of action](#Message-Of-Action)*
+        - **[fr](#From)**, key: "fr", from, the sender address in [Address](#Address) format
+            - [t](#Address-Type) type
+            - [ma](#Address-String) string
+        - [to](#To) key: "to", to, the reciever address in [Address](#Address) format
+            - [t](#Address-Type), key: "t", type
+            - [ma](#Address-String), key: "ma", message address
+        - [dt](#Date), key: "dt", date, unix time stamp millis
+        - [g](#Green), key: "g", green, TKG value in nanoTK
+        - [r](#Red), key: "r", red, value in nanoTK
+        - [tm](#Text-Message), key: "tm", text message, UTF8 Text Message
+        - [ew](#Encoded-Wallet), key: "ew", encoded wallet, Wallet encrypted with password
 - **[type](#Values-For-Type)**, key: "t", what action I expect to be performed by the qr
-    - [st](#Stake-To-Node), value: "st", stake to node (v1.0)
-    - [b](#Blob), value: "b", blob (v1.0)
-    - [rp](#Request-Pay), value: "rp", request pay (v1.0)
-    - [st](#Stake-To-Node), value: "st", stake to node (v1.0)
-    - [su](#Steke-Undo), value: "su", stake undo (v1.0)
-    - [we](#Wallet-Encrypted), value: "ew", wallet encrypted (v1.0)
+    - *[Values For Type](#Values-For-Type)*
+    - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
+    - *[b](#Blob), value: "b"*, blob (v1.0)
+    - *[rp](#Request-Pay), value: "rp"*, request pay (v1.0)
+    - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
+    - *[su](#Steke-Undo), value: "su"*, stake undo (v1.0)
+    - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
 
 ## Action
 
 key **a**
 
-### Fields of Action
+### Message Of Action
 
 #### Date
 
