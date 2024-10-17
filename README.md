@@ -35,6 +35,7 @@ highest version number.
         - *[su](#Steke-Undo), value: "su"*, stake undo (v1.0)
         - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
 - **[Type Of Signature](#Type-Of-Signature)**, key:"ts", string like "Ed25519BC" defined by the takamaka.io core wallet library
+- **[Signature](#Signature)**, key:"sg", base64 url encoded bytes of the signature
 
 ## Action
 
@@ -278,4 +279,98 @@ package io.takamaka.wallet.utils;
 
     }
 
+```
+
+## Signature
+
+key **sg**
+
+Base64 URL encoded signature.
+
+The signature covers only the (action)[#Action] bean of the message. The value of the top-level key (**a** Action)[#Action] must be taken to generate the message to be signed/verified. This json should be sorted by keys in its most compact form, without spaces or indentations.
+If you are using Jackson as a serializer these are the `ObjectMapper` options:
+
+```java
+ObjectMapper mapper = new ObjectMapper();
+mapper.configure(SerializationFeature.INDENT_OUTPUT, false)
+                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+                .writeValueAsString(messageAction);
+```
+
+
+Where `messageAction` is the action bean (value of key **a**).
+
+The external bean coming from the QR (or another message):
+
+```json
+{
+  “v” : ‘1.0’,
+  “a” : {
+    “fr” : {
+      “t” : ‘f’,
+      “ma” : ”v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4.”
+    },
+    “to” : {
+      “t” : ‘c’,
+      “ma” : ”Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r”
+    },
+    “g” : 10000000000,
+    “r” : 2000000000,
+    “tm” : “key qTesla + green + red”
+  },
+  “t” : ‘rp’,
+  “ts” : “ed25519BC”,
+  “sg” : ”XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg..”
+}
+```
+
+The object to be signed (prettified for convenience, not the actual signed 
+message).
+
+```json
+{
+    “fr” : {
+      “t” : ‘f’,
+      “ma” : ”v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4.”
+    },
+    “to” : {
+      “t” : ‘c’,
+      “ma” : ”Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r”
+    },
+    “g” : 10000000000,
+    “r” : 2000000000,
+    “tm” : “key qTesla + green + red”
+}
+```
+
+This object should be passed to the minimized signature function.
+
+```json
+{“fr”:{“t”: “f”, “ma”: “v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4. “},“to”:{“t”:“c”,“ma”:“Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r”},“g”:10000000000,“r”:2000000000,“tm”:“chiave qTesla + green + red”}
+```
+the spaces present are those of the original free text message, which should be 
+left unchanged, if it is a json in turn the stringified version of the value 
+of **[tm](#Text-Message)** should be passed.
+
+In case you are sending a signed message this field contains the public key with
+ which the message is signed.
+If the public key is of type *c* compact, the original key must be retrieved by 
+an external function (e.g., via bookmarks). This is because it is a hash and it 
+is not possible to reconstruct the original address.
+
+If a qTesla key is used for signing, the message will probably be too large for 
+a QR; the use of post-quantum encryption is intended for other communication 
+channels that do not have such stringent limitations on the number of characters 
+as the QR. In case you decide to use it you will also need to pass the signature 
+as a hash (a post-quantum type hash such as sha3-384 or higher) but in the 
+current version the signature distribution channel has not yet been put 
+implemented.
+
+The resulting signature should be entered as the value of the 
+**[sg](#Signature)** field in base64 url format with “.” as padding.
+
+In the previous example:
+
+```json
+“sg” : ”XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg..”
 ```
