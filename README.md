@@ -105,7 +105,7 @@ the password is. There is no significant difference in size between encryption
 types because what is exported is the seed generator for entropy and 
 not the key.
 
-The format of the content of the “ew" clause is defined by the 
+The format of the content of the "ew" clause is defined by the 
 takamaka.io core wallet library.
 
 ```json
@@ -304,23 +304,23 @@ The external bean coming from the QR (or another message):
 
 ```json
 {
-  “v" : "1.0",
-  “a" : {
-    “fr" : {
-      “t" : "f",
-      “ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
+  "v" : "1.0",
+  "a" : {
+    "fr" : {
+      "t" : "f",
+      "ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
     },
-    “to" : {
-      “t" : "c",
-      “ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
     },
-    “g" : 10000000000,
-    “r" : 2000000000,
-    “tm" : “key qTesla + green + red"
+    "g" : 10000000000,
+    "r" : 2000000000,
+    "tm" : "key qTesla + green + red"
   },
-  “t" : "rp",
-  “ts" : “ed25519BC",
-  “sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
+  "t" : "rp",
+  "ts" : "ed25519BC",
+  "sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
 }
 ```
 
@@ -329,24 +329,24 @@ message).
 
 ```json
 {
-    “fr" : {
-      “t" : "f",
-      “ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
+    "fr" : {
+      "t" : "f",
+      "ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
     },
-    “to" : {
-      “t" : "c",
-      “ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
     },
-    “g" : 10000000000,
-    “r" : 2000000000,
-    “tm" : “key qTesla + green + red"
+    "g" : 10000000000,
+    "r" : 2000000000,
+    "tm" : "key qTesla + green + red"
 }
 ```
 
 This object should be passed to the minimized signature function.
 
 ```json
-{“fr":{“t": “f", “ma": “v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4. “},“to":{“t":“c",“ma":“Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"},“g":10000000000,“r":2000000000,“tm":“chiave qTesla + green + red"}
+{"fr":{"t": "f", "ma": "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4. "},"to":{"t":"c","ma":"Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"},"g":10000000000,"r":2000000000,"tm":"chiave qTesla + green + red"}
 ```
 the spaces present are those of the original free text message, which should be 
 left unchanged, if it is a json in turn the stringified version of the value 
@@ -367,10 +367,10 @@ current version the signature distribution channel has not yet been put
 implemented.
 
 The resulting signature should be entered as the value of the 
-**[sg](#Signature)** field in base64 url format with “." as padding.
+**[sg](#Signature)** field in base64 url format with "." as padding.
 
 In the previous example:
 
 ```json
-“sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
+"sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
 ```
