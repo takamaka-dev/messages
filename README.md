@@ -25,32 +25,42 @@ highest version number.
     - [r](#Red), key: "r", red, value in nanoTK
     - [tm](#Text-Message), key: "tm", text message, UTF8 Text Message
     - [ew](#Encoded-Wallet), key: "ew", encoded wallet, Wallet encrypted with password
-- **[type](#Type)**, key: "t", what action I expect to be performed by the qr
-    - [st](#Stake-To-Node), key: "st", stake to node (v1.0)
-    - [b](#Blob), key: "b", blob (v1.0)
-    - [rp](#Request-Pay), key: "rp", request pay (v1.0)
-    - [st](#Stake-To-Node), key: "st", stake to node (v1.0)
-    - [su](#Steke-Undo), key: "su", stake undo (v1.0)
-    - [we](#Wallet-Encrypted), key: "ew", wallet encrypted (v1.0)
+- **[type](#Values-For-Type)**, key: "t", what action I expect to be performed by the qr
+    - [st](#Stake-To-Node), value: "st", stake to node (v1.0)
+    - [b](#Blob), value: "b", blob (v1.0)
+    - [rp](#Request-Pay), value: "rp", request pay (v1.0)
+    - [st](#Stake-To-Node), value: "st", stake to node (v1.0)
+    - [su](#Steke-Undo), value: "su", stake undo (v1.0)
+    - [we](#Wallet-Encrypted), value: "ew", wallet encrypted (v1.0)
 
 ## Action
 
-### Fields
+key **a**
+
+### Fields of Action
 
 #### Date
+
+key **dt**
 
 a timestamp when required by the specific function, the timestamp is of type 
 unix in milliseconds (e.g. 2024-10-17 8:01:51 GMT &rarr; 1729152111 )
 
 #### Green
 
+key **g**
+
 TKG value in nanoTKG (e.g. 10 000 000 000 nanoTKG &rarr; 10 TKG)
 
 #### Red
 
+key **r**
+
 TKR value in nanoTKG (e.g. 2 000 000 000 nanoTKG &rarr; 2 TKG)
 
 #### Address
+
+keys **fr** or **to**
 
 If it is an ed25519 the base64 URL encoding, if it is a qTesla the sha3-384 
 encoded base64 URL. If it is an unrecognized object (e.g., an incorrect "to" 
@@ -59,13 +69,31 @@ cases) the sha3-384 encoded base64 URL of the same. If the address is in
 bas64url format and is 64 characters long it is considered as a compact address 
 and used directly.
 
+##### Address Type
+
+key **t**
+
+ - **f** full address
+ - **c** compact sha3-384 encoded base64 URL
+
+
+##### Address String
+
+key **ma** message address
+
+Base64 URL encoded byte string with "." has padding char
+
 #### Text Message
+
+key **tm**
 
 A UTF8 free text message, for use within QRs it is advisable to keep under 
 150 characters otherwise the QR becomes too large and loses readability 
 by devices.
 
 #### Encoded Wallet
+
+key **ew**
 
 A special transaction that allows the password-protected version of the wallet 
 to be exported. The security of this transaction depends on how strong 
@@ -84,28 +112,26 @@ takamaka.io core wallet library.
 }
 ```
 
-##### Address Type
-
- - **f** full address
- - **c** compact sha3-384 encoded base64 URL
-
-
-##### Address String
-
 #### From
 
-Source Address
+key **fr**
+
+Source Address of type [Address](#Address)
 
 #### To
 
-Destination address
+key **to**
+
+Destination address of type [Address](#Address)
 
 ## Type
 
-The type of request action that the JSon or QR includes. This field is 
-obbligatory.
+key **rp**
 
-### Fields
+The type of request action that the Json or QR includes. This field is 
+mandatory.
+
+### Values For Type
 
 #### Stake To Node
 
