@@ -490,6 +490,7 @@ key otherwise the sender will be overwritten with the public key you sign with.
 
 The relevant java code is here:
 
+
 ```java
 package io.takamaka.messages.utils;
 
@@ -525,5 +526,56 @@ public class SimpleRequestHelper {
 }
 ```
 
+
 ### Verify Signature
 
+#### Ed25519
+
+This is the easiest verification because all the data for the check is in the json of the message.
+
+The relevant code:
+
+```java
+package io.takamaka.messages.utils;
+
+...
+
+public class SimpleRequestHelper {
+
+...
+
+    public static final boolean verifyMessageSignature(BaseBean baseBean, String fullPublicKey) throws JsonProcessingException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException, MessageException {
+        
+        ...
+
+        String requestJsonCompact = getRequestJsonCompact(baseBean.getMessageAction());
+        System.out.println("message to be verified: " + requestJsonCompact);
+        TkmCypherBean verifyEd = TkmCypherProviderBCED25519.verify(
+                    baseBean.getMessageAction().getFrom().getAddress(),
+                    baseBean.getSignature(),
+                    requestJsonCompact
+            );
+
+        if (verifyEd.isValid()) {
+            return true;
+        }
+
+        ...
+    }
+
+...
+
+}
+```
+
+#### qTesla
+
+For qTesla keys I have to:
+ 1. retrieve the compact address from the ***to*** of the transaction.
+ 2. run a request to a server that returns the original version to me
+ 3. ***calculate the sha3-384 of the address obtained from the server and verify that it is the same as the one in the to***
+ 4. apply the verify by passing the full address in addition to the BaseBean
+
+The complete procedure is available in the example classes and uses takamaka.io 
+servers to retrieve the full qTesla keys (only those of nodes registered as Main 
+in the production blockchain are available on the servers). 
