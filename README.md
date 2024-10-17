@@ -440,13 +440,13 @@ resulting in json
 }
 ```
 
-#### Get a wallet
+##### Get a wallet
 
 ```java
 InstanceWalletKeystoreInterface iwk = new InstanceWalletKeyStoreBCED25519(SimpleRequestModels.EXAMPLE_WALLET_ED25519_QR_EXPORT, SimpleRequestModels.SUPER_SAFE_PASSWORD);
 ```
 
-#### Use the helper method to sign
+##### Use the helper method to sign
 
 ```java
 SimpleRequestHelper.signMessage(simplePayRequest_v0, iwk, 0);
@@ -458,3 +458,69 @@ The call will modifiy the `BaseBean` updating the field required for the sign.
 If the request has a **fr** field make sure you use the wallet with that public 
 key otherwise the sender will be overwritten with the public key you sign with.
 
+```json
+{
+  "v" : "1.0",
+  "a" : {
+    "fr" : {
+      "t" : "f",
+      "ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
+    },
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    },
+    "g" : 10000000000,
+    "r" : 2000000000,
+    "tm" : "chiave qTesla + green + red"
+  },
+  "t" : "rp",
+  "ts" : "Ed25519BC",
+  "sg" : "XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg.."
+}
+```
+
+##### Step by step signing
+
+ 1. set type of signature in base bean field ***[ts](#Type-Of-Signature)***
+ 2. set from address ***[fr](#From)*** using the public key of the signer, *the public key will be part of the signed message*
+ 3. create the minimized json of the action value ***[a](#Action)*** `{"fr":{"t":"f","ma":"v8a3ben ... [OMISSIS] ... + red"}`
+ 4. generate the correct signature e.g. using `TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact)` for ED sign
+ 5. save the signature returned as ***[sg](#Signature)*** value e.g. `XdtrpA_fI1-rDgvvxwDB7jOg5PZV1-oTrBGRNLyatXjiPBlfkicVLsh5uxFsLCRahlvdhzyda7F40VwP_AX7Bg..`
+
+The relevant java code is here:
+
+```java
+package io.takamaka.messages.utils;
+
+...
+
+public class SimpleRequestHelper {
+
+...
+
+    public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {
+        //set type of signature
+        baseBean.setTypeOfSignature(iwk.getWalletCypher().name());
+        //set message action from field
+        baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
+        //create message to be signed
+        String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
+
+        ...
+
+        //sign using ed25519
+        sign = TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact);
+
+        ...
+
+        //update signature in the base bean
+        baseBean.setSignature(sign.getSignature());
+    
+        ...
+    }
+
+...
+
+}
+```

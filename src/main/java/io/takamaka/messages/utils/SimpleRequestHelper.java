@@ -135,13 +135,17 @@ public class SimpleRequestHelper {
     }
 
     public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {
+        //set type of signature
         baseBean.setTypeOfSignature(iwk.getWalletCypher().name());
+        //set message action from field
         baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
+        //create message to be signed
         String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
         System.out.println("String to be signed " + requestJsonCompact);
         final TkmCypherBean sign;
         switch (iwk.getWalletCypher()) {
             case Ed25519BC:
+                //sign using ed25519
                 sign = TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact);
                 break;
 
@@ -157,6 +161,7 @@ public class SimpleRequestHelper {
                 throw new AssertionError(iwk.getWalletCypher().name());
         }
         if (sign.isValid()) {
+            //update signature in the base bean
             baseBean.setSignature(sign.getSignature());
         } else {
             throw new MessageException("unable to sign transaction", sign.getEx());
