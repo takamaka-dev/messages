@@ -11,11 +11,17 @@ import io.takamaka.messages.qr.SimpleQRHelper;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.messages.utils.SimpleRequestModels;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
+import io.takamaka.wallet.InstanceWalletKeyStoreBCQTESLAPSSC1Round1;
+import io.takamaka.wallet.InstanceWalletKeyStoreBCQTESLAPSSC1Round2;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
+import io.takamaka.wallet.exceptions.HashEncodeException;
+import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.UnlockWalletException;
 import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.DefaultInitParameters;
 import io.takamaka.wallet.utils.FileHelper;
+import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTK;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -37,7 +43,7 @@ public class Messages {
 
     }
 
-    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException {
+    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException {
         System.out.println("Hello World!");
         //force param load
         System.out.println(ReflectionToStringBuilder.toString(new DefaultInitParameters(),
@@ -123,6 +129,25 @@ public class Messages {
         SimpleRequestHelper.signMessage(simplePayRequest_v0, iwk, 0);
         SimpleQRHelper.getJsonAsQRPNGAndTXT(simplePayRequest_v0);
         System.out.println("is verified? " + SimpleRequestHelper.verifyMessageSignature(simplePayRequest_v0, null));
+        
+        
+        InstanceWalletKeystoreInterface iwkQ1 = new InstanceWalletKeyStoreBCQTESLAPSSC1Round1(SimpleRequestModels.EXAMPLE_WALLET_ED25519_QR_EXPORT, SimpleRequestModels.SUPER_SAFE_PASSWORD);
+        SimpleRequestHelper.signMessage(simplePayRequest_v0, iwkQ1, 0);
+        
+        String publicKeyAtIndexURL64R1 = iwkQ1.getPublicKeyAtIndexURL64(0);
+        String hash384B64URL = TkmSignUtils.Hash384B64URL(publicKeyAtIndexURL64R1);
+        //SimpleQRHelper.getJsonAsQRPNGAndTXT(simplePayRequest_v0);
+        System.out.println("is verified? " + SimpleRequestHelper.verifyMessageSignature(simplePayRequest_v0, hash384B64URL));
 
+        
+        InstanceWalletKeystoreInterface iwkQ2 = new InstanceWalletKeyStoreBCQTESLAPSSC1Round2(SimpleRequestModels.EXAMPLE_WALLET_ED25519_QR_EXPORT, SimpleRequestModels.SUPER_SAFE_PASSWORD);
+        SimpleRequestHelper.signMessage(simplePayRequest_v0, iwkQ2, 0);
+        String publicKeyAtIndexURL64R2 = iwkQ2.getPublicKeyAtIndexURL64(0);
+        String Hash384B64URL = TkmSignUtils.Hash384B64URL(publicKeyAtIndexURL64R2);
+        
+        //SimpleQRHelper.getJsonAsQRPNGAndTXT(simplePayRequest_v0);
+        System.out.println("is verified? " + SimpleRequestHelper.verifyMessageSignature(simplePayRequest_v0, Hash384B64URL));
+
+        
     }
 }
