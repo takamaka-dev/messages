@@ -287,7 +287,7 @@ key **sg**
 
 Base64 URL encoded signature.
 
-The signature covers only the (action)[#Action] bean of the message. The value of the top-level key **(a)[#Action]** must be taken to generate the message to be signed/verified. This json should be sorted by keys in its most compact form, without spaces or indentations.
+The signature covers only the (action)[#Action] bean of the message. The value of the top-level key **[a](#Action)** must be taken to generate the message to be signed/verified. This json should be sorted by keys in its most compact form, without spaces or indentations.
 If you are using Jackson as a serializer these are the `ObjectMapper` options:
 
 ```java
