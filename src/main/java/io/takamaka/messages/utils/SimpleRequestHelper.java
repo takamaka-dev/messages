@@ -26,8 +26,18 @@ import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.ed25519;
 import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.qTesla;
 import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.undefined;
 import io.takamaka.messages.beans.BaseBean;
+import io.takamaka.messages.beans.MessageAction;
 import io.takamaka.messages.beans.MessageAddress;
 import io.takamaka.messages.exception.MessageException;
+import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.TkmCypherProviderBCED25519;
+import io.takamaka.wallet.TkmCypherProviderBCQTESLAPSSC1Round1;
+import io.takamaka.wallet.TkmCypherProviderBCQTESLAPSSC1Round2;
+import io.takamaka.wallet.beans.TkmCypherBean;
+import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.KeyContexts;
+import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Ed25519;
+import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Tink;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -107,6 +117,94 @@ public class SimpleRequestHelper {
                 .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
                 .writeValueAsString(baseBean);
 
+    }
+
+    public static final String getRequestJsonCompact(MessageAction messageAction) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper()
+                .configure(SerializationFeature.INDENT_OUTPUT, false)
+                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+                .writeValueAsString(messageAction);
+
+    }
+
+    public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {
+        baseBean.setTypeOfSignature(iwk.getWalletCypher().name());
+        baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
+        String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
+        System.out.println("String to be signed " + requestJsonCompact);
+        final TkmCypherBean sign;
+        switch (iwk.getWalletCypher()) {
+            case Ed25519BC:
+                sign = TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact);
+                break;
+
+            case BCQTESLA_PS_1:
+                sign = TkmCypherProviderBCQTESLAPSSC1Round1.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact);
+                break;
+            case BCQTESLA_PS_1_R2:
+                sign = TkmCypherProviderBCQTESLAPSSC1Round2.sign(iwk.getKeyPairAtIndex(index), requestJsonCompact);
+                break;
+            case Ed25519:
+            case Tink:
+            default:
+                throw new AssertionError(iwk.getWalletCypher().name());
+        }
+        if (sign.isValid()) {
+            baseBean.setSignature(sign.getSignature());
+        } else {
+            throw new MessageException("unable to sign transaction", sign.getEx());
+        }
+    }
+
+    public static final boolean verifyMessageSignature(BaseBean baseBean, String fullPublicKey) throws JsonProcessingException {
+        if (TkmTextUtils.isNullOrBlank(baseBean.getTypeOfSignature())) {
+            System.err.println("missing signature type");
+            return false;
+        }
+        if (TkmTextUtils.isNullOrBlank(baseBean.getSignature())) {
+            System.err.println("missing signature");
+            return false;
+        }
+        if (baseBean.getMessageAction().getFrom().getAddress() == null) {
+            System.err.println("null signing address");
+            return false;
+        }
+        if (TkmTextUtils.isNullOrBlank(baseBean.getMessageAction().getFrom().getAddress())) {
+            System.err.println("missing signature address");
+            return false;
+        }
+        String requestJsonCompact = getRequestJsonCompact(baseBean.getMessageAction());
+        System.out.println("message to be verified: " + requestJsonCompact);
+        switch (baseBean.getTypeOfSignature()) {
+            case "Ed25519BC":
+
+                TkmCypherBean verify = TkmCypherProviderBCED25519.verify(
+                        baseBean.getMessageAction().getFrom().getAddress(),
+                        baseBean.getSignature(),
+                        requestJsonCompact
+                );
+
+                if (verify.isValid()) {
+                    return true;
+                }
+
+                break;
+
+            case "BCQTESLA_PS_1":
+                if (TkmTextUtils.isNullOrBlank(fullPublicKey)) {
+                    throw new AssertionError("missing dflated public key");
+                }
+                break;
+            case "BCQTESLA_PS_1_R2":
+                if (TkmTextUtils.isNullOrBlank(fullPublicKey)) {
+                    throw new AssertionError("missing dflated public key");
+                }
+                break;
+            default:
+                throw new AssertionError("unknown cypher");
+
+        }
+        return false;
     }
 
 }

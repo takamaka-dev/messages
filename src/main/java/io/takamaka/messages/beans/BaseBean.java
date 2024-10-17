@@ -43,4 +43,9 @@ public class BaseBean {
     private MessageAction messageAction;
     @JsonProperty("t")
     private String typeOfAction;
+    @JsonProperty("ts")
+    private String typeOfSignature;
+    @JsonProperty("sg")
+    private String signature;    
+    
 }

@@ -61,8 +61,8 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class SimpleRequestModels {
 
-    private static final String SUPER_SAFE_PASSWORD = "super_safe_password";
-    private static final String EXAMPLE_WALLET_ED25519_QR_EXPORT = "example_wallet_ed25519_qr_export";
+    public static final String SUPER_SAFE_PASSWORD = "super_safe_password";
+    public static final String EXAMPLE_WALLET_ED25519_QR_EXPORT = "example_wallet_ed25519_qr_export";
 
     public static final BaseBean getSimplePayRequest_V_1_0(String to, BigInteger greenValueNanoTkg, BigInteger redValueNanoTkr, String message) throws MessageException {
         return new BaseBean("1.0",
@@ -71,7 +71,10 @@ public class SimpleRequestModels {
                         greenValueNanoTkg,
                         redValueNanoTkr,
                         message),
-                ActionType.REQUEST_PAY.getShortCode());
+                ActionType.REQUEST_PAY.getShortCode(),
+                null,
+                null
+        );
     }
 
     public static final BaseBean getSimpleStakeRequest_V_1_0(String to, BigInteger greenValueNanoTkg, String message) throws MessageException {
@@ -80,7 +83,9 @@ public class SimpleRequestModels {
                         SimpleRequestHelper.getAddress(to),
                         greenValueNanoTkg,
                         message),
-                ActionType.REQUEST_PAY.getShortCode());
+                ActionType.REQUEST_PAY.getShortCode(),
+                null,
+                null);
     }
 
     public static final BaseBean getSimpleStakeUndoRequest_V_1_0(Long notBefore, String message) throws MessageException {
@@ -88,15 +93,19 @@ public class SimpleRequestModels {
                 new StakeUndoRequestAction(
                         notBefore,
                         message),
-                ActionType.REQUEST_PAY.getShortCode());
+                ActionType.REQUEST_PAY.getShortCode(),
+                null,
+                null);
     }
 
     public static final BaseBean getSimpleBlobRequest_V_1_0(String message) throws MessageException {
         return new BaseBean("1.0",
-                new BlobRequestAction(                        
+                new BlobRequestAction(
                         message
                 ),
-                ActionType.BLOB.getShortCode());
+                ActionType.BLOB.getShortCode(),
+                null,
+                null);
     }
 
     public static final BaseBean getWalletEncrypted_V_1_0() throws MessageException {
@@ -122,7 +131,9 @@ public class SimpleRequestModels {
             //try to decypt wallet for test --- END ---
             return new BaseBean("1.0",
                     new WalletEncryptedAction(enckeyBeanFromJson),
-                    ActionType.EXPORT_WALLET_ENCRYPTED.getShortCode()
+                    ActionType.EXPORT_WALLET_ENCRYPTED.getShortCode(),
+                    null,
+                    null
             );
 //        Paths.get(FileHelper.getDefaultWalletDirectoryPath().toString(), internalName + DefaultInitParameters.WALLET_EXTENSION);
 //            return new BaseBean("1.0",

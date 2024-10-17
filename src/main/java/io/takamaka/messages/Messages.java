@@ -10,6 +10,10 @@ import io.takamaka.messages.qr.SimpleQRGenerator;
 import io.takamaka.messages.qr.SimpleQRHelper;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.messages.utils.SimpleRequestModels;
+import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
+import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.exceptions.UnlockWalletException;
+import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.DefaultInitParameters;
 import io.takamaka.wallet.utils.FileHelper;
 import io.takamaka.wallet.utils.TkmTK;
@@ -33,7 +37,7 @@ public class Messages {
 
     }
 
-    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException {
+    public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException {
         System.out.println("Hello World!");
         //force param load
         System.out.println(ReflectionToStringBuilder.toString(new DefaultInitParameters(),
@@ -114,6 +118,11 @@ public class Messages {
                 (new Date()).getTime(),
                 "test stake undo request");
         SimpleQRHelper.getJsonAsQRPNGAndTXT(simpleStakeUndoRequest_v0);
+
+        InstanceWalletKeystoreInterface iwk = new InstanceWalletKeyStoreBCED25519(SimpleRequestModels.EXAMPLE_WALLET_ED25519_QR_EXPORT, SimpleRequestModels.SUPER_SAFE_PASSWORD);
+        SimpleRequestHelper.signMessage(simplePayRequest_v0, iwk, 0);
+        SimpleQRHelper.getJsonAsQRPNGAndTXT(simplePayRequest_v0);
+        System.out.println("is verified? " + SimpleRequestHelper.verifyMessageSignature(simplePayRequest_v0, null));
 
     }
 }
