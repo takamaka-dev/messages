@@ -26,14 +26,14 @@ highest version number.
         - [r](#Red), key: "r", red, value in nanoTK
         - [tm](#Text-Message), key: "tm", text message, UTF8 Text Message
         - [ew](#Encoded-Wallet), key: "ew", encoded wallet, Wallet encrypted with password
-- **[type](#Values-For-Type)**, key: "t", what action I expect to be performed by the qr
+- **[type](#Type)**, key: "t", what action I expect to be performed by the qr
     - *[Values For Type](#Values-For-Type)*
-    - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
-    - *[b](#Blob), value: "b"*, blob (v1.0)
-    - *[rp](#Request-Pay), value: "rp"*, request pay (v1.0)
-    - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
-    - *[su](#Steke-Undo), value: "su"*, stake undo (v1.0)
-    - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
+        - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
+        - *[b](#Blob), value: "b"*, blob (v1.0)
+        - *[rp](#Request-Pay), value: "rp"*, request pay (v1.0)
+        - *[st](#Stake-To-Node), value: "st"*, stake to node (v1.0)
+        - *[su](#Steke-Undo), value: "su"*, stake undo (v1.0)
+        - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
 
 ## Action
 
