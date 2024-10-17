@@ -524,3 +524,6 @@ public class SimpleRequestHelper {
 
 }
 ```
+
+### Verify Signature
+
