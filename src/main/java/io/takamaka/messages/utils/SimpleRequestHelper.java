@@ -16,18 +16,23 @@
 package io.takamaka.messages.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.takamaka.extra.beans.CompactAddressBean;
+import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.identicon.exceptions.AddressNotRecognizedException;
 import io.takamaka.extra.identicon.exceptions.AddressTooLongException;
+import io.takamaka.extra.utils.SerializerUtils;
 import io.takamaka.extra.utils.TkmAddressUtils;
 import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.ed25519;
 import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.qTesla;
 import static io.takamaka.extra.utils.TkmAddressUtils.TypeOfAddress.undefined;
+import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.beans.MessageAction;
 import io.takamaka.messages.beans.MessageAddress;
+import io.takamaka.messages.beans.implementation.MessageActionClazz;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;
@@ -39,7 +44,10 @@ import io.takamaka.wallet.exceptions.HashEncodeException;
 import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.KeyContexts;
+import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.BCQTESLA_PS_1;
+import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.BCQTESLA_PS_1_R2;
 import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Ed25519;
+import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Ed25519BC;
 import static io.takamaka.wallet.utils.KeyContexts.WalletCypher.Tink;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
@@ -135,6 +143,78 @@ public class SimpleRequestHelper {
                 .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
                 .writeValueAsString(messageAction);
 
+    }
+
+    public static final MessageAction fromJsonToMessageAction(String actionJson) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue(actionJson, MessageActionClazz.class);
+    }
+
+    public static final void signEncryptMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index, String password, String scope, String version) throws JsonProcessingException, WalletException, MessageException {
+        //set type of signature
+        baseBean.setTypeOfSignature(iwk.getWalletCypher().name());
+        //set message action from field
+        baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
+        //create message to be signed
+        String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
+        System.out.println("String to be signed " + requestJsonCompact);
+        final EncMessageBean toPasswordEncryptedContent = TkmEncryptionUtils.toPasswordEncryptedContent(password, requestJsonCompact, scope, version);
+        final String encSerializedAction = SerializerUtils.getJson(toPasswordEncryptedContent);
+
+        final TkmCypherBean sign;
+        switch (iwk.getWalletCypher()) {
+            case Ed25519BC:
+                //sign using ed25519
+                sign = TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), encSerializedAction);
+                break;
+
+            case BCQTESLA_PS_1:
+                sign = TkmCypherProviderBCQTESLAPSSC1Round1.sign(iwk.getKeyPairAtIndex(index), encSerializedAction);
+                break;
+            case BCQTESLA_PS_1_R2:
+                sign = TkmCypherProviderBCQTESLAPSSC1Round2.sign(iwk.getKeyPairAtIndex(index), encSerializedAction);
+                break;
+            case Ed25519:
+            case Tink:
+            default:
+                throw new AssertionError(iwk.getWalletCypher().name());
+        }
+        if (sign.isValid()) {
+            //update signature in the base bean
+            baseBean.setSignature(sign.getSignature());
+            baseBean.setEncryptedMessageAction(encSerializedAction);
+            baseBean.setMessageAction(null);
+        } else {
+            throw new MessageException("unable to sign transaction", sign.getEx());
+        }
+    }
+
+    public static final void deccryptMessage(BaseBean baseBean, String password, String scope) throws WalletException, JsonProcessingException {
+        EncMessageBean encMessageBeanFromJson = SerializerUtils.getEncMessageBeanFromJson(baseBean.getEncryptedMessageAction());
+        String actionJson = TkmEncryptionUtils.fromPasswordEncryptedContent(password, scope, encMessageBeanFromJson);
+        System.out.println(actionJson);
+        MessageAction fromJsonToMessageAction = fromJsonToMessageAction(actionJson);
+        baseBean.setMessageAction(fromJsonToMessageAction);
+    }
+
+    public static final boolean verifyEncryptedMessageSignature(BaseBean encrypedBaseBean, String publicKey) {
+        switch (encrypedBaseBean.getTypeOfSignature()) {
+            case "Ed25519BC":
+                TkmCypherBean verifyEd = TkmCypherProviderBCED25519.verify(
+                        publicKey,
+                        encrypedBaseBean.getSignature(),
+                        encrypedBaseBean.getEncryptedMessageAction()
+                );
+
+                if (verifyEd.isValid()) {
+                    return true;
+                }
+                break;
+            default:
+                throw new AssertionError();
+        }
+        return false;
     }
 
     public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {

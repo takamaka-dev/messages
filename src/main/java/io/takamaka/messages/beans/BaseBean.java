@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
  * <li><b>we</b> wallet encrypted <i> (v1.0)</i></li>
  * </ul>
  *
- * 
+ *
  *
  * @author giovanni.antino@takamaka.io
  */
@@ -46,6 +46,8 @@ public class BaseBean {
     @JsonProperty("ts")
     private String typeOfSignature;
     @JsonProperty("sg")
-    private String signature;    
-    
+    private String signature;
+    @JsonProperty("ea")
+    private String encryptedMessageAction;
+
 }

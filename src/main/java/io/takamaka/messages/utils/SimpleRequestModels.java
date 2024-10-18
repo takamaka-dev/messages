@@ -62,6 +62,8 @@ import javax.crypto.spec.SecretKeySpec;
 public class SimpleRequestModels {
 
     public static final String SUPER_SAFE_PASSWORD = "super_safe_password";
+    public static final String SUPER_SAFE_ENCRYPTION_PASSWORD = "super_safe_encryption_password";
+    public static final String SUPER_ENCRYPTION_SCOPE = "super_encryption_scope";
     public static final String EXAMPLE_WALLET_ED25519_QR_EXPORT = "example_wallet_ed25519_qr_export";
 
     public static final BaseBean getSimplePayRequest_V_1_0(String to, BigInteger greenValueNanoTkg, BigInteger redValueNanoTkr, String message) throws MessageException {
@@ -72,6 +74,7 @@ public class SimpleRequestModels {
                         redValueNanoTkr,
                         message),
                 ActionType.REQUEST_PAY.getShortCode(),
+                null,
                 null,
                 null
         );
@@ -85,6 +88,7 @@ public class SimpleRequestModels {
                         message),
                 ActionType.REQUEST_PAY.getShortCode(),
                 null,
+                null,
                 null);
     }
 
@@ -95,6 +99,7 @@ public class SimpleRequestModels {
                         message),
                 ActionType.REQUEST_PAY.getShortCode(),
                 null,
+                null,
                 null);
     }
 
@@ -104,6 +109,7 @@ public class SimpleRequestModels {
                         message
                 ),
                 ActionType.BLOB.getShortCode(),
+                null,
                 null,
                 null);
     }
@@ -133,18 +139,12 @@ public class SimpleRequestModels {
                     new WalletEncryptedAction(enckeyBeanFromJson),
                     ActionType.EXPORT_WALLET_ENCRYPTED.getShortCode(),
                     null,
+                    null,
                     null
             );
-//        Paths.get(FileHelper.getDefaultWalletDirectoryPath().toString(), internalName + DefaultInitParameters.WALLET_EXTENSION);
-//            return new BaseBean("1.0",
-//                    new PayRequestAction(
-//                            SimpleRequestHelper.getAddress(to),
-//                            greenValueNanoTkg,
-//                            redValueNanoTkr,
-//                            message),
-//                    ActionType.REQUEST_PAY.name());
         } catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException | UnlockWalletException | IOException | HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | InvalidKeySpecException | NoSuchAlgorithmException | NoSuchPaddingException ex) {
             throw new MessageException(ex);
         }
     }
+
 }
