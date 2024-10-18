@@ -59,11 +59,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
+@Slf4j
 public class SimpleRequestHelper {
 
     public static final String ADDRESS_CHECK_ED25519_STRING = "^[a-zA-Z0-9-_.]{44}$";
@@ -158,10 +160,10 @@ public class SimpleRequestHelper {
         baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
         //create message to be signed
         String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
-        System.out.println("String to be signed " + requestJsonCompact);
+        log.info("String to be signed " + requestJsonCompact);
         final EncMessageBean toPasswordEncryptedContent = TkmEncryptionUtils.toPasswordEncryptedContent(password, requestJsonCompact, scope, version);
         final String encSerializedAction = SerializerUtils.getJson(toPasswordEncryptedContent);
-        System.out.println("Encrypted message to be signed: " + encSerializedAction);
+        log.info("Encrypted message to be signed: " + encSerializedAction);
         final TkmCypherBean sign;
         switch (iwk.getWalletCypher()) {
             case Ed25519BC:
@@ -193,7 +195,7 @@ public class SimpleRequestHelper {
     public static final void deccryptMessage(BaseBean baseBean, String password, String scope) throws WalletException, JsonProcessingException {
         EncMessageBean encMessageBeanFromJson = SerializerUtils.getEncMessageBeanFromJson(baseBean.getEncryptedMessageAction());
         String actionJson = TkmEncryptionUtils.fromPasswordEncryptedContent(password, scope, encMessageBeanFromJson);
-        System.out.println(actionJson);
+        log.info(actionJson);
         MessageAction fromJsonToMessageAction = fromJsonToMessageAction(actionJson);
         baseBean.setMessageAction(fromJsonToMessageAction);
     }
@@ -224,7 +226,7 @@ public class SimpleRequestHelper {
         baseBean.getMessageAction().setFrom(getAddress(iwk.getPublicKeyAtIndexURL64(index)));
         //create message to be signed
         String requestJsonCompact = SimpleRequestHelper.getRequestJsonCompact(baseBean.getMessageAction());
-        System.out.println("String to be signed " + requestJsonCompact);
+        log.info("String to be signed " + requestJsonCompact);
         final TkmCypherBean sign;
         switch (iwk.getWalletCypher()) {
             case Ed25519BC:
@@ -269,7 +271,7 @@ public class SimpleRequestHelper {
             return false;
         }
         String requestJsonCompact = getRequestJsonCompact(baseBean.getMessageAction());
-        System.out.println("message to be verified: " + requestJsonCompact);
+        log.info("message to be verified: " + requestJsonCompact);
         switch (baseBean.getTypeOfSignature()) {
             case "Ed25519BC":
 

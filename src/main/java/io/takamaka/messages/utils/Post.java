@@ -30,17 +30,19 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.StringJoiner;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  *
  * @author iris
  */
+@Slf4j
 public class Post {
 
     public static String Post(String uri, Map<String, String> parameters) throws UnsupportedEncodingException, ProtocolException, IOException {
 
         URL url = new URL(uri);
-        System.out.println("Uri : " + uri);
+        log.info("Uri : " + uri);
         URLConnection con = url.openConnection();
         HttpURLConnection http = (HttpURLConnection) con;
         http.setRequestMethod("POST"); // PUT is another valid option
@@ -50,11 +52,11 @@ public class Post {
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
             sj.add(URLEncoder.encode(entry.getKey(), "UTF-8") + "="
                     + URLEncoder.encode(entry.getValue(), "UTF-8"));
-            System.out.println("Key: " + entry.getKey() + " - Value: " + entry.getValue());
+            log.info("Key: " + entry.getKey() + " - Value: " + entry.getValue());
         }
         byte[] out = sj.toString().getBytes(StandardCharsets.UTF_8);
         int length = out.length;
-        System.out.println(sj.toString());
+        log.info(sj.toString());
 
         http.setFixedLengthStreamingMode(length);
         http.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");

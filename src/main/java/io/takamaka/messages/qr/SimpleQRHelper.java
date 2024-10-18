@@ -63,11 +63,11 @@ public class SimpleQRHelper {
             String requestJsonPretty = SimpleRequestHelper.getRequestJsonPretty(simpleRequest);
             String filename = getNameFromText(requestJsonPretty);
             String destFile = Paths.get(destFolder, filename).toString();
-            System.out.println(SimpleQRGenerator.writeQRToPNG(Path.of(destFile), 256, 256, requestJsonPretty));
-            System.out.println("Json File: " + filename + ".txt");
-            System.out.println(requestJsonPretty);
+            log.info(SimpleQRGenerator.writeQRToPNG(Path.of(destFile), 256, 256, requestJsonPretty));
+            log.info("Json File: " + filename + ".txt");
+            log.info(requestJsonPretty);
             SimpleQRGenerator.writeJsonToTXT(Path.of(destFolder), requestJsonPretty, filename);
-            System.out.println("-------------------------------------------------------------------------------------------");
+            log.info("-------------------------------------------------------------------------------------------");
 
         } catch (IOException ex) {
             throw new QrException(ex);
