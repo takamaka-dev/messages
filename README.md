@@ -600,7 +600,7 @@ initialize the decoder and the encrypted text.
 
 
 ```json
-\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]
+"ea" : "{\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]}"
 ```
 
 Decrypting the message populates the action field with the action contained 
