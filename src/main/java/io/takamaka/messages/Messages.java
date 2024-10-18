@@ -170,8 +170,6 @@ public class Messages {
         log.info("is verified? " + SimpleRequestHelper.verifyEncryptedMessageSignature(simplePayRequest_v0, iwk.getPublicKeyAtIndexURL64(0)));
         SimpleRequestHelper.deccryptMessage(simplePayRequest_v0, SimpleRequestModels.SUPER_SAFE_ENCRYPTION_PASSWORD, SimpleRequestModels.SUPER_ENCRYPTION_SCOPE);
         log.info(SimpleRequestHelper.getRequestJsonPretty(simplePayRequest_v0));
-        
-        log.info("LOG");
-        log.info("LOOOOOOOOOOOOOOOOOOOOOOOL");
+
     }
 }

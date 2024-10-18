@@ -583,5 +583,64 @@ in the production blockchain are available on the servers).
 
 ## Encryption
 
+In encrypted messages the action message is null and there is an [ea](#Encrypted-Message-Action) field 
+containing the encrypted action.
+The from field cannot be read while the signature is exposed in plain text.
+If I know the identity of the sender, I can verify the signature before 
+decoding the message.
+
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/SIGNED_ENCRYPTED.png)
+
+### Encrypted Message Action
+
 key **ea**
+
+The field value is a stringified json that contains all the details needed to 
+initialize the decoder and the encrypted text.
+
+
+```json
+{\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]}
+```
+
+Decrypting the message populates the action field with the action contained 
+in the encrypted text.
+
+Message before decoding:
+
+```json
+{
+  "v" : "1.0",
+  "t" : "rp",
+  "ts" : "Ed25519BC",
+  "sg" : "R-PPsiPYz8rivMmj20x9YZZvFxwVUXLWrxPWNCu9DauV3-nSjYfXBc01qvHSTh79K-L5v8-67b2B4KyixO5RAQ..",
+  "ea" : "{\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]}"
+}
+```
+
+Message after decoding:
+
+
+```json
+{
+  "v" : "1.0",
+  "a" : {
+    "fr" : {
+      "t" : "f",
+      "ma" : "v8a3bHFvpKadNvBEYGhstAW3hFQ9YTonsClrSML_T_4."
+    },
+    "to" : {
+      "t" : "c",
+      "ma" : "Iq1wmZeyhgjdeoaNAnBFHtgfXzyw_JtBDXc3ij1ybWuT6G_vWfS6U3YkuBJNYs3r"
+    },
+    "g" : 10000000000,
+    "r" : 2000000000,
+    "tm" : "chiave qTesla + green + red"
+  },
+  "t" : "rp",
+  "ts" : "Ed25519BC",
+  "sg" : "R-PPsiPYz8rivMmj20x9YZZvFxwVUXLWrxPWNCu9DauV3-nSjYfXBc01qvHSTh79K-L5v8-67b2B4KyixO5RAQ..",
+  "ea" : "{\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]}"
+}
+```
 

@@ -1,0 +1,7 @@
+{
+  "v" : "1.0",
+  "t" : "rp",
+  "ts" : "Ed25519BC",
+  "sg" : "R-PPsiPYz8rivMmj20x9YZZvFxwVUXLWrxPWNCu9DauV3-nSjYfXBc01qvHSTh79K-L5v8-67b2B4KyixO5RAQ..",
+  "ea" : "{\"pa\":\"PBKDF2WithHmacSHA512\",\"it\":20000,\"tr\":\"AES/CBC/PKCS5Padding\",\"ka\":\"AES\",\"tv\":\"v0_1_a\",\"kl\":256,\"ec\":\"UTF-8\",\"em\":[\"vfLKeeWsFXq27jOumjgeoQ..\",\"HXMqNv0AlOKEm-3UfSLnz_PXq2qP_ep2J2EjtjcIf8TytF16hCt4H8w24bR1p11nOMusRNwegTJY6hRtOIIS0qWzSIVEh9g_2DZUK4Yvl14l-OAjEaGgUslQB863YV6dtOKcEbYqYGeCaZoMiJ3THJdZj345MhriG091yNooGdJb3kY9mWAt_HLj1gWrc-26xu1ViZIUX7DYxO4XRhi9dLmblg5gLb40fLhONNNYEJZe9F-vkF_1wrPjfURila93trinGw5xdoUk4uzRQTDrtw9ZmDQJDDQgh1aoN234rgs.\"]}"
+}
