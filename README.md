@@ -12,6 +12,9 @@ In the event that a field is introduced that breaks compatibility a new major
 version must be created. The json version corresponds to the field with the 
 highest version number.
 
+![image](https://github.com/takamaka-dev/messages/blob/master/src/main/resources/img/external_bean_execution_flow.png)
+
+
 - **[version](#External-Json-Envelope)**, key:"v", string like "1.0"
 - **[action](#Action)**, key: "a", the data needed to perform the action
     - *[message of action](#Message-Of-Action)*
