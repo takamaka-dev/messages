@@ -161,7 +161,7 @@ public class SimpleRequestHelper {
         System.out.println("String to be signed " + requestJsonCompact);
         final EncMessageBean toPasswordEncryptedContent = TkmEncryptionUtils.toPasswordEncryptedContent(password, requestJsonCompact, scope, version);
         final String encSerializedAction = SerializerUtils.getJson(toPasswordEncryptedContent);
-
+        System.out.println("Encrypted message to be signed: " + encSerializedAction);
         final TkmCypherBean sign;
         switch (iwk.getWalletCypher()) {
             case Ed25519BC:

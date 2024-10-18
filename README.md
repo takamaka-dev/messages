@@ -36,6 +36,7 @@ highest version number.
         - *[we](#Wallet-Encrypted), value: "ew"*, wallet encrypted (v1.0)
 - **[Type Of Signature](#Type-Of-Signature)**, key:"ts", string like "Ed25519BC" defined by the takamaka.io core wallet library
 - **[Signature](#Signature)**, key:"sg", base64 url encoded bytes of the signature
+- **[Encryption](#Encryption)**, key:"ea", encrypted message action
 
 ## Action
 
@@ -579,3 +580,8 @@ For qTesla keys I have to:
 The complete procedure is available in the example classes and uses takamaka.io 
 servers to retrieve the full qTesla keys (only those of nodes registered as Main 
 in the production blockchain are available on the servers). 
+
+## Encryption
+
+key **ea**
+
