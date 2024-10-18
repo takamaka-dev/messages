@@ -34,6 +34,8 @@ import java.util.Date;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.config.Configurator;
 
 /**
  *
@@ -47,6 +49,8 @@ public class Messages {
     }
 
     public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException {
+        Configurator.setLevel("io.takamaka.messages.Messages", Level.DEBUG);
+        log.info("test constructor");
         System.out.println("Hello World!");
         //force param load
         System.out.println(ReflectionToStringBuilder.toString(new DefaultInitParameters(),
@@ -166,5 +170,7 @@ public class Messages {
         System.out.println("is verified? " + SimpleRequestHelper.verifyEncryptedMessageSignature(simplePayRequest_v0, iwk.getPublicKeyAtIndexURL64(0)));
         SimpleRequestHelper.deccryptMessage(simplePayRequest_v0, SimpleRequestModels.SUPER_SAFE_ENCRYPTION_PASSWORD, SimpleRequestModels.SUPER_ENCRYPTION_SCOPE);
         System.out.println(SimpleRequestHelper.getRequestJsonPretty(simplePayRequest_v0));
+        
+        log.info("LOG");
     }
 }
