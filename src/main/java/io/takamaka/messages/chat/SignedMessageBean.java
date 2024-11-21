@@ -15,6 +15,7 @@
  */
 package io.takamaka.messages.chat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -33,6 +34,9 @@ public class SignedMessageBean {
     private String from;
     @EqualsAndHashCode.Include
     private String signature;
-    private String type;
+    @JsonProperty("message-type")
+    private String messageType;
+    @JsonProperty("signature-type")
+    private String signatureType;
 
 }

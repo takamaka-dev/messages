@@ -36,4 +36,6 @@ public class RegisterUserRequestSignedContentBean {
      */
     @JsonProperty("encryption-public-key")
     private String encryptionPublicKey;
+    @JsonProperty("encryption-public-key-type")
+    private String encryptionPublicKeyType;
 }

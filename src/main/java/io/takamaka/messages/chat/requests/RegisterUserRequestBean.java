@@ -32,8 +32,8 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class RegisterUserRequestBean extends SignedMessageBean {
 
-    public RegisterUserRequestBean(RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean, String from, String signature, String type) {
-        super(from, signature, type);
+    public RegisterUserRequestBean(RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean, String from, String signature, String messageType, String signatureType) {
+        super(from, signature, messageType, signatureType);
         this.registerUserRequestSignedContentBean = registerUserRequestSignedContentBean;
     }
 

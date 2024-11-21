@@ -44,32 +44,51 @@ import static org.junit.Assert.*;
  */
 @Slf4j
 public class MessagesTest {
-    
+
     public static InstanceWalletKeystoreInterface iwkED;
     public static InstanceWalletKeystoreInterface iwkRSA;
     public static final String password = "superSecretPassword";
-    
+
     public MessagesTest() {
         BasicConfigurator.configure();
     }
-    
+
     @BeforeAll
     public static void setUpClass() throws WalletException {
-        
+
         iwkED = new InstanceWalletKeyStoreBCED25519("chat_messages_wallet_test", password);
         iwkRSA = new InstanceWalletKeyStoreBCRSA4096ENC("chat_messages_wallet_test", password);
 //        iwkED = new InstanceWalletKeyStore("chat_messages_wallet_test", password);
     }
-    
+
     @Test
     public void testRegisterUserRequestBean() throws Exception {
-        RegisterUserRequestBean signedRegisteredUserRequests = ChatUtils.getSignedRegisteredUserRequests(iwkED, 0, new RegisterUserRequestSignedContentBean(new NonceBean(UUID.randomUUID().toString(), Long.MIN_VALUE, Long.MIN_VALUE), iwkRSA.getPublicKeyAtIndexURL64(0)));
+        RegisterUserRequestBean signedRegisteredUserRequests
+                = ChatUtils.getSignedRegisteredUserRequests(
+                        iwkED,
+                        0,
+                        new RegisterUserRequestSignedContentBean(
+                                new NonceBean(
+                                        UUID.randomUUID().toString(),
+                                        Long.MIN_VALUE,
+                                        Long.MIN_VALUE
+                                ),
+                                iwkRSA.getPublicKeyAtIndexURL64(0),
+                                iwkRSA.getWalletCypher().name()
+                        )
+                );
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String sigReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
         RegisterUserRequestBean fromJsonRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(sigReqJson);
         assertEquals(fromJsonRegisterUserRequestBean, signedRegisteredUserRequests);
         SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(sigReqJson);
         log.info(fromJsonToSignedMessageBean.toString());
+        SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(sigReqJson);
+        assert (verifySignedMessage != null);
+        RegisterUserRequestBean rurb = (RegisterUserRequestBean) verifySignedMessage;
+        log.info(rurb.toString());
+        assertNotNull(rurb.getRegisterUserRequestSignedContentBean().getNonce());
+
     }
-    
+
 }

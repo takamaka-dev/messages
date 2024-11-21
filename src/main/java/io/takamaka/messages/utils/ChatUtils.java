@@ -21,10 +21,18 @@ import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.MessageException;
+import io.takamaka.messages.exception.UnsupportedChatMessageTypeException;
+import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.TkmCypherProviderBCED25519;
+import io.takamaka.wallet.beans.TkmCypherBean;
 import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmTextUtils;
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import lombok.extern.slf4j.Slf4j;
@@ -58,10 +66,58 @@ public class ChatUtils {
                 .readValue(jsonMessage, SignedMessageBean.class);
     }
 
+    public static final SignedMessageBean verifySignedMessage(String messageJson, String... from) throws ChatMessageException {
+        try {
+            SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(messageJson);
+            final String jsonCanonical;
+            final String pk;
+            switch (from.length) {
+                case 0:
+                    pk = fromJsonToSignedMessageBean.getFrom();
+                    break;
+                case 1:
+                    pk = from[0];
+                    break;
+                default:
+                    throw new ChatMessageException("invalid parameters number, expected 0..1 got " + Arrays.toString(from));
+            }
+            final TkmCypherBean verifyResult;
+            final SignedMessageBean returnObj;
+            switch (fromJsonToSignedMessageBean.getMessageType()) {
+                //java 17 limitation...
+                case "REGISTER_USER_SIGNED_REQUEST":
+                    RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
+                    returnObj = fromJsonToRegisterUserRequestBean;
+                    break;
+
+                default:
+                    throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
+            }
+
+            switch (fromJsonToSignedMessageBean.getSignatureType()) {
+                case "Ed25519BC":
+                    verifyResult = TkmCypherProviderBCED25519.verify(pk, fromJsonToSignedMessageBean.getSignature(), jsonCanonical);
+                    break;
+
+                default:
+                    throw new UnsupportedSignatureCypherException("unsupported message type" + fromJsonToSignedMessageBean.getSignatureType());
+            }
+            if (verifyResult.isValid()) {
+                return returnObj;
+            }
+
+        } catch (JsonProcessingException ex) {
+            throw new ChatMessageException(ex);
+        }
+        return null;
+
+    }
+
     public static final RegisterUserRequestBean getSignedRegisteredUserRequests(InstanceWalletKeystoreInterface iwk, int i, RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(registerUserRequestSignedContentBean), iwk, i);
-            return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name());
+            return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
