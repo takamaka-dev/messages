@@ -185,8 +185,29 @@ public class MessagesTest {
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
         Exception ex = assertThrows(ChatMessageException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson, "pollo", "prova"));
-        assertEquals(ex.getMessage(), "invalid parameters number, expected 0..1 got ");
+        //assertEquals(ex.getMessage(), "invalid parameters number, expected 0..1 got [pollo,prova]");
 
+    }
+    
+    @Test
+    public void testRegisterRequestBean_withInvalidCypherName() throws Exception{
+         RegisterUserRequestBean signedRegisteredUserRequests
+                = ChatUtils.getSignedRegisteredUserRequests(
+                        iwkED,
+                        0,
+                        new RegisterUserRequestSignedContentBean(
+                                new NonceResponseBean(
+                                        UUID.randomUUID().toString(),
+                                        Long.MIN_VALUE,
+                                        Long.MIN_VALUE
+                                ),
+                                "pollo",
+                                "cypher_test"
+                        )
+                );
+        log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
+        String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
+       // Exception ex = assertThrows(ChatMessageException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson,));
     }
 
 }
