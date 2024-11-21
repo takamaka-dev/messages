@@ -136,7 +136,13 @@ public class SimpleRequestHelper {
                 .configure(SerializationFeature.INDENT_OUTPUT, false)
                 .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
                 .writeValueAsString(baseBean);
+    }
 
+    public static final String getCanonicalJson(Object contentBean) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper()
+                .configure(SerializationFeature.INDENT_OUTPUT, false)
+                .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true)
+                .writeValueAsString(contentBean);
     }
 
     public static final String getRequestJsonCompact(MessageAction messageAction) throws JsonProcessingException {
@@ -217,6 +223,53 @@ public class SimpleRequestHelper {
                 throw new AssertionError();
         }
         return false;
+    }
+
+    /**
+     *
+     * Use @see SimpleRequestHelper.getCanonicalJson for details for
+     * canonical message
+     *
+     * @param canonicalJsonMessage minimized json with keys lexicographically
+     * ordered
+     * @param iwk
+     * @param index
+     * @return
+     * @throws MessageException
+     */
+    public static final String signChatMessage(String canonicalJsonMessage, InstanceWalletKeystoreInterface iwk, int index) throws MessageException {
+        TkmCypherBean sign = null;
+        try {
+            switch (iwk.getWalletCypher()) {
+                case Ed25519BC:
+                    //sign using ed25519
+                    sign = TkmCypherProviderBCED25519.sign(iwk.getKeyPairAtIndex(index), canonicalJsonMessage);
+                    break;
+
+                case BCQTESLA_PS_1:
+                    sign = TkmCypherProviderBCQTESLAPSSC1Round1.sign(iwk.getKeyPairAtIndex(index), canonicalJsonMessage);
+                    break;
+                case BCQTESLA_PS_1_R2:
+                    sign = TkmCypherProviderBCQTESLAPSSC1Round2.sign(iwk.getKeyPairAtIndex(index), canonicalJsonMessage);
+                    break;
+                case Ed25519:
+                case Tink:
+                default:
+                    throw new AssertionError(iwk.getWalletCypher().name());
+            }
+            if (sign.isValid()) {
+                //update signature in the base bean
+                return sign.getSignature();
+            } else {
+                throw new MessageException("unable to sign transaction", sign.getEx());
+            }
+        } catch (WalletException ex) {
+            if (sign != null) {
+                throw new MessageException("signature exception [1]", sign.getEx());
+            } else {
+                throw new MessageException("signature exception [2]", ex);
+            }
+        }
     }
 
     public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {
