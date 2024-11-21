@@ -19,6 +19,7 @@ import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.utils.ChatUtils;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
@@ -89,5 +90,35 @@ public class MessagesTest {
         assertNotNull(rurb.getRegisterUserRequestSignedContentBean().getNonce());
 
     }
+    
+    @Test
+    public void testRegisterUserRequestBean_withEmptyKey() throws Exception{
+         RegisterUserRequestBean signedRegisteredUserRequests
+                = ChatUtils.getSignedRegisteredUserRequests(
+                        iwkED,
+                        0,
+                        new RegisterUserRequestSignedContentBean(
+                                new NonceResponseBean(
+                                        UUID.randomUUID().toString(),
+                                        Long.MIN_VALUE,
+                                        Long.MIN_VALUE
+                                ),
+                                null,
+                                iwkRSA.getWalletCypher().name()
+                        )
+                );
+         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
+         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
+         RegisterUserRequestBean fromSignedRegisteredUserRequests = ChatUtils.fromJsonToRegisterUserRequestBean(jsonReqJson);
+         assertEquals(signedRegisteredUserRequests, fromSignedRegisteredUserRequests);
+         log.info(fromSignedRegisteredUserRequests.toString());
+         SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(jsonReqJson);
+         assert (verifySignedMessage != null);
+         RegisterUserRequestBean rurb = (RegisterUserRequestBean) verifySignedMessage;
+         log.info(rurb.toString());
+         assertNotNull(rurb.getRegisterUserRequestSignedContentBean().getNonce());
+  
+    }
+    
 
 }
