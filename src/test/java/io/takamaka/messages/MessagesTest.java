@@ -23,6 +23,7 @@ import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
 import io.takamaka.wallet.exceptions.WalletException;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,10 @@ public class MessagesTest {
     public void testRegisterUserRequestBean() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests = ChatUtils.getSignedRegisteredUserRequests(iwkED, 0, new RegisterUserRequestSignedContentBean(new NonceBean(UUID.randomUUID().toString(), Long.MIN_VALUE, Long.MIN_VALUE), iwkRSA.getPublicKeyAtIndexURL64(0)));
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
+        String sigReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
+        RegisterUserRequestBean fromJsonRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(sigReqJson);
+        assertEquals(fromJsonRegisterUserRequestBean, signedRegisteredUserRequests);
+        
     }
     
 }

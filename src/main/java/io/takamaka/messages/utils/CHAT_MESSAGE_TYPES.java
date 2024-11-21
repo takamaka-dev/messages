@@ -13,26 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.chat;
-
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+package io.takamaka.messages.utils;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class SignedMessageBean {
-
-    private String from;
-    @EqualsAndHashCode.Include
-    private String signature;
-    private String type;
-
+public enum CHAT_MESSAGE_TYPES {
+    REGISTER_USER_SIGNED_REQUEST
 }
