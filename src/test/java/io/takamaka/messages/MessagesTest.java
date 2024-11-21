@@ -22,6 +22,7 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
+import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
 import io.takamaka.messages.utils.ChatUtils;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
@@ -29,6 +30,7 @@ import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
 import io.takamaka.wallet.exceptions.WalletException;
+import java.util.Arrays;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.log4j.BasicConfigurator;
@@ -168,6 +170,7 @@ public class MessagesTest {
 
     @Test
     public void testRegisterUserRequestBean_withInvalidParams() throws Exception {
+        String[] from = new String [] {"pollo", "prova"};
         RegisterUserRequestBean signedRegisteredUserRequests
                 = ChatUtils.getSignedRegisteredUserRequests(
                         iwkED,
@@ -185,29 +188,11 @@ public class MessagesTest {
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
         Exception ex = assertThrows(ChatMessageException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson, "pollo", "prova"));
-        //assertEquals(ex.getMessage(), "invalid parameters number, expected 0..1 got [pollo,prova]");
+        String exMsg = "invalid parameters number, expected 0..1 got " + Arrays.toString(from);
+        assertEquals(ex.getMessage(), exMsg);
 
     }
     
-    @Test
-    public void testRegisterRequestBean_withInvalidCypherName() throws Exception{
-         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
-                        iwkED,
-                        0,
-                        new RegisterUserRequestSignedContentBean(
-                                new NonceResponseBean(
-                                        UUID.randomUUID().toString(),
-                                        Long.MIN_VALUE,
-                                        Long.MIN_VALUE
-                                ),
-                                "pollo",
-                                "cypher_test"
-                        )
-                );
-        log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
-        String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
-       // Exception ex = assertThrows(ChatMessageException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson,));
-    }
+
 
 }
