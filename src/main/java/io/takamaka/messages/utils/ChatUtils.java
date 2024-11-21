@@ -16,7 +16,9 @@
 package io.takamaka.messages.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.takamaka.messages.beans.BaseBean;
+import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.exception.MessageException;
@@ -47,6 +49,13 @@ public class ChatUtils {
 
     public static final RegisterUserRequestBean fromJsonToRegisterUserRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RegisterUserRequestBean.class);
+    }
+
+    public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils
+                .getJacksonMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue(jsonMessage, SignedMessageBean.class);
     }
 
     public static final RegisterUserRequestBean getSignedRegisteredUserRequests(InstanceWalletKeystoreInterface iwk, int i, RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean) throws MessageException {

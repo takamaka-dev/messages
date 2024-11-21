@@ -16,6 +16,7 @@
 package io.takamaka.messages;
 
 import io.takamaka.messages.chat.NonceBean;
+import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.utils.ChatUtils;
@@ -67,7 +68,8 @@ public class MessagesTest {
         String sigReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
         RegisterUserRequestBean fromJsonRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(sigReqJson);
         assertEquals(fromJsonRegisterUserRequestBean, signedRegisteredUserRequests);
-        
+        SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(sigReqJson);
+        log.info(fromJsonToSignedMessageBean.toString());
     }
     
 }
