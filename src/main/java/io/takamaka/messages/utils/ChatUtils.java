@@ -22,6 +22,7 @@ import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.exception.ChatMessageException;
+import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.exception.UnsupportedChatMessageTypeException;
 import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
@@ -106,11 +107,13 @@ public class ChatUtils {
             if (verifyResult.isValid()) {
                 return returnObj;
             }
+            else{
+                throw new InvalidChatMessageSignatureException("invalid message signature");
+            }
 
         } catch (JsonProcessingException ex) {
             throw new ChatMessageException(ex);
         }
-        return null;
 
     }
 
