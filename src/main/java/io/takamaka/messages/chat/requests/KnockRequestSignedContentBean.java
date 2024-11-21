@@ -15,8 +15,6 @@
  */
 package io.takamaka.messages.chat.requests;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.takamaka.messages.chat.responses.NonceResponseBean;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,14 +26,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterUserRequestSignedContentBean {
+public class KnockRequestSignedContentBean {
 
-    private NonceResponseBean nonce;
-    /**
-     * this message is used for sharing to all the encryption key
-     */
-    @JsonProperty("encryption-public-key")
-    private String encryptionPublicKey;
-    @JsonProperty("encryption-public-key-type")
-    private String encryptionPublicKeyType;
+    private String to;
+    private Long timestamp;
 }

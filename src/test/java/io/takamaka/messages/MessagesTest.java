@@ -15,7 +15,7 @@
  */
 package io.takamaka.messages;
 
-import io.takamaka.messages.chat.NonceBean;
+import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
@@ -64,11 +64,10 @@ public class MessagesTest {
     @Test
     public void testRegisterUserRequestBean() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
-                        iwkED,
+                = ChatUtils.getSignedRegisteredUserRequests(iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
-                                new NonceBean(
+                                new NonceResponseBean(
                                         UUID.randomUUID().toString(),
                                         Long.MIN_VALUE,
                                         Long.MIN_VALUE
