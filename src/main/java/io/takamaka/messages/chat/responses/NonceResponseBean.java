@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class NonceResponseBean {
 
+    //es 81b641a3-51f0-4941-9912-68d86c2b0d2b
     private String nonce;
     private Long timestamp;
     private Long liveness;
