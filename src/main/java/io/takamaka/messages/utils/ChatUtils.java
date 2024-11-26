@@ -16,11 +16,14 @@
 package io.takamaka.messages.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
+import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
@@ -33,6 +36,8 @@ import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,6 +49,9 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class ChatUtils {
+
+    public static final TypeReference<List<RequestUserKeyRequestBeanSignedContent>> type_ListRequestUserKeyRequestBeanSignedContent = new TypeReference<>() {
+    };
 
     /**
      * pretty printer for visualization
@@ -58,6 +66,14 @@ public class ChatUtils {
 
     public static final RegisterUserRequestBean fromJsonToRegisterUserRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RegisterUserRequestBean.class);
+    }
+
+    public static final List<RequestUserKeyRequestBeanSignedContent> fromJsonToListRequestUserKeyRequestBeanSignedContent(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, type_ListRequestUserKeyRequestBeanSignedContent);
+    }
+
+    public static final RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RequestUserKeyRequestBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {
@@ -91,6 +107,11 @@ public class ChatUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
                     returnObj = fromJsonToRegisterUserRequestBean;
                     break;
+                case "REQUEST_USER_KEYS":
+                    RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean = ChatUtils.fromJsonToRequestUserKeyRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRequestUserKeyRequestBean.getRequestUserKeyRequestBeanSignedContent());
+                    returnObj = fromJsonToRequestUserKeyRequestBean;
+                    break;
 
                 default:
                     throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
@@ -106,8 +127,7 @@ public class ChatUtils {
             }
             if (verifyResult.isValid()) {
                 return returnObj;
-            }
-            else{
+            } else {
                 throw new InvalidChatMessageSignatureException("invalid message signature");
             }
 
@@ -121,6 +141,19 @@ public class ChatUtils {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(registerUserRequestSignedContentBean), iwk, i);
             return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    public static final RequestUserKeyRequestBean getRequestUserKeyRequestBean(InstanceWalletKeystoreInterface iwk, int i, List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(requestUserKeyRequestBeanSignedContent), iwk, i);
+            return new RequestUserKeyRequestBean(requestUserKeyRequestBeanSignedContent, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REQUEST_USER_KEYS.name(), KeyContexts.WalletCypher.Ed25519BC.name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);

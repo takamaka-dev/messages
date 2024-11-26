@@ -35,6 +35,11 @@ import lombok.extern.slf4j.Slf4j;
 @EqualsAndHashCode(callSuper = true)
 public class RequestUserKeyRequestBean extends SignedMessageBean {
 
+    public RequestUserKeyRequestBean(List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent, String from, String signature, String messageType, String signatureType) {
+        super(from, signature, messageType, signatureType);
+        this.requestUserKeyRequestBeanSignedContent = requestUserKeyRequestBeanSignedContent;
+    }    
+    
     @JsonProperty("request-user-key-request-bean-signed-content")
     private List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent;
 }

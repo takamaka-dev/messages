@@ -20,5 +20,6 @@ package io.takamaka.messages.utils;
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 public enum CHAT_MESSAGE_TYPES {
-    REGISTER_USER_SIGNED_REQUEST
+    REGISTER_USER_SIGNED_REQUEST,
+    REQUEST_USER_KEYS
 }
