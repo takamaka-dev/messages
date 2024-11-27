@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.beans.BaseBean;
+import io.takamaka.messages.chat.ConversationNameHashBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
@@ -235,5 +236,16 @@ public class ChatUtils {
             throw new MessageException(ex);
         }
 
+    }
+
+    public static final String getConversationName(String[] partecipants, String topicHash) throws ChatMessageException {
+        try {
+            Arrays.sort(partecipants);
+            ConversationNameHashBean conversationNameHashBean = new ConversationNameHashBean(Arrays.asList(partecipants), topicHash);
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(conversationNameHashBean);
+            return TkmSignUtils.Hash256ToHex(canonicalJson);
+        } catch (JsonProcessingException | HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException ex) {
+            throw new ChatMessageException(ex);
+        }
     }
 }
