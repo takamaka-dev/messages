@@ -7,6 +7,7 @@ package io.takamaka.messages.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.takamaka.extra.beans.CombinedRSAAESBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
+import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
@@ -16,7 +17,12 @@ import io.takamaka.messages.exception.InvalidParameterException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
+import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
+import io.takamaka.wallet.exceptions.HashEncodeException;
+import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.TkmSignUtils;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -81,6 +87,19 @@ public class ChatCryptoUtils {
         RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
         RegisterUserRequestBean signedRegisteredUserRequests = ChatUtils.getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
         return signedRegisteredUserRequests;
+    }
+
+    public static final TopicKeyDistributionItemBean getInviteForUser(RegisterUserRequestBean registerUserRequestBean, String topicSymmetricKey) throws CryptoMessageException {
+        try {
+            String encryptionPublicKey = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKey();
+            TopicKeyDistributionItemBean invite = new TopicKeyDistributionItemBean(
+                    TkmSignUtils.Hash256B64URL(encryptionPublicKey),
+                    TkmCypherProviderBCRSA4096ENC
+                            .encrypt(encryptionPublicKey, topicSymmetricKey));
+            return invite;
+        } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
     }
 
 }
