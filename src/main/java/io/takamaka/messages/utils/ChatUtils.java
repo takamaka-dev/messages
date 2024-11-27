@@ -25,7 +25,7 @@ import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
-import io.takamaka.messages.chat.requests.CreateConversationRequest;
+import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
@@ -93,8 +93,8 @@ public class ChatUtils {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RequestUserKeyRequestBean.class);
     }
 
-    public static final CreateConversationRequest fromJsonToCreateConversationRequest(String jsonMessage) throws JsonProcessingException {
-        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, CreateConversationRequest.class);
+    public static final CreateConversationRequestBean fromJsonToCreateConversationRequest(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, CreateConversationRequestBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {
@@ -134,7 +134,7 @@ public class ChatUtils {
                     returnObj = fromJsonToRequestUserKeyRequestBean;
                     break;
                 case "TOPIC_CREATION":
-                    CreateConversationRequest fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
+                    CreateConversationRequestBean fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
                     returnObj = fromJsonToCreateConversationRequest;
                     break;
@@ -221,10 +221,10 @@ public class ChatUtils {
         }
     }
 
-    public static final CreateConversationRequest getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
+    public static final CreateConversationRequestBean getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedContentTopicBean), iwk, index);
-            CreateConversationRequest createConversationRequest = new CreateConversationRequest(
+            CreateConversationRequestBean createConversationRequest = new CreateConversationRequestBean(
                     signedContentTopicBean,
                     iwk.getPublicKeyAtIndexURL64(index),
                     messageSignature,

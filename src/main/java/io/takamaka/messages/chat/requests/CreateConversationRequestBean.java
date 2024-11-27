@@ -29,15 +29,13 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CreateConversationRequest extends SignedMessageBean {
+public class CreateConversationRequestBean extends SignedMessageBean {
 
-    public CreateConversationRequest(SignedContentTopicBean topic, String from, String signature, String messageType, String signatureType) {
+    public CreateConversationRequestBean(SignedContentTopicBean topic, String from, String signature, String messageType, String signatureType) {
         super(from, signature, messageType, signatureType);
         this.topic = topic;
     }
 
-    
-    
     @JsonProperty("topic")
     private SignedContentTopicBean topic;
 
