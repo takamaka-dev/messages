@@ -6,8 +6,12 @@ package io.takamaka.messages.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.takamaka.extra.beans.CombinedRSAAESBean;
+import io.takamaka.extra.beans.EncMessageBean;
+import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
+import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
+import io.takamaka.messages.chat.TopicKeyDistributionMapBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
@@ -73,14 +77,44 @@ public class ChatCryptoUtils {
         return new TopicTitleKeyBean(topicTitle, generateRandomSafeKey());
     }
 
-    public static final CombinedRSAAESBean getTopicEncryptedForUser(TopicTitleKeyBean topicTitleKeyBean, String userEncryptionKet) throws CryptoMessageException {
+//    public static final CombinedRSAAESBean getTopicEncryptedForUser(TopicTitleKeyBean topicTitleKeyBean, String userEncryptionKet) throws CryptoMessageException {
+//        try {
+//            String canonicalJson = SimpleRequestHelper.getCanonicalJson(topicTitleKeyBean);
+//            CombinedRSAAESBean encryptRSAAES = TkmEncryptionUtils.encryptRSAAES(userEncryptionKet, canonicalJson);
+//            return encryptRSAAES;
+//        } catch (JsonProcessingException | WalletException ex) {
+//            throw new CryptoMessageException(ex);
+//        }
+//    }
+    public static final EncMessageBean getEncryptedTopic(TopicTitleKeyBean topicTitleKeyBean, String symmetricKey) throws CryptoMessageException {
         try {
             String canonicalJson = SimpleRequestHelper.getCanonicalJson(topicTitleKeyBean);
-            CombinedRSAAESBean encryptRSAAES = TkmEncryptionUtils.encryptRSAAES(userEncryptionKet, canonicalJson);
-            return encryptRSAAES;
+            EncMessageBean toPasswordEncryptedContent = TkmEncryptionUtils.toPasswordEncryptedContent(
+                    symmetricKey,
+                    canonicalJson,
+                    CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(),
+                    EncryptionContext.v0_1_a.name());
+            return toPasswordEncryptedContent;
         } catch (JsonProcessingException | WalletException ex) {
             throw new CryptoMessageException(ex);
         }
+    }
+
+    public static final SignedContentTopicBean getSignedContentTopicBean(TopicKeyDistributionMapBean topicKeyDistributionMapBean, TopicTitleKeyBean topicTitleKeyBean) throws CryptoMessageException {
+        try {
+            String topicSymmetricKeySignature = TkmSignUtils.Hash256B64URL(topicTitleKeyBean.getSymmetricKey());
+            String topicTitleHash = TkmSignUtils.Hash256B64URL(topicTitleKeyBean.getTopicTitle());
+            EncMessageBean topicDescription = getEncryptedTopic(topicTitleKeyBean, topicTitleKeyBean.getSymmetricKey());
+            SignedContentTopicBean signedContentTopicBean = new SignedContentTopicBean(
+                    topicTitleHash,
+                    topicSymmetricKeySignature,
+                    topicDescription,
+                    topicKeyDistributionMapBean);
+            return signedContentTopicBean;
+        } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | CryptoMessageException ex) {
+            throw new CryptoMessageException(ex);
+        }
+
     }
 
     public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {

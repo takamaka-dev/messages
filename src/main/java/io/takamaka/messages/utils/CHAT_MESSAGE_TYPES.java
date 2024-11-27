@@ -21,5 +21,6 @@ package io.takamaka.messages.utils;
  */
 public enum CHAT_MESSAGE_TYPES {
     REGISTER_USER_SIGNED_REQUEST,
-    REQUEST_USER_KEYS
+    REQUEST_USER_KEYS,
+    TOPIC_CREATION
 }
