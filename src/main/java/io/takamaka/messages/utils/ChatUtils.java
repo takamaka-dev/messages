@@ -19,7 +19,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.takamaka.messages.beans.BaseBean;
+import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
+import io.takamaka.messages.chat.requests.CreateConversationRequest;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
@@ -161,5 +163,21 @@ public class ChatUtils {
             log.error("wallet error ", ex);
             throw new MessageException("wallet error ", ex);
         }
+    }
+
+    public static final CreateConversationRequest getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedContentTopicBean), iwk, index);
+            CreateConversationRequest createConversationRequest = new CreateConversationRequest(
+                    signedContentTopicBean,
+                    iwk.getPublicKeyAtIndexURL64(index),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(),
+                    iwk.getWalletCypher().name());
+            return createConversationRequest;
+        } catch (JsonProcessingException | MessageException | WalletException ex) {
+            throw new MessageException(ex);
+        }
+
     }
 }
