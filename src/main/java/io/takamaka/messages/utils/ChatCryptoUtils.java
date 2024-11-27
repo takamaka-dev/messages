@@ -8,9 +8,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.takamaka.extra.beans.CombinedRSAAESBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
+import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.exception.CryptoMessageException;
 import io.takamaka.messages.exception.InvalidParameterException;
+import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
+import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.exceptions.WalletException;
 import java.util.Arrays;
 import java.util.logging.Level;
@@ -70,6 +75,12 @@ public class ChatCryptoUtils {
         } catch (JsonProcessingException | WalletException ex) {
             throw new CryptoMessageException(ex);
         }
+    }
+
+    public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
+        RegisterUserRequestBean signedRegisteredUserRequests = ChatUtils.getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
+        return signedRegisteredUserRequests;
     }
 
 }
