@@ -4,10 +4,17 @@
  */
 package io.takamaka.messages.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.takamaka.extra.beans.CombinedRSAAESBean;
+import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.exception.CryptoMessageException;
 import io.takamaka.messages.exception.InvalidParameterException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
+import io.takamaka.wallet.exceptions.WalletException;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.commons.text.RandomStringGenerator;
 
 /**
@@ -53,6 +60,16 @@ public class ChatCryptoUtils {
      */
     public static final TopicTitleKeyBean generateTopicKeyBean(String topicTitle) throws InvalidParameterException {
         return new TopicTitleKeyBean(topicTitle, generateRandomSafeKey());
+    }
+
+    public static final CombinedRSAAESBean getTopicEncryptedForUser(TopicTitleKeyBean topicTitleKeyBean, String userEncryptionKet) throws CryptoMessageException {
+        try {
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(topicTitleKeyBean);
+            CombinedRSAAESBean encryptRSAAES = TkmEncryptionUtils.encryptRSAAES(userEncryptionKet, canonicalJson);
+            return encryptRSAAES;
+        } catch (JsonProcessingException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
     }
 
 }
