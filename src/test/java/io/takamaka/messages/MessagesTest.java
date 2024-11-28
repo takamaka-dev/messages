@@ -15,14 +15,19 @@
  */
 package io.takamaka.messages;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
+import io.takamaka.messages.chat.ChatMediaBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.chat.SignedMessageBean;
+import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
+import io.takamaka.messages.utils.ChatCryptoUtils;
 import io.takamaka.messages.utils.ChatUtils;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
@@ -30,6 +35,8 @@ import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
 import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.TkmTextUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -193,6 +200,27 @@ public class MessagesTest {
 
     }
     
-
+    @Test
+    public void testMessageEncConversation() throws ChatMessageException, JsonProcessingException{
+        
+        BasicMessageRequestBean basicMessageBean 
+                = ChatUtils.getBasicMessageBean(
+                        iwkED, 
+                        0, 
+                        "placehoder", 
+                        "pollo", 
+                        new ArrayList<String>(), 
+                        new BasicMessageEncryptedContentBean(
+                                "sticazzi", 
+                                new ArrayList<ChatMediaBean>()));
+        
+        String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
+        
+        SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(basicMessageJson);
+        
+        assertNotNull(verifySignedMessage.getSignature());
+        
+        
+    }
 
 }
