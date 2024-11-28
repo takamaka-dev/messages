@@ -20,6 +20,7 @@ import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
@@ -29,6 +30,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 public class CreateConversationRequestBean extends SignedMessageBean {
 
     public CreateConversationRequestBean(SignedContentTopicBean topic, String from, String signature, String messageType, String signatureType) {
