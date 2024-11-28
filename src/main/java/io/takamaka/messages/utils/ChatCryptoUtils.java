@@ -11,19 +11,28 @@ import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
+import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicKeyDistributionMapBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
+import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.CryptoMessageException;
+import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.InvalidParameterException;
 import io.takamaka.messages.exception.MessageException;
+import io.takamaka.messages.exception.UnsupportedChatMessageTypeException;
+import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.TkmCypherProviderBCED25519;
 import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
+import io.takamaka.wallet.beans.TkmCypherBean;
 import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
 import io.takamaka.wallet.exceptions.HashEncodeException;
 import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
@@ -190,4 +199,63 @@ public class ChatCryptoUtils {
     //            throw new ChatMessageException(ex);
     //        }
     //    }
+
+    public static final SignedMessageBean verifySignedMessage(String messageJson, String... from) throws ChatMessageException {
+        try {
+            SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(messageJson);
+            final String jsonCanonical;
+            final String pk;
+            switch (from.length) {
+                case 0:
+                    pk = fromJsonToSignedMessageBean.getFrom();
+                    break;
+                case 1:
+                    pk = from[0];
+                    break;
+                default:
+                    throw new ChatMessageException("invalid parameters number, expected 0..1 got " + Arrays.toString(from));
+            }
+            final TkmCypherBean verifyResult;
+            final SignedMessageBean returnObj;
+            switch (fromJsonToSignedMessageBean.getMessageType()) {
+            //java 17 limitation...
+                case "REGISTER_USER_SIGNED_REQUEST":
+                    RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
+                    returnObj = fromJsonToRegisterUserRequestBean;
+                    break;
+                case "REQUEST_USER_KEYS":
+                    RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean = ChatUtils.fromJsonToRequestUserKeyRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRequestUserKeyRequestBean.getRequestUserKeyRequestBeanSignedContent());
+                    returnObj = fromJsonToRequestUserKeyRequestBean;
+                    break;
+                case "TOPIC_CREATION":
+                    CreateConversationRequestBean fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
+                    returnObj = fromJsonToCreateConversationRequest;
+                    break;
+                case "TOPIC_MESSAGE":
+                    BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
+                    returnObj = fromJsonToBasicMessageBeanRequest;
+                    break;
+                default:
+                    throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
+            }
+            switch (fromJsonToSignedMessageBean.getSignatureType()) {
+                case "Ed25519BC":
+                    verifyResult = TkmCypherProviderBCED25519.verify(pk, fromJsonToSignedMessageBean.getSignature(), jsonCanonical);
+                    break;
+                default:
+                    throw new UnsupportedSignatureCypherException("unsupported message type" + fromJsonToSignedMessageBean.getSignatureType());
+            }
+            if (verifyResult.isValid()) {
+                return returnObj;
+            } else {
+                throw new InvalidChatMessageSignatureException("invalid message signature");
+            }
+        } catch (JsonProcessingException ex) {
+            throw new ChatMessageException(ex);
+        }
+    }
 }

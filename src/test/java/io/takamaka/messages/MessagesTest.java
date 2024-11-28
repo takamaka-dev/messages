@@ -94,7 +94,7 @@ public class MessagesTest {
         assertEquals(fromJsonRegisterUserRequestBean, signedRegisteredUserRequests);
         SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(sigReqJson);
         log.info(fromJsonToSignedMessageBean.toString());
-        SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(sigReqJson);
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(sigReqJson);
         assert (verifySignedMessage != null);
         RegisterUserRequestBean rurb = (RegisterUserRequestBean) verifySignedMessage;
         log.info(rurb.toString());
@@ -123,7 +123,7 @@ public class MessagesTest {
         RegisterUserRequestBean fromSignedRegisteredUserRequests = ChatUtils.fromJsonToRegisterUserRequestBean(jsonReqJson);
         assertEquals(signedRegisteredUserRequests, fromSignedRegisteredUserRequests);
         log.info(fromSignedRegisteredUserRequests.toString());
-        SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(jsonReqJson);
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(jsonReqJson);
         assert (verifySignedMessage != null);
         RegisterUserRequestBean rurb = (RegisterUserRequestBean) verifySignedMessage;
         log.info(rurb.toString());
@@ -149,7 +149,7 @@ public class MessagesTest {
                 );
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
-        Exception ex = assertThrows(InvalidChatMessageSignatureException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson, "pollo"));
+        Exception ex = assertThrows(InvalidChatMessageSignatureException.class, () -> ChatCryptoUtils.verifySignedMessage(jsonReqJson, "pollo"));
         assertEquals(ex.getMessage(), "invalid message signature");
     }
     
@@ -171,7 +171,7 @@ public class MessagesTest {
                 );
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
-        Exception ex = assertThrows(InvalidChatMessageSignatureException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson, iwkRSA.getPublicKeyAtIndexURL64(1)));
+        Exception ex = assertThrows(InvalidChatMessageSignatureException.class, () -> ChatCryptoUtils.verifySignedMessage(jsonReqJson, iwkRSA.getPublicKeyAtIndexURL64(1)));
         assertEquals(ex.getMessage(), "invalid message signature");
     }
 
@@ -194,7 +194,7 @@ public class MessagesTest {
                 );
         log.info("uud signed message {} ", ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests));
         String jsonReqJson = ChatUtils.getObjectJsonPretty(signedRegisteredUserRequests);
-        Exception ex = assertThrows(ChatMessageException.class, () -> ChatUtils.verifySignedMessage(jsonReqJson, "pollo", "prova"));
+        Exception ex = assertThrows(ChatMessageException.class, () -> ChatCryptoUtils.verifySignedMessage(jsonReqJson, "pollo", "prova"));
         String exMsg = "invalid parameters number, expected 0..1 got " + Arrays.toString(from);
         assertEquals(ex.getMessage(), exMsg);
 
@@ -216,7 +216,7 @@ public class MessagesTest {
         
         String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
         
-        SignedMessageBean verifySignedMessage = ChatUtils.verifySignedMessage(basicMessageJson);
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(basicMessageJson);
         
         assertNotNull(verifySignedMessage.getSignature());
         
