@@ -20,5 +20,6 @@ package io.takamaka.messages.utils;
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 public enum NOTIFICATION_TYPES {
-    CONVERSATION_REQUEST
+    CONVERSATION_REQUEST,
+    NEW_MESSAGE
 }
