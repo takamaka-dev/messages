@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.beans.BaseBean;
+import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 import io.takamaka.messages.chat.BasicMessageSignedContentBean;
 import io.takamaka.messages.chat.ConversationNameHashBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
@@ -256,11 +257,12 @@ public class ChatUtils {
 //        }
 //
 //    }
-    public static final BasicMessageRequestBean getBasicMessageBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, List<String> citedUsers)
+    public static final BasicMessageRequestBean getBasicMessageBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, List<String> citedUsers, BasicMessageEncryptedContentBean basicMessageEncryptedContentBean)
             throws ChatMessageException {
         try {
-            //encrypted content
-            EncMessageBean encContent = null;//TODO CREATE CONTENT
+            
+            //encrypt content
+            EncMessageBean encContent = ChatCryptoUtils.getEncryptedBasicMessageEncryptedContentBean(basicMessageEncryptedContentBean, conversationEncryptionKey);//TODO CREATE CONTENT
             //signed content
             BasicMessageSignedContentBean basicMessageSignedContentBean
                     = new BasicMessageSignedContentBean(
