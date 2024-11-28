@@ -31,14 +31,20 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserNotificationJsonBean {
-
+    
+    @JsonProperty("notification-hash")
     private String notificationHash;
     @JsonProperty("sender-key")
     private String senderKey;
+    @JsonProperty("receiver-key")
     private String receiverKey;
+    @JsonProperty("submission-time")
     private Long submissionTime;
-    private NOTIFICATION_TYPES notificationType;
+    @JsonProperty("notification-time")
+    private String notificationType;
+    @JsonProperty("conversation-hash-name")
     private String conversationHashName;
+    @JsonProperty("read")
     private boolean read;
 
 }
