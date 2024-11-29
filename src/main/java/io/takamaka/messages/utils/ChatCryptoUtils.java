@@ -10,16 +10,20 @@ import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
+import io.takamaka.messages.chat.BasicMessageSignedContentBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicKeyDistributionMapBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.chat.notifications.SignedNotificationRequestContent;
 import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
+import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
+import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.CryptoMessageException;
@@ -37,17 +41,21 @@ import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
 import io.takamaka.wallet.exceptions.HashEncodeException;
 import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
+@Slf4j
 public class ChatCryptoUtils {
 
     /**
@@ -169,8 +177,31 @@ public class ChatCryptoUtils {
 
     public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
-        RegisterUserRequestBean signedRegisteredUserRequests = ChatUtils.getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
+        RegisterUserRequestBean signedRegisteredUserRequests = getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
         return signedRegisteredUserRequests;
+    }
+
+    public static final UserNotificationRequestBean getUserNotificationRequestBean(Long notBefore, boolean onlyUnreaded, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            SignedNotificationRequestContent signedNotificationRequestContent = new SignedNotificationRequestContent(notBefore, onlyUnreaded);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedNotificationRequestContent), signIwk, sigIwkIndex);
+            UserNotificationRequestBean userNotificationRequestBean = new UserNotificationRequestBean(
+                    signedNotificationRequestContent,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.NOTIFICATION_REQUEST.name(),
+                    signIwk.getWalletCypher().name());
+            return userNotificationRequestBean;
+            //return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+
+        //return signedRegisteredUserRequests;
     }
 
     public static final TopicKeyDistributionItemBean getInviteForUser(RegisterUserRequestBean registerUserRequestBean, String topicSymmetricKey) throws CryptoMessageException {
@@ -199,7 +230,6 @@ public class ChatCryptoUtils {
     //            throw new ChatMessageException(ex);
     //        }
     //    }
-
     public static final SignedMessageBean verifySignedMessage(String messageJson, String... from) throws ChatMessageException {
         try {
             SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(messageJson);
@@ -218,7 +248,7 @@ public class ChatCryptoUtils {
             final TkmCypherBean verifyResult;
             final SignedMessageBean returnObj;
             switch (fromJsonToSignedMessageBean.getMessageType()) {
-            //java 17 limitation...
+                //java 17 limitation...
                 case "REGISTER_USER_SIGNED_REQUEST":
                     RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
@@ -239,6 +269,12 @@ public class ChatCryptoUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                     returnObj = fromJsonToBasicMessageBeanRequest;
                     break;
+                case "NOTIFICATION_REQUEST":
+                    UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToUserNotificationRequestBean.getSignedNotificationRequestContent());
+                    returnObj = fromJsonToUserNotificationRequestBean;
+                    break;
+
                 default:
                     throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
             }
@@ -256,6 +292,72 @@ public class ChatCryptoUtils {
             }
         } catch (JsonProcessingException ex) {
             throw new ChatMessageException(ex);
+        }
+    }
+
+    //    public static final CreateConversationRequestBean getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
+    //        try {
+    //            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedContentTopicBean), iwk, index);
+    //            CreateConversationRequestBean createConversationRequest = new CreateConversationRequestBean(
+    //                    signedContentTopicBean,
+    //                    iwk.getPublicKeyAtIndexURL64(index),
+    //                    messageSignature,
+    //                    CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(),
+    //                    iwk.getWalletCypher().name());
+    //            return createConversationRequest;
+    //        } catch (JsonProcessingException | MessageException | WalletException ex) {
+    //            throw new MessageException(ex);
+    //        }
+    //
+    //    }
+    public static final BasicMessageRequestBean getBasicMessageBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, List<String> citedUsers, BasicMessageEncryptedContentBean basicMessageEncryptedContentBean) throws ChatMessageException {
+        try {
+            //encrypt content
+            EncMessageBean encContent = ChatCryptoUtils.getEncryptedBasicMessageEncryptedContentBean(basicMessageEncryptedContentBean, conversationEncryptionKey); //TODO CREATE CONTENT
+            //signed content
+            BasicMessageSignedContentBean basicMessageSignedContentBean = new BasicMessageSignedContentBean(conversationHashName, citedUsers, encContent);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(basicMessageSignedContentBean), iwkSign, index);
+            //server request
+            BasicMessageRequestBean basicMessageBeanRequest = new BasicMessageRequestBean(basicMessageSignedContentBean, iwkSign.getPublicKeyAtIndexURL64(index), messageSignature, CHAT_MESSAGE_TYPES.TOPIC_MESSAGE.name(), iwkSign.getWalletCypher().name());
+            return basicMessageBeanRequest;
+        } catch (MessageException | JsonProcessingException | WalletException ex) {
+            throw new ChatMessageException(ex);
+        }
+    }
+
+    public static final RegisterUserRequestBean getSignedRegisteredUserRequests(InstanceWalletKeystoreInterface iwk, int i, RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(registerUserRequestSignedContentBean), iwk, i);
+            return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    public static final RequestUserKeyRequestBean getRequestUserKeyRequestBean(InstanceWalletKeystoreInterface iwk, int i, List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(requestUserKeyRequestBeanSignedContent), iwk, i);
+            return new RequestUserKeyRequestBean(requestUserKeyRequestBeanSignedContent, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REQUEST_USER_KEYS.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    public static final CreateConversationRequestBean getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedContentTopicBean), iwk, index);
+            CreateConversationRequestBean createConversationRequest = new CreateConversationRequestBean(signedContentTopicBean, iwk.getPublicKeyAtIndexURL64(index), messageSignature, CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(), iwk.getWalletCypher().name());
+            return createConversationRequest;
+        } catch (JsonProcessingException | MessageException | WalletException ex) {
+            throw new MessageException(ex);
         }
     }
 }

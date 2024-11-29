@@ -76,7 +76,7 @@ public class MessagesTest {
     @Test
     public void testRegisterUserRequestBean() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(iwkED,
+                = ChatCryptoUtils.getSignedRegisteredUserRequests(iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
                                 new NonceResponseBean(
@@ -105,7 +105,7 @@ public class MessagesTest {
     @Test
     public void testRegisterUserRequestBean_withEmptyKey() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
+                = ChatCryptoUtils.getSignedRegisteredUserRequests(
                         iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
@@ -134,7 +134,7 @@ public class MessagesTest {
     @Test
     public void testRegisterUserRequestBean_withIncorrectKeyFormat() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
+                = ChatCryptoUtils.getSignedRegisteredUserRequests(
                         iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
@@ -156,7 +156,7 @@ public class MessagesTest {
     @Test
     public void testRegisterUserRequestBean_withIncorrectKey() throws Exception {
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
+                = ChatCryptoUtils.getSignedRegisteredUserRequests(
                         iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
@@ -179,7 +179,7 @@ public class MessagesTest {
     public void testRegisterUserRequestBean_withInvalidParams() throws Exception {
         String[] from = new String [] {"pollo", "prova"};
         RegisterUserRequestBean signedRegisteredUserRequests
-                = ChatUtils.getSignedRegisteredUserRequests(
+                = ChatCryptoUtils.getSignedRegisteredUserRequests(
                         iwkED,
                         0,
                         new RegisterUserRequestSignedContentBean(
@@ -204,7 +204,7 @@ public class MessagesTest {
     public void testMessageEncConversation() throws ChatMessageException, JsonProcessingException{
         
         BasicMessageRequestBean basicMessageBean 
-                = ChatUtils.getBasicMessageBean(
+                = ChatCryptoUtils.getBasicMessageBean(
                         iwkED, 
                         0, 
                         "placehoder", 

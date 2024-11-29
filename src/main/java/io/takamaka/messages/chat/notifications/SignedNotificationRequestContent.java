@@ -13,16 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat.notifications;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum CHAT_MESSAGE_TYPES {
-    REGISTER_USER_SIGNED_REQUEST,
-    REQUEST_USER_KEYS,
-    TOPIC_CREATION,
-    TOPIC_MESSAGE,
-    NOTIFICATION_REQUEST
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class SignedNotificationRequestContent {
+
+    @JsonProperty("not_before")
+    private Long notBefore;
+    @JsonProperty("only_not_readed")
+    private Boolean onlyNotReaded;
+
 }
