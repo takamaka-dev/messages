@@ -223,4 +223,8 @@ public class ChatUtils {
             throw new ChatMessageException(ex);
         }
     }
+
+    public static final String getUserConversationHash(String memberKey, String conversationName) throws HashAlgorithmNotFoundException, HashEncodeException, HashProviderNotFoundException {
+        return TkmSignUtils.Hash256B64URL(memberKey + conversationName);
+    }
 }
