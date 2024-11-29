@@ -40,7 +40,7 @@ public class UserNotificationJsonBean {
     private String receiverKey;
     @JsonProperty("submission-time")
     private Long submissionTime;
-    @JsonProperty("notification-time")
+    @JsonProperty("notification-type")
     private String notificationType;
     @JsonProperty("conversation-hash-name")
     private String conversationHashName;
