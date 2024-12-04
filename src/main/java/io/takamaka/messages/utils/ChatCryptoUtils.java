@@ -275,7 +275,7 @@ public class ChatCryptoUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToUserNotificationRequestBean.getSignedNotificationRequestContent());
                     returnObj = fromJsonToUserNotificationRequestBean;
                     break;
-                case "RETRIEVE_MESSAGE_FROM_CONVERSATION":
+                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N":
                     RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveMessageRequestBean.getRetrieveMessageSignedRequestBean());
                     returnObj = fromJsonToRetrieveMessageRequestBean;
