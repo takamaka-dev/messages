@@ -34,6 +34,7 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
+import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
@@ -122,13 +123,16 @@ public class ChatUtils {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, UserNotificationRequestBean.class);
     }
 
+    public static final RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RetrieveMessageRequestBean.class);
+    }
+
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils
                 .getJacksonMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .readValue(jsonMessage, SignedMessageBean.class);
     }
-
 
     public static final String getConversationName(String[] partecipants, String topicHash) throws ChatMessageException {
         try {
@@ -140,7 +144,6 @@ public class ChatUtils {
             throw new ChatMessageException(ex);
         }
     }
-
 
     public static final String getUserConversationHash(String memberKey, String conversationName) throws HashAlgorithmNotFoundException, HashEncodeException, HashProviderNotFoundException {
         return TkmSignUtils.Hash256B64URL(memberKey + conversationName);

@@ -13,17 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat.requests;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum CHAT_MESSAGE_TYPES {
-    REGISTER_USER_SIGNED_REQUEST,
-    REQUEST_USER_KEYS,
-    TOPIC_CREATION,
-    TOPIC_MESSAGE,
-    NOTIFICATION_REQUEST,
-    RETRIEVE_MESSAGE_FROM_CONVERSATION
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class RetrieveMessageSignedRequestBean {
+
+    private Long timestamp;
+    @JsonProperty("number-of-messages")
+    private Long numberOfMessages;
+    @JsonProperty("conversation-hash-name")
+    private String conversationHashName;
+
 }
