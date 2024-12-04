@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.chat.requests;
+package io.takamaka.messages.chat.responses;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,15 +27,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(Include.NON_EMPTY)
-public class RetrieveMessageSignedRequestBean {
+public class RetriveMessagesResponseBean {
 
-    private Long timestamp;
-    @JsonProperty("number_of_messages")
-    private Long numberOfMessages;
-    @JsonProperty("conversation_hash_name")
-    private String conversationHashName;
-    @JsonProperty("last_message_signature")
-    private String lastMessageSignature;
-
+    @JsonProperty("request_signature")
+    private String requestSignature;
+    @JsonProperty("message_json")
+    private String messageJson;
 }
