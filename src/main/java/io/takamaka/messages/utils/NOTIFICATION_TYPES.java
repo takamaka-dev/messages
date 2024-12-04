@@ -21,5 +21,6 @@ package io.takamaka.messages.utils;
  */
 public enum NOTIFICATION_TYPES {
     CONVERSATION_REQUEST,
-    NEW_MESSAGE
+    NEW_MESSAGE,
+    QUOTE_IN_CONVERSATION
 }
