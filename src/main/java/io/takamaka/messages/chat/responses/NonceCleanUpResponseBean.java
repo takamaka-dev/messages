@@ -29,6 +29,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class NonceCleanUpResponseBean {
 
-    @JsonProperty("deleted-entries")
+    @JsonProperty("deleted_entries")
     private Long deletedEntries;
 }

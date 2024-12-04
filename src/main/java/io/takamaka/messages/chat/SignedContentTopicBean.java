@@ -33,21 +33,21 @@ public class SignedContentTopicBean {
     /**
      * sha3-256(topic title) b64url
      */
-    @JsonProperty("topic-title-hash")
+    @JsonProperty("topic_title_hash")
     private String topicTitleHash;
     /**
      * sha3-256(symmetricKey) b64url
      */
-    @JsonProperty("topic-symmetric-key-signature")
+    @JsonProperty("topic_symmetric_key_signature")
     private String topicSymmetricKeySignature;
     /**
      * password encrypted TopicTitleKeyBean
      */
-    @JsonProperty("topic-description")
+    @JsonProperty("topic_description")
     private EncMessageBean topicDescription;
     /**
      * list of members with encrypted symmetricTopicKey
      */
-    @JsonProperty("topic-members-map")
+    @JsonProperty("topic_members_map")
     private TopicKeyDistributionMapBean topicMembersMap;
 }

@@ -30,7 +30,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TopicKeyDistributionMapBean {
 
-    @JsonProperty("topic-invitation-list")
+    @JsonProperty("topic_invitation_list")
     private Map<String, TopicKeyDistributionItemBean> topicInvitationList;
 
 }

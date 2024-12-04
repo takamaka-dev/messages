@@ -37,6 +37,6 @@ public class RegisterUserRequestBean extends SignedMessageBean {
         this.registerUserRequestSignedContentBean = registerUserRequestSignedContentBean;
     }
 
-    @JsonProperty("register-user-request-signed-content")
+    @JsonProperty("register_user_request_signed_content")
     private RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean;
 }

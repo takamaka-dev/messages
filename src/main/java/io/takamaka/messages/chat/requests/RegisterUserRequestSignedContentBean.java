@@ -34,8 +34,8 @@ public class RegisterUserRequestSignedContentBean {
     /**
      * this message is used for sharing to all the encryption key
      */
-    @JsonProperty("encryption-public-key")
+    @JsonProperty("encryption_public_key")
     private String encryptionPublicKey;
-    @JsonProperty("encryption-public-key-type")
+    @JsonProperty("encryption_public_key_type")
     private String encryptionPublicKeyType;
 }

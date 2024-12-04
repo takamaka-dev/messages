@@ -32,6 +32,6 @@ public class UserNotificationBean {
     private String to;
     private String from;
     private Long timestamp;
-    @JsonProperty("notification-type")
+    @JsonProperty("notification_type")
     private String notificationType;
 }

@@ -40,6 +40,6 @@ public class RequestUserKeyRequestBean extends SignedMessageBean {
         this.requestUserKeyRequestBeanSignedContent = requestUserKeyRequestBeanSignedContent;
     }    
     
-    @JsonProperty("request-user-key-request-bean-signed-content")
+    @JsonProperty("request_user_key_request_bean_signed_content")
     private List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent;
 }

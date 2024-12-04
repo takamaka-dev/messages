@@ -29,8 +29,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TopicTitleKeyBean {
 
-    @JsonProperty("topic-title")
+    @JsonProperty("topic_title")
     private String topicTitle;
-    @JsonProperty("symmetric-key")
+    @JsonProperty("symmetric_key")
     private String symmetricKey;
 }

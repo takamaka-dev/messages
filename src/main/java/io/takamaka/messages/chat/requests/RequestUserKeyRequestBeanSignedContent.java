@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RequestUserKeyRequestBeanSignedContent {
-    @JsonProperty("other-user-sign-key")
+    @JsonProperty("other_user_sign_key")
     private String otherUserSignKey;
     private Long timestamp;
 }

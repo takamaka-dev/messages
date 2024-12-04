@@ -30,6 +30,6 @@ import lombok.NoArgsConstructor;
 public class BasicMessageResponseBean {
 
     private String result;
-    @JsonProperty("request-message-signature")
+    @JsonProperty("request_message_signature")
     private String requestMessageSignature;
 }

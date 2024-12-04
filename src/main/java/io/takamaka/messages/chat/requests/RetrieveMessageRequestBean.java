@@ -37,7 +37,7 @@ public class RetrieveMessageRequestBean extends SignedMessageBean{
     
     
     
-    @JsonProperty("signed-request")
+    @JsonProperty("signed_request")
     private RetrieveMessageSignedRequestBean retrieveMessageSignedRequestBean;
     
 }

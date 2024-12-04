@@ -36,7 +36,7 @@ public class KnockRequestBean extends SignedMessageBean {
         this.knockRequestSignedContentBean = knockRequestSignedContentBean;
     }
 
-    @JsonProperty("knock-request-signed-content")
+    @JsonProperty("knock_request_signed_content")
     private KnockRequestSignedContentBean knockRequestSignedContentBean;
 
 }

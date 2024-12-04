@@ -38,7 +38,7 @@ public class UserNotificationRequestBean extends SignedMessageBean {
         this.signedNotificationRequestContent = signedNotificationRequestContent;
     }
 
-    @JsonProperty("signed-content")
+    @JsonProperty("signed_content")
     private SignedNotificationRequestContent signedNotificationRequestContent;
 
 }

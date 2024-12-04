@@ -30,9 +30,11 @@ import lombok.NoArgsConstructor;
 public class RetrieveMessageSignedRequestBean {
 
     private Long timestamp;
-    @JsonProperty("number-of-messages")
+    @JsonProperty("number_of_messages")
     private Long numberOfMessages;
-    @JsonProperty("conversation-hash-name")
+    @JsonProperty("conversation_hash_name")
     private String conversationHashName;
+    @JsonProperty("last_message_signature")
+    private String lastMessageSignature;
 
 }

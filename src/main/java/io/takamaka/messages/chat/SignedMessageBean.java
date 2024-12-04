@@ -34,9 +34,9 @@ public class SignedMessageBean {
     private String from;
     @EqualsAndHashCode.Include
     private String signature;
-    @JsonProperty("message-type")
+    @JsonProperty("message_type")
     private String messageType;
-    @JsonProperty("signature-type")
+    @JsonProperty("signature_type")
     private String signatureType;
 
 }

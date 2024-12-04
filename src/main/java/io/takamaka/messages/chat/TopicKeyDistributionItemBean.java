@@ -29,8 +29,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class TopicKeyDistributionItemBean {
 
-    @JsonProperty("enc-key-hash")
+    @JsonProperty("enc_key_hash")
     private String encryptionKeyHash;
-    @JsonProperty("enc-key")
+    @JsonProperty("enc_key")
     private String encryptedTopicKey;
 }
