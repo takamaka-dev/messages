@@ -184,9 +184,9 @@ public class ChatCryptoUtils {
         return signedRegisteredUserRequests;
     }
 
-    public static final UserNotificationRequestBean getUserNotificationRequestBean(Long notBefore, boolean onlyUnreaded, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+    public static final UserNotificationRequestBean getUserNotificationRequestBean(Long notBefore, boolean onlyUnread, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         try {
-            SignedNotificationRequestContent signedNotificationRequestContent = new SignedNotificationRequestContent(notBefore, onlyUnreaded);
+            SignedNotificationRequestContent signedNotificationRequestContent = new SignedNotificationRequestContent(notBefore, onlyUnread);
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedNotificationRequestContent), signIwk, sigIwkIndex);
             UserNotificationRequestBean userNotificationRequestBean = new UserNotificationRequestBean(
                     signedNotificationRequestContent,

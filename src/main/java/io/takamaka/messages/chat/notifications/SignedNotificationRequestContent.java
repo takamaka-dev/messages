@@ -31,7 +31,7 @@ public class SignedNotificationRequestContent {
 
     @JsonProperty("not_before")
     private Long notBefore;
-    @JsonProperty("only_not_readed")
-    private Boolean onlyNotReaded;
+    @JsonProperty("only_unread")
+    private Boolean onlyUnread;
 
 }
