@@ -70,7 +70,17 @@ public class ChatUtils {
 
     public static final String CONVERSATION_HASH_NAME_PARAM_STRING = "^[0-9a-fA-F]{64}$";
     public static final Pattern CONVERSATION_HASH_NAME_PARAM_PATTERN = Pattern.compile(CONVERSATION_HASH_NAME_PARAM_STRING);
+    public static final String CONVERSATION_SIGNATURE_PARAM_STRING = "^[0-9a-zA-Z\\-_]{86}\\.\\.$";
+    public static final Pattern CONVERSATION_SIGNATURE_PARAM_PATTERN = Pattern.compile(CONVERSATION_SIGNATURE_PARAM_STRING);
 
+    
+    public static final String parseSafeSIgnatureName(String conversationSignature) throws InvalidParameterException {
+        if (CONVERSATION_SIGNATURE_PARAM_PATTERN.matcher(conversationSignature).matches()) {
+            return conversationSignature;
+        }
+        throw new InvalidParameterException("invalid conversation hash name");
+    }
+    
     public static final String parseSafeConversationHashName(String conversationHashName) throws InvalidParameterException {
         if (CONVERSATION_HASH_NAME_PARAM_PATTERN.matcher(conversationHashName).matches()) {
             return conversationHashName;
