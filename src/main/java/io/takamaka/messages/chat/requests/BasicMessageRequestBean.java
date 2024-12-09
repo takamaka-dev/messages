@@ -37,6 +37,7 @@ public class BasicMessageRequestBean extends SignedMessageBean {
         this.basicMessageSignedContentBean = basicMessageSignedContentBean;
     }
 
+    @JsonProperty("basic_message_signed_content_bean")
     private BasicMessageSignedContentBean basicMessageSignedContentBean;
 
 }
