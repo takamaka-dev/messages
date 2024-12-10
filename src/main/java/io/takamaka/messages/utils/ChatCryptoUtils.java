@@ -188,7 +188,7 @@ public class ChatCryptoUtils {
     public static final SignedTimestampRequestBean getSignedTimestampRequest(Long timestamp, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         try {
             BasicTimestampBean basicTimestampBean = new BasicTimestampBean(timestamp);
-            String canonicalJson = SimpleRequestHelper.getCanonicalJson(timestamp);
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(basicTimestampBean);
             String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
             SignedTimestampRequestBean signedTimestampRequestBean = new SignedTimestampRequestBean(
                     basicTimestampBean,
