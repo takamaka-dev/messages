@@ -23,6 +23,8 @@ import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
@@ -38,6 +40,7 @@ import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.log4j.BasicConfigurator;
@@ -201,7 +204,7 @@ public class MessagesTest {
     }
     
     @Test
-    public void testMessageEncConversation() throws ChatMessageException, JsonProcessingException{
+    public void testMessageEncConversation() throws ChatMessageException, JsonProcessingException, MessageException{
         
         BasicMessageRequestBean basicMessageBean 
                 = ChatCryptoUtils.getBasicMessageBean(
@@ -219,6 +222,47 @@ public class MessagesTest {
         SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(basicMessageJson);
         
         assertNotNull(verifySignedMessage.getSignature());
+        
+        
+    }
+    
+    @Test
+    public void testUserNotification() throws ChatMessageException, JsonProcessingException, MessageException{
+        
+        UserNotificationRequestBean userNotificationRequestBean = ChatCryptoUtils.getUserNotificationRequestBean(new Date().getTime(), true, iwkED, 0);
+        
+        String requestJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(userNotificationRequestBean);
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(requestJson);
+        
+        
+        assertNotNull(verifySignedMessage.getSignature());
+        log.info("signed message signature: {} ", verifySignedMessage.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage.getFrom());
+        
+        
+    }
+    
+    @Test
+    public void testSignedTimestamp() throws ChatMessageException, JsonProcessingException, MessageException{
+        
+        SignedTimestampRequestBean signedTimestampRequest = ChatCryptoUtils.getSignedTimestampRequest(iwkED, 0);
+        
+        SignedTimestampRequestBean signedTimestampRequest1 = ChatCryptoUtils.getSignedTimestampRequest(new Date().getTime(), iwkED, 1);
+        
+        
+        String writeValueAsString = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedTimestampRequest);
+        String writeValueAsString1 = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedTimestampRequest1);
+        
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(writeValueAsString);
+        SignedMessageBean verifySignedMessage1 = ChatCryptoUtils.verifySignedMessage(writeValueAsString1);
+        
+        
+        assertNotNull(verifySignedMessage.getSignature());
+        assertNotNull(verifySignedMessage1.getSignature());
+        log.info("signed message signature: {} ", verifySignedMessage.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage.getFrom());
+        log.info("signed message signature: {} ", verifySignedMessage1.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage1.getFrom());
         
         
     }
