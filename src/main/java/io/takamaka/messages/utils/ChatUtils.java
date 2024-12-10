@@ -35,6 +35,7 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
+import io.takamaka.messages.chat.requests.TimestampSignedRequest;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
@@ -73,14 +74,13 @@ public class ChatUtils {
     public static final String CONVERSATION_SIGNATURE_PARAM_STRING = "^[0-9a-zA-Z\\-_]{86}\\.\\.$";
     public static final Pattern CONVERSATION_SIGNATURE_PARAM_PATTERN = Pattern.compile(CONVERSATION_SIGNATURE_PARAM_STRING);
 
-    
     public static final String parseSafeSIgnatureName(String conversationSignature) throws InvalidParameterException {
         if (CONVERSATION_SIGNATURE_PARAM_PATTERN.matcher(conversationSignature).matches()) {
             return conversationSignature;
         }
         throw new InvalidParameterException("invalid conversation hash name");
     }
-    
+
     public static final String parseSafeConversationHashName(String conversationHashName) throws InvalidParameterException {
         if (CONVERSATION_HASH_NAME_PARAM_PATTERN.matcher(conversationHashName).matches()) {
             return conversationHashName;
@@ -135,6 +135,10 @@ public class ChatUtils {
 
     public static final RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RetrieveMessageRequestBean.class);
+    }
+
+    public static final TimestampSignedRequest fromJsonToTimestampSignedRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, TimestampSignedRequest.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {

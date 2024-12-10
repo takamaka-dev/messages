@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum CHAT_MESSAGE_TYPES {
-    REGISTER_USER_SIGNED_REQUEST,
-    REQUEST_USER_KEYS,
-    TOPIC_CREATION,
-    TOPIC_MESSAGE,
-    NOTIFICATION_REQUEST,
-    RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N,
-    RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE,
-    SIGNED_TIMESTAMP
-    
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class BasicTimestampBean {
+
+    private String timestamp;
 }
