@@ -28,5 +28,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BasicTimestampBean {
 
-    private String timestamp;
+    private Long timestamp;
 }
