@@ -181,11 +181,11 @@ public class ChatCryptoUtils {
         }
     }
 
-    public static final SignedTimestampRequestBean getSignedRegisterUserRequest(InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
-        return getSignedRegisterUserRequest(new Date().getTime(), signIwk, sigIwkIndex);
+    public static final SignedTimestampRequestBean getSignedTimestampRequest(InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        return getSignedTimestampRequest(new Date().getTime(), signIwk, sigIwkIndex);
     }
 
-    public static final SignedTimestampRequestBean getSignedRegisterUserRequest(Long timestamp, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+    public static final SignedTimestampRequestBean getSignedTimestampRequest(Long timestamp, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         try {
             BasicTimestampBean basicTimestampBean = new BasicTimestampBean(timestamp);
             String canonicalJson = SimpleRequestHelper.getCanonicalJson(timestamp);
