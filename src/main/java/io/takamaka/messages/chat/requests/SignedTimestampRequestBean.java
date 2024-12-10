@@ -29,9 +29,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TimestampSignedRequest extends SignedMessageBean {
+public class SignedTimestampRequestBean extends SignedMessageBean {
 
-    public TimestampSignedRequest(BasicTimestampBean timestamp, String from, String signature, String messageType, String signatureType) {
+    public SignedTimestampRequestBean(BasicTimestampBean timestamp, String from, String signature, String messageType, String signatureType) {
         super(from, signature, messageType, signatureType);
         this.signedTimestamp = timestamp;
     }

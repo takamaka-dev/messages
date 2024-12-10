@@ -25,7 +25,7 @@ import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageSignedRequestBean;
-import io.takamaka.messages.chat.requests.TimestampSignedRequest;
+import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.chat.responses.RetriveMessagesResponseBean;
@@ -286,7 +286,7 @@ public class ChatCryptoUtils {
                     break;
 
                 case "SIGNED_TIMESTAMP":
-                    TimestampSignedRequest fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
+                    SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToTimestampSignedRequestBean.getSignedTimestamp());
                     returnObj = fromJsonToTimestampSignedRequestBean;
                     break;
