@@ -11,6 +11,7 @@ import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 import io.takamaka.messages.chat.BasicMessageSignedContentBean;
+import io.takamaka.messages.chat.BasicTimestampBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
@@ -49,6 +50,7 @@ import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -175,6 +177,27 @@ public class ChatCryptoUtils {
                     topicKeyDistributionMapBean);
             return signedContentTopicBean;
         } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | CryptoMessageException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    public static final SignedTimestampRequestBean getSignedRegisterUserRequest(InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        return getSignedRegisterUserRequest(new Date().getTime(), signIwk, sigIwkIndex);
+    }
+
+    public static final SignedTimestampRequestBean getSignedRegisterUserRequest(Long timestamp, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            BasicTimestampBean basicTimestampBean = new BasicTimestampBean(timestamp);
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(timestamp);
+            String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            SignedTimestampRequestBean signedTimestampRequestBean = new SignedTimestampRequestBean(
+                    basicTimestampBean,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.SIGNED_TIMESTAMP.name(),
+                    signIwk.getWalletCypher().name());
+            return signedTimestampRequestBean;
+        } catch (WalletException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
         }
     }
