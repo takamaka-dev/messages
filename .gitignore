@@ -1,2 +1,5 @@
 /.idea/
 /Messages.iml
+/nbproject/
+/target/
+/nbactions.xml
