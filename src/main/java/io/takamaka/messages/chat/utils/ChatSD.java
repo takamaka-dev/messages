@@ -17,6 +17,8 @@ package io.takamaka.messages.chat.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.exception.ChatMessageSerializationException;
 import io.takamaka.wallet.utils.TkmTextUtils;
@@ -49,4 +51,10 @@ public class ChatSD {
             throw new ChatMessageSerializationException(ex);
         }
     }
+    
+//    public static final JavaType getlistRegisterUserRequestBeanType() {
+//        ObjectMapper jacksonMapper = TkmTextUtils.getJacksonMapper();
+//        JavaType constructParametricType = jacksonMapper.getTypeFactory().constructParametricType(List.class, RegisterUserRequestBean.class);
+//        return constructParametricType;
+//    }
 }
