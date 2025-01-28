@@ -8,23 +8,23 @@ package io.takamaka.messages.exception;
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public class MessageException extends Exception {
+public class ChatMessageSerializationException extends ChatMessageException {
 
-    private static final long serialVersionUID = 1549724953313390756L;
+    private static final long serialVersionUID = 7121306851089874421L;
 
-    public MessageException() {
+    public ChatMessageSerializationException() {
         super();
     }
 
-    public MessageException(String msg) {
+    public ChatMessageSerializationException(String msg) {
         super(msg);
     }
 
-    public MessageException(Throwable er) {
+    public ChatMessageSerializationException(Throwable er) {
         super(er);
     }
 
-    public MessageException(String msg, Throwable er) {
+    public ChatMessageSerializationException(String msg, Throwable er) {
         super(msg, er);
     }
 }

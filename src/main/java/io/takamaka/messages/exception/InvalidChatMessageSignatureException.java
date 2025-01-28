@@ -10,7 +10,7 @@ package io.takamaka.messages.exception;
  */
 public class InvalidChatMessageSignatureException extends ChatMessageException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 5072342661462935548L;
 
     public InvalidChatMessageSignatureException() {
         super();

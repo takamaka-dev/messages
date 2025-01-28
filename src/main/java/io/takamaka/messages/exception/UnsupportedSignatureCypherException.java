@@ -10,7 +10,7 @@ package io.takamaka.messages.exception;
  */
 public class UnsupportedSignatureCypherException extends ChatMessageException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -601113302507390165L;
 
     public UnsupportedSignatureCypherException() {
         super();

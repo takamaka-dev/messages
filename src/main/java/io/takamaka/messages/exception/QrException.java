@@ -10,7 +10,7 @@ package io.takamaka.messages.exception;
  */
 public class QrException extends MessageException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -1515339639921067983L;
 
     public QrException() {
         super();

@@ -10,7 +10,7 @@ package io.takamaka.messages.exception;
  */
 public class CryptoMessageException extends MessageException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 4015124906924691463L;
 
     public CryptoMessageException() {
         super();

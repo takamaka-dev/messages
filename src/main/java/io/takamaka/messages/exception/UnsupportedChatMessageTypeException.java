@@ -10,7 +10,7 @@ package io.takamaka.messages.exception;
  */
 public class UnsupportedChatMessageTypeException extends ChatMessageException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = -9175072189795748075L;
 
     public UnsupportedChatMessageTypeException() {
         super();
