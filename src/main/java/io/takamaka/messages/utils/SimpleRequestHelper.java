@@ -283,72 +283,72 @@ public class SimpleRequestHelper {
         }
     }
 
-    public static final boolean verifyChatMessageSignature(String canonicalJsonMessage, String fullPublicKey) throws JsonProcessingException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException, MessageException {
-        SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(canonicalJsonMessage);
-//        log.info(fromJsonToSignedMessageBean.toString());
-//        log.info("message to be verified: " + requestJsonCompact);
-//        switch (baseBean.getTypeOfSignature()) {
-//            case "Ed25519BC":
-//
-//                TkmCypherBean verifyEd = TkmCypherProviderBCED25519.verify(
-//                        baseBean.getMessageAction().getFrom().getAddress(),
-//                        baseBean.getSignature(),
-//                        requestJsonCompact
-//                );
-//
-//                if (verifyEd.isValid()) {
-//                    return true;
-//                }
-//
-//                break;
-//
-//            case "BCQTESLA_PS_1":
-//
-//                String addressQTR1 = fullPublicKey;
-//                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
-//                    addressQTR1 = retrieveBookmark("test", fullPublicKey);
-//                }
-//                String testQTR1 = TkmAddressUtils.toCompactAddress(addressQTR1).getDefaultShort();
-//                if (testQTR1.equals(baseBean.getMessageAction().getFrom().getAddress())) {
-//                    TkmCypherBean verifyQTR1 = TkmCypherProviderBCQTESLAPSSC1Round1.verify(
-//                            addressQTR1,
-//                            baseBean.getSignature(),
-//                            requestJsonCompact
-//                    );
-//                    if (verifyQTR1.isValid()) {
-//                        return true;
-//                    }
-//                } else {
-//                    throw new MessageException("Key verification error!");
-//                }
-//
-//                break;
-//            case "BCQTESLA_PS_1_R2":
-//                String addressQTR2 = fullPublicKey;
-//                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
-//                    addressQTR2 = retrieveBookmark("test", fullPublicKey);
-//                }
-//                String testQTR2 = TkmAddressUtils.toCompactAddress(addressQTR2).getDefaultShort();
-//                if (testQTR2.equals(baseBean.getMessageAction().getFrom().getAddress())) {
-//                    TkmCypherBean verifyQTR2 = TkmCypherProviderBCQTESLAPSSC1Round2.verify(
-//                            addressQTR2,
-//                            baseBean.getSignature(),
-//                            requestJsonCompact
-//                    );
-//                    if (verifyQTR2.isValid()) {
-//                        return true;
-//                    }
-//                } else {
-//                    throw new MessageException("Key verification error!");
-//                }
-//
-//                break;
-//            default:
-//                throw new AssertionError("unknown cypher");
-//
-//        }
-        return false;
-    }
+//    public static final boolean verifyChatMessageSignature(String canonicalJsonMessage, String fullPublicKey) throws JsonProcessingException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException, MessageException {
+//        SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(canonicalJsonMessage);
+////        log.info(fromJsonToSignedMessageBean.toString());
+////        log.info("message to be verified: " + requestJsonCompact);
+////        switch (baseBean.getTypeOfSignature()) {
+////            case "Ed25519BC":
+////
+////                TkmCypherBean verifyEd = TkmCypherProviderBCED25519.verify(
+////                        baseBean.getMessageAction().getFrom().getAddress(),
+////                        baseBean.getSignature(),
+////                        requestJsonCompact
+////                );
+////
+////                if (verifyEd.isValid()) {
+////                    return true;
+////                }
+////
+////                break;
+////
+////            case "BCQTESLA_PS_1":
+////
+////                String addressQTR1 = fullPublicKey;
+////                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
+////                    addressQTR1 = retrieveBookmark("test", fullPublicKey);
+////                }
+////                String testQTR1 = TkmAddressUtils.toCompactAddress(addressQTR1).getDefaultShort();
+////                if (testQTR1.equals(baseBean.getMessageAction().getFrom().getAddress())) {
+////                    TkmCypherBean verifyQTR1 = TkmCypherProviderBCQTESLAPSSC1Round1.verify(
+////                            addressQTR1,
+////                            baseBean.getSignature(),
+////                            requestJsonCompact
+////                    );
+////                    if (verifyQTR1.isValid()) {
+////                        return true;
+////                    }
+////                } else {
+////                    throw new MessageException("Key verification error!");
+////                }
+////
+////                break;
+////            case "BCQTESLA_PS_1_R2":
+////                String addressQTR2 = fullPublicKey;
+////                if (fullPublicKey != null && fullPublicKey.length() != 19840) {
+////                    addressQTR2 = retrieveBookmark("test", fullPublicKey);
+////                }
+////                String testQTR2 = TkmAddressUtils.toCompactAddress(addressQTR2).getDefaultShort();
+////                if (testQTR2.equals(baseBean.getMessageAction().getFrom().getAddress())) {
+////                    TkmCypherBean verifyQTR2 = TkmCypherProviderBCQTESLAPSSC1Round2.verify(
+////                            addressQTR2,
+////                            baseBean.getSignature(),
+////                            requestJsonCompact
+////                    );
+////                    if (verifyQTR2.isValid()) {
+////                        return true;
+////                    }
+////                } else {
+////                    throw new MessageException("Key verification error!");
+////                }
+////
+////                break;
+////            default:
+////                throw new AssertionError("unknown cypher");
+////
+////        }
+//        return false;
+//    }
 
     public static final void signMessage(BaseBean baseBean, InstanceWalletKeystoreInterface iwk, int index) throws JsonProcessingException, WalletException, MessageException {
         //set type of signature
