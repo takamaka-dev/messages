@@ -24,6 +24,8 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
+import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
+import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageSignedRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
@@ -37,6 +39,7 @@ import io.takamaka.messages.exception.InvalidParameterException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.exception.UnsupportedChatMessageTypeException;
 import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
+import static io.takamaka.messages.utils.ChatUtils.fromJsonToRetrieveConversationRequestBean;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;
@@ -219,7 +222,7 @@ public class ChatCryptoUtils {
                     CHAT_MESSAGE_TYPES.NOTIFICATION_REQUEST.name(),
                     signIwk.getWalletCypher().name());
             return userNotificationRequestBean;
-            //return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+            //return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
@@ -314,6 +317,12 @@ public class ChatCryptoUtils {
                     returnObj = fromJsonToTimestampSignedRequestBean;
                     break;
 
+                case "RETRIEVE_CONVERSATION":
+                    RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean = ChatUtils.fromJsonToRetrieveConversationRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveConversationRequestBean.getRetrieveConversationRequestContentBean());
+                    returnObj = fromJsonToRetrieveConversationRequestBean;
+                    break;
+
                 default:
                     throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
             }
@@ -367,7 +376,7 @@ public class ChatCryptoUtils {
     public static final RegisterUserRequestBean getSignedRegisteredUserRequests(InstanceWalletKeystoreInterface iwk, int i, RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(registerUserRequestSignedContentBean), iwk, i);
-            return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+            return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
@@ -380,7 +389,7 @@ public class ChatCryptoUtils {
     public static final RequestUserKeyRequestBean getRequestUserKeyRequestBean(InstanceWalletKeystoreInterface iwk, int i, List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(requestUserKeyRequestBeanSignedContent), iwk, i);
-            return new RequestUserKeyRequestBean(requestUserKeyRequestBeanSignedContent, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REQUEST_USER_KEYS.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+            return new RequestUserKeyRequestBean(requestUserKeyRequestBeanSignedContent, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REQUEST_USER_KEYS.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
@@ -403,7 +412,20 @@ public class ChatCryptoUtils {
     public static final RetrieveMessageRequestBean getRetrieveMessageRequestBeanLastN(InstanceWalletKeystoreInterface iwk, int i, RetrieveMessageSignedRequestBean retrieveMessageSignedRequestBean) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveMessageSignedRequestBean), iwk, i);
-            return new RetrieveMessageRequestBean(retrieveMessageSignedRequestBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+            return new RetrieveMessageRequestBean(retrieveMessageSignedRequestBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N.name(), iwk.getWalletCypher().name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    public static final RetrieveConversationRequestBean getRetrieveConversationRequestBean(InstanceWalletKeystoreInterface iwk, int i, RetrieveConversationRequestContentBean retrieveConversationRequestContentBean) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveConversationRequestContentBean), iwk, i);
+            return new RetrieveConversationRequestBean(retrieveConversationRequestContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_CONVERSATION.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
@@ -416,7 +438,7 @@ public class ChatCryptoUtils {
     public static final RetrieveMessageRequestBean getRetrieveMessageRequestBeanBySignature(InstanceWalletKeystoreInterface iwk, int i, RetrieveMessageSignedRequestBean retrieveMessageSignedRequestBean) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveMessageSignedRequestBean), iwk, i);
-            return new RetrieveMessageRequestBean(retrieveMessageSignedRequestBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE.name(), KeyContexts.WalletCypher.Ed25519BC.name());
+            return new RetrieveMessageRequestBean(retrieveMessageSignedRequestBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);

@@ -34,6 +34,8 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
+import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
+import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
@@ -139,6 +141,10 @@ public class ChatUtils {
 
     public static final SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SignedTimestampRequestBean.class);
+    }
+
+    public static final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RetrieveConversationRequestBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {
