@@ -158,6 +158,16 @@ public class ChatCryptoUtils {
 
     }
 
+    public static final BasicMessageEncryptedContentBean decryptBasicMessageEncryptedContentBeanWithScope(EncMessageBean encryptedBasicMessageBean, String symmetricKey, CHAT_MESSAGE_TYPES scope) throws ChatMessageException {
+        try {
+            String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricKey, scope.name(), encryptedBasicMessageBean);
+            BasicMessageEncryptedContentBean readValue = TkmTextUtils.getJacksonMapper().readValue(fromPasswordEncryptedContent, BasicMessageEncryptedContentBean.class);
+            return readValue;
+        } catch (WalletException | JsonProcessingException ex) {
+            throw new ChatMessageException(ex);
+        }
+    }
+
     public static final BasicMessageEncryptedContentBean decryptBasicMessageEncryptedContentBean(EncMessageBean encryptedBasicMessageBean, String symmetricKey) throws ChatMessageException {
         try {
             String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricKey, CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(), encryptedBasicMessageBean);
