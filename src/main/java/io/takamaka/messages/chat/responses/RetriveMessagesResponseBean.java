@@ -31,6 +31,8 @@ public class RetriveMessagesResponseBean {
 
     @JsonProperty("request_signature")
     private String requestSignature;
+    @JsonProperty("reception_timestamp")
+    private Long receptionTimestamp;
     @JsonProperty("message_json")
     private String messageJson;
 }
