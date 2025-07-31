@@ -49,7 +49,7 @@ public class Messages {
     }
 
     public static void main(String[] args) throws MessageException, JsonProcessingException, IOException, UnlockWalletException, WalletException, HashEncodeException, HashAlgorithmNotFoundException, HashProviderNotFoundException, AddressNotRecognizedException, AddressTooLongException {
-        Configurator.setRootLevel(Level.DEBUG);
+//        Configurator.setRootLevel(Level.DEBUG);
         
         log.info("Hello World!");
         //force param load
