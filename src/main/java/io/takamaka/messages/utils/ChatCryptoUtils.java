@@ -287,55 +287,64 @@ public class ChatCryptoUtils {
             }
             final TkmCypherBean verifyResult;
             final SignedMessageBean returnObj;
+            log.debug("dec {}", fromJsonToSignedMessageBean);
+            if (fromJsonToSignedMessageBean == null) {
+                throw new ChatMessageException("invalid json message");
+            }
+            if (fromJsonToSignedMessageBean.getFrom() == null
+                    || fromJsonToSignedMessageBean.getFrom() == null
+                    || fromJsonToSignedMessageBean.getMessageType() == null
+                    || fromJsonToSignedMessageBean.getSignature() == null
+                    || fromJsonToSignedMessageBean.getSignatureType() == null) {
+                throw new ChatMessageException("missing required field");
+            }
             switch (fromJsonToSignedMessageBean.getMessageType()) {
-                //java 17 limitation...
-                case "REGISTER_USER_SIGNED_REQUEST":
+                case "REGISTER_USER_SIGNED_REQUEST" -> {
                     RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
                     returnObj = fromJsonToRegisterUserRequestBean;
-                    break;
-                case "REQUEST_USER_KEYS":
+                }
+                case "REQUEST_USER_KEYS" -> {
                     RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean = ChatUtils.fromJsonToRequestUserKeyRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRequestUserKeyRequestBean.getRequestUserKeyRequestBeanSignedContent());
                     returnObj = fromJsonToRequestUserKeyRequestBean;
-                    break;
-                case "TOPIC_CREATION":
+                }
+                case "TOPIC_CREATION" -> {
                     CreateConversationRequestBean fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
                     returnObj = fromJsonToCreateConversationRequest;
-                    break;
-                case "TOPIC_MESSAGE":
+                }
+                case "TOPIC_MESSAGE" -> {
                     BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                     returnObj = fromJsonToBasicMessageBeanRequest;
-                    break;
-                case "NOTIFICATION_REQUEST":
+                }
+                case "NOTIFICATION_REQUEST" -> {
                     UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToUserNotificationRequestBean.getSignedNotificationRequestContent());
                     returnObj = fromJsonToUserNotificationRequestBean;
-                    break;
-                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N":
-                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE":
+                }
+                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N", "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE" -> {
                     RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveMessageRequestBean.getRetrieveMessageSignedRequestBean());
                     returnObj = fromJsonToRetrieveMessageRequestBean;
-                    break;
-
-                case "SIGNED_TIMESTAMP":
+                }
+                case "SIGNED_TIMESTAMP" -> {
                     SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToTimestampSignedRequestBean.getSignedTimestamp());
                     returnObj = fromJsonToTimestampSignedRequestBean;
-                    break;
+                }
 
-                case "RETRIEVE_CONVERSATION":
+                case "RETRIEVE_CONVERSATION" -> {
                     RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean = ChatUtils.fromJsonToRetrieveConversationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveConversationRequestBean.getRetrieveConversationRequestContentBean());
                     returnObj = fromJsonToRetrieveConversationRequestBean;
-                    break;
+                }
 
-                default:
+                default ->
                     throw new UnsupportedChatMessageTypeException("unsupported message type" + fromJsonToSignedMessageBean.getMessageType());
             }
+            //java 17 limitation...
             switch (fromJsonToSignedMessageBean.getSignatureType()) {
                 case "Ed25519BC":
                     verifyResult = TkmCypherProviderBCED25519.verify(pk, fromJsonToSignedMessageBean.getSignature(), jsonCanonical);
