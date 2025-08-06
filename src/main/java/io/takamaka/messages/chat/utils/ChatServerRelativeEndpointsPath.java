@@ -21,5 +21,9 @@ package io.takamaka.messages.chat.utils;
  */
 public class ChatServerRelativeEndpointsPath {
 
+    /**
+     * nonce endpoint
+     */
     public static final String NONCE = "nonce";
+    public static final String REGISTER_USER = "registeruser";
 }
