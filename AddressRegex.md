@@ -17,7 +17,7 @@
 
 ## SHORT B64
 
-more compact (new client version, not in user)
+more compact (new client version, not in use in current client)
 
 ```regex
 ^[a-zA-Z0-9-_.]{64}$
