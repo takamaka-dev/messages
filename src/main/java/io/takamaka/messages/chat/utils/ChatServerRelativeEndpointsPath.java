@@ -27,4 +27,5 @@ public class ChatServerRelativeEndpointsPath {
     public static final String NONCE = "nonce";
     public static final String REGISTER_USER = "registeruser";
     public static final String REQUEST_KEYS = "requestkeys";
+    public static final String CREATE_CONVERSATION = "createconversation";
 }
