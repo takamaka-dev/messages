@@ -31,4 +31,5 @@ public class ChatServerRelativeEndpointsPath {
     public static final String NOTIFICATION = "notification";
     public static final String NOTIFICATION_HISTORY = "notificationhistory";
     public static final String RETRIEVE_ALL_CONVERSATIONS = "retrieveallconversations";
+    public static final String RETRIEVE_CONVERSATION = "retrieveconversation";
 }
