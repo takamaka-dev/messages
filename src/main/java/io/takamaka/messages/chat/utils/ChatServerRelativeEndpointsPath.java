@@ -19,17 +19,52 @@ package io.takamaka.messages.chat.utils;
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
+/**
+ * Defines the relative endpoint paths for the chat server API. This class
+ * provides constant string values for various API endpoints, making it easier
+ * to manage and refer to them throughout the application.
+ */
 public class ChatServerRelativeEndpointsPath {
 
     /**
-     * nonce endpoint
+     * The relative path for the nonce endpoint, used for nonce challenge
+     * retrival.
      */
     public static final String NONCE = "nonce";
+
+    /**
+     * The relative path for the user encryption/decryption keys registration
+     * endpoint.
+     */
     public static final String REGISTER_USER = "registeruser";
+
+    /**
+     * The relative path for requesting user public encryption/decryption keys.
+     */
     public static final String REQUEST_KEYS = "requestkeys";
+
+    /**
+     * The relative path for submit a new conversation bean.
+     */
     public static final String CREATE_CONVERSATION = "createconversation";
+
+    /**
+     * The relative path for sending or receiving notifications.
+     */
     public static final String NOTIFICATION = "notification";
+
+    /**
+     * The relative path for retrieving notification history.
+     */
     public static final String NOTIFICATION_HISTORY = "notificationhistory";
+
+    /**
+     * The relative path for retrieving all conversations hashes for a user.
+     */
     public static final String RETRIEVE_ALL_CONVERSATIONS = "retrieveallconversations";
+
+    /**
+     * The relative path for retrieving a specific conversation key bean.
+     */
     public static final String RETRIEVE_CONVERSATION = "retrieveconversation";
 }
