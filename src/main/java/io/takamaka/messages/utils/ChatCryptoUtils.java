@@ -24,6 +24,8 @@ import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
 import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
+import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestBean;
+import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
@@ -221,6 +223,29 @@ public class ChatCryptoUtils {
         return signedRegisteredUserRequests;
     }
 
+    public static final RetrieveAllConversationsRequestBean getRetrieveAllConversationsRequestBean(Long notBefore, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            RetrieveAllConversationsRequestContentBean retrieveAllConversationsRequestContentBean = new RetrieveAllConversationsRequestContentBean(notBefore);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveAllConversationsRequestContentBean), signIwk, sigIwkIndex);
+            RetrieveAllConversationsRequestBean retrieveAllConversationsRequestBean = new RetrieveAllConversationsRequestBean(
+                    retrieveAllConversationsRequestContentBean,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.RETRIEVE_ALL_CONVERSATIONS.name(),
+                    signIwk.getWalletCypher().name());
+            return retrieveAllConversationsRequestBean;
+            //return new RegisterUserRequestBean(registerUserRequestSignedContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REGISTER_USER_SIGNED_REQUEST.name(), iwk.getWalletCypher().name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+
+        //return signedRegisteredUserRequests;
+    }
+
     public static final UserNotificationRequestBean getUserNotificationRequestBean(Long notBefore, boolean onlyUnread, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         try {
             SignedNotificationRequestContent signedNotificationRequestContent = new SignedNotificationRequestContent(notBefore, onlyUnread);
@@ -323,6 +348,11 @@ public class ChatCryptoUtils {
                     UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToUserNotificationRequestBean.getSignedNotificationRequestContent());
                     returnObj = fromJsonToUserNotificationRequestBean;
+                }
+                case "RETRIEVE_ALL_CONVERSATIONS" -> {
+                    RetrieveAllConversationsRequestBean fromJsonToRetrieveAllConversationsRequestBean = ChatUtils.fromJsonToRetrieveAllConversationsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveAllConversationsRequestBean.getAllConversationsRequestContentBean());
+                    returnObj = fromJsonToRetrieveAllConversationsRequestBean;
                 }
                 case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N", "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE" -> {
                     RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);

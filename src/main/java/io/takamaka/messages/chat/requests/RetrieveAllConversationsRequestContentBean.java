@@ -13,22 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.chat.utils;
+package io.takamaka.messages.chat.requests;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public class ChatServerRelativeEndpointsPath {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class RetrieveAllConversationsRequestContentBean {
 
-    /**
-     * nonce endpoint
-     */
-    public static final String NONCE = "nonce";
-    public static final String REGISTER_USER = "registeruser";
-    public static final String REQUEST_KEYS = "requestkeys";
-    public static final String CREATE_CONVERSATION = "createconversation";
-    public static final String NOTIFICATION = "notification";
-    public static final String NOTIFICATION_HISTORY = "notificationhistory";
-    public static final String RETRIEVE_ALL_CONVERSATIONS = "retrieveallconversations";
+    private Long notBefore;
 }
