@@ -15,6 +15,7 @@
  */
 package io.takamaka.messages.chat.requests;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,5 +29,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RetrieveAllConversationsRequestContentBean {
 
+    @JsonProperty("not_before")
     private Long notBefore;
 }
