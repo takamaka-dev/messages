@@ -69,4 +69,5 @@ public class ChatServerRelativeEndpointsPath {
     public static final String RETRIEVE_CONVERSATION = "retrieveconversation";
     public static final String RETRIEVE_MESSAGES = "retrievemessages";
     public static final String RETRIEVE_ALL_MESSAGES = "retrieveallmessages";
+    public static final String SUBMIT_MESSAGE = "messages";
 }
