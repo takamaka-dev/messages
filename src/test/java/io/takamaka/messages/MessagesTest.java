@@ -218,7 +218,7 @@ public class MessagesTest {
                         new ArrayList<String>(),
                         new BasicMessageEncryptedContentBean(
                                 "sticazzi",
-                                new ArrayList<ChatMediaBean>()));
+                                new ArrayList<String>()));
 
         String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
 

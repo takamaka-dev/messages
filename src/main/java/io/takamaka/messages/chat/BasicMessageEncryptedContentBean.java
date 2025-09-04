@@ -33,5 +33,5 @@ public class BasicMessageEncryptedContentBean {
     @JsonProperty("text_message")
     private String textMessage;
     @JsonProperty("attached_media")
-    private List<ChatMediaBean> attachedMedia;
+    private List<String> attachedMedia;
 }

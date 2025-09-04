@@ -9,7 +9,6 @@ import io.takamaka.extra.identicon.exceptions.AddressTooLongException;
 import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.exception.MessageException;
-import io.takamaka.messages.qr.SimpleQRGenerator;
 import io.takamaka.messages.qr.SimpleQRHelper;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.messages.utils.SimpleRequestModels;
@@ -23,19 +22,14 @@ import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
 import io.takamaka.wallet.exceptions.UnlockWalletException;
 import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.DefaultInitParameters;
-import io.takamaka.wallet.utils.FileHelper;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTK;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Date;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
 
 /**
  *
