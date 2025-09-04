@@ -215,10 +215,10 @@ public class MessagesTest {
                         0,
                         "placehoder",
                         "pollo",
-                        new ArrayList<String>(),
+                        new ArrayList<>(),
                         new BasicMessageEncryptedContentBean(
-                                "sticazzi",
-                                new ArrayList<String>()));
+                                "sti casi",
+                                new ArrayList<>()));
 
         String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
 
