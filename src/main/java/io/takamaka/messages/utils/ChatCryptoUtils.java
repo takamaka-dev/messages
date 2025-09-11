@@ -12,6 +12,7 @@ import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 import io.takamaka.messages.chat.BasicMessageSignedContentBean;
 import io.takamaka.messages.chat.BasicTimestampBean;
+import io.takamaka.messages.chat.ChatMediaBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
@@ -160,10 +161,35 @@ public class ChatCryptoUtils {
 
     }
 
+    public static final EncMessageBean getEncryptedMessageAttachmentMediaBean(ChatMediaBean chatMediaBean, String symmetricKey) throws CryptoMessageException {
+        try {
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(chatMediaBean);
+            EncMessageBean toPasswordEncryptedContent = TkmEncryptionUtils.toPasswordEncryptedContent(
+                    symmetricKey,
+                    canonicalJson,
+                    CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA.name(),
+                    EncryptionContext.v0_1_a.name());
+            return toPasswordEncryptedContent;
+        } catch (JsonProcessingException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
+
+    }
+
     public static final BasicMessageEncryptedContentBean decryptBasicMessageEncryptedContentBeanWithScope(EncMessageBean encryptedBasicMessageBean, String symmetricKey, CHAT_MESSAGE_TYPES scope) throws ChatMessageException {
         try {
             String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricKey, scope.name(), encryptedBasicMessageBean);
             BasicMessageEncryptedContentBean readValue = TkmTextUtils.getJacksonMapper().readValue(fromPasswordEncryptedContent, BasicMessageEncryptedContentBean.class);
+            return readValue;
+        } catch (WalletException | JsonProcessingException ex) {
+            throw new ChatMessageException(ex);
+        }
+    }
+    
+    public static final ChatMediaBean decryptMediaMessageEncryptedContentBeanWithScope(EncMessageBean encryptedBasicMessageBean, String symmetricKey, CHAT_MESSAGE_TYPES scope) throws ChatMessageException {
+        try {
+            String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricKey, scope.name(), encryptedBasicMessageBean);
+            ChatMediaBean readValue = TkmTextUtils.getJacksonMapper().readValue(fromPasswordEncryptedContent, ChatMediaBean.class);
             return readValue;
         } catch (WalletException | JsonProcessingException ex) {
             throw new ChatMessageException(ex);
@@ -339,7 +365,7 @@ public class ChatCryptoUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
                     returnObj = fromJsonToCreateConversationRequest;
                 }
-                case "TOPIC_MESSAGE" -> {
+                case "TOPIC_MESSAGE", "TOPIC_MESSAGE_MEDIA" -> {
                     BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                     returnObj = fromJsonToBasicMessageBeanRequest;
@@ -392,30 +418,74 @@ public class ChatCryptoUtils {
         }
     }
 
-    //    public static final CreateConversationRequestBean getSignedCreateConversationRequest(InstanceWalletKeystoreInterface iwk, int index, SignedContentTopicBean signedContentTopicBean) throws MessageException {
-    //        try {
-    //            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedContentTopicBean), iwk, index);
-    //            CreateConversationRequestBean createConversationRequest = new CreateConversationRequestBean(
-    //                    signedContentTopicBean,
-    //                    iwk.getPublicKeyAtIndexURL64(index),
-    //                    messageSignature,
-    //                    CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(),
-    //                    iwk.getWalletCypher().name());
-    //            return createConversationRequest;
-    //        } catch (JsonProcessingException | MessageException | WalletException ex) {
-    //            throw new MessageException(ex);
-    //        }
-    //
-    //    }
     public static final BasicMessageRequestBean getBasicMessageBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, List<String> citedUsers, BasicMessageEncryptedContentBean basicMessageEncryptedContentBean) throws ChatMessageException {
         try {
             //encrypt content
-            EncMessageBean encContent = ChatCryptoUtils.getEncryptedBasicMessageEncryptedContentBean(basicMessageEncryptedContentBean, conversationEncryptionKey); //TODO CREATE CONTENT
+            EncMessageBean encContent
+                    = ChatCryptoUtils
+                            .getEncryptedBasicMessageEncryptedContentBean(
+                                    basicMessageEncryptedContentBean,
+                                    conversationEncryptionKey
+                            );
             //signed content
-            BasicMessageSignedContentBean basicMessageSignedContentBean = new BasicMessageSignedContentBean(conversationHashName, citedUsers, encContent);
-            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(basicMessageSignedContentBean), iwkSign, index);
+            BasicMessageSignedContentBean basicMessageSignedContentBean
+                    = new BasicMessageSignedContentBean(
+                            conversationHashName,
+                            citedUsers,
+                            encContent
+                    );
+            String messageSignature
+                    = SimpleRequestHelper.signChatMessage(
+                            SimpleRequestHelper.getCanonicalJson(basicMessageSignedContentBean),
+                            iwkSign,
+                            index
+                    );
             //server request
-            BasicMessageRequestBean basicMessageBeanRequest = new BasicMessageRequestBean(basicMessageSignedContentBean, iwkSign.getPublicKeyAtIndexURL64(index), messageSignature, CHAT_MESSAGE_TYPES.TOPIC_MESSAGE.name(), iwkSign.getWalletCypher().name());
+            BasicMessageRequestBean basicMessageBeanRequest
+                    = new BasicMessageRequestBean(
+                            basicMessageSignedContentBean,
+                            iwkSign.getPublicKeyAtIndexURL64(index),
+                            messageSignature,
+                            CHAT_MESSAGE_TYPES.TOPIC_MESSAGE.name(),
+                            iwkSign.getWalletCypher().name()
+                    );
+            return basicMessageBeanRequest;
+        } catch (MessageException | JsonProcessingException | WalletException ex) {
+            throw new ChatMessageException(ex);
+        }
+    }
+
+    public static final BasicMessageRequestBean getEncryptedMessageAttachmentBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, ChatMediaBean chatMediaBean) throws ChatMessageException {
+        try {
+            //encrypt content
+            EncMessageBean encContent
+                    = ChatCryptoUtils
+                            .getEncryptedMessageAttachmentMediaBean(
+                                    chatMediaBean,
+                                    conversationEncryptionKey
+                            );
+            //signed content
+            BasicMessageSignedContentBean basicMessageSignedContentBean
+                    = new BasicMessageSignedContentBean(
+                            conversationHashName,
+                            List.of(),
+                            encContent
+                    );
+            String messageSignature
+                    = SimpleRequestHelper.signChatMessage(
+                            SimpleRequestHelper.getCanonicalJson(basicMessageSignedContentBean),
+                            iwkSign,
+                            index
+                    );
+            //server request
+            BasicMessageRequestBean basicMessageBeanRequest
+                    = new BasicMessageRequestBean(
+                            basicMessageSignedContentBean,
+                            iwkSign.getPublicKeyAtIndexURL64(index),
+                            messageSignature,
+                            CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA.name(),
+                            iwkSign.getWalletCypher().name()
+                    );
             return basicMessageBeanRequest;
         } catch (MessageException | JsonProcessingException | WalletException ex) {
             throw new ChatMessageException(ex);

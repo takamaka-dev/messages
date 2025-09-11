@@ -31,6 +31,7 @@ import io.takamaka.messages.exception.ChatMessageSerializationException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
+import io.takamaka.messages.utils.CHAT_MESSAGE_TYPES;
 import io.takamaka.messages.utils.ChatCryptoUtils;
 import io.takamaka.messages.utils.ChatUtils;
 import io.takamaka.messages.utils.SimpleRequestHelper;
@@ -39,7 +40,9 @@ import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
 import io.takamaka.wallet.exceptions.WalletException;
+import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -66,6 +69,7 @@ public class MessagesTest {
     public static InstanceWalletKeystoreInterface iwkED;
     public static InstanceWalletKeystoreInterface iwkRSA;
     public static final String password = "superSecretPassword";
+    public static final String LOREM_TEXT = "Lorem Ipsum è un testo segnaposto utilizzato nel settore della tipografia e della stampa. Lorem Ipsum è considerato il testo segnaposto standard sin dal sedicesimo secolo, quando un anonimo tipografo prese una cassetta di caratteri e li assemblò per preparare un testo campione. È sopravvissuto non solo a più di cinque secoli, ma anche al passaggio alla videoimpaginazione, pervenendoci sostanzialmente inalterato. Fu reso popolare, negli anni ’60, con la diffusione dei fogli di caratteri trasferibili “Letraset”, che contenevano passaggi del Lorem Ipsum, e più recentemente da software di impaginazione come Aldus PageMaker, che includeva versioni del Lorem Ipsum.";
 
     public MessagesTest() {
         BasicConfigurator.configure();
@@ -226,6 +230,48 @@ public class MessagesTest {
 
         assertNotNull(verifySignedMessage.getSignature());
 
+    }
+
+    @Test
+    public void testAttachmentEncConversation() throws ChatMessageException, JsonProcessingException, MessageException {
+        final byte[] fromStringToByteArray = TkmSignUtils.fromStringToByteArray(LOREM_TEXT);
+        final String toBeEncrypted = TkmSignUtils.fromByteArrayToB64(fromStringToByteArray);
+        final String theSuperSecretEncryptionSymmetricKey = "pollo";
+        final ChatMediaBean chatMediaBean = new ChatMediaBean("mime type placeholder", toBeEncrypted);
+        BasicMessageRequestBean basicMessageBean
+                = ChatCryptoUtils.getEncryptedMessageAttachmentBean(iwkED,
+                        0,
+                        "placehoder",
+                        theSuperSecretEncryptionSymmetricKey, chatMediaBean);
+
+        String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
+
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(basicMessageJson);
+
+        assertNotNull(verifySignedMessage.getSignature());
+
+        ChatMediaBean decryptBasicMessageEncryptedContentBeanWithScope = ChatCryptoUtils
+                .decryptMediaMessageEncryptedContentBeanWithScope(
+                        basicMessageBean.getBasicMessageSignedContentBean().getEncryptedContent(),
+                        theSuperSecretEncryptionSymmetricKey,
+                        CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA);
+
+        assertEquals(CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA.name(), verifySignedMessage.getMessageType());
+
+        assertTrue("equals media type",
+                decryptBasicMessageEncryptedContentBeanWithScope
+                        .getMediaType()
+                        .equals(chatMediaBean.getMediaType()));
+        assertTrue("equals b64 content",
+                decryptBasicMessageEncryptedContentBeanWithScope
+                        .getBase64EncodedMedia()
+                        .equals(chatMediaBean.getBase64EncodedMedia()));
+        final byte[] decodedB64Bytes = TkmSignUtils.fromB64ToByteArray(decryptBasicMessageEncryptedContentBeanWithScope.getBase64EncodedMedia());
+        String decodedString = new String(decodedB64Bytes, Charset.defaultCharset());
+        assertTrue("equals string",
+                LOREM_TEXT
+                        .equals(decodedString));
+        //assertEquals(CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA.name(), verifySignedMessage.getMessageType());
     }
 
     @Test
