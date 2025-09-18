@@ -39,6 +39,7 @@ import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
@@ -146,6 +147,10 @@ public class ChatUtils {
 
     public static final SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SignedTimestampRequestBean.class);
+    }
+
+    public static final SignedUploadRequestBean fromJsonToSignedUploadRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SignedUploadRequestBean.class);
     }
 
     public static final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean(String jsonMessage) throws JsonProcessingException {

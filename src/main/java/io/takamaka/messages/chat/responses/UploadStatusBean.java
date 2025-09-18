@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 AiliA SA.
+ * Copyright 2025 AiliA SA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat.responses;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum CHAT_MESSAGE_TYPES {
-    REGISTER_USER_SIGNED_REQUEST,
-    REQUEST_USER_KEYS,
-    TOPIC_CREATION,
-    TOPIC_MESSAGE,
-    TOPIC_MESSAGE_MEDIA,
-    NOTIFICATION_REQUEST,
-    RETRIEVE_CONVERSATION,
-    RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N,
-    RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE,
-    SIGNED_TIMESTAMP,
-    RETRIEVE_ALL_CONVERSATIONS,
-    UPLOAD_REQUEST
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class UploadStatusBean {
 
+    private String uploadSignature;
+    private String status;
+    private Long uploadedChunk;
+    private String error;
 }

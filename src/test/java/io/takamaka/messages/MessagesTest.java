@@ -24,6 +24,7 @@ import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.chat.utils.ChatSD;
 import io.takamaka.messages.exception.ChatMessageException;
@@ -297,6 +298,28 @@ public class MessagesTest {
 
         String writeValueAsString = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedTimestampRequest);
         String writeValueAsString1 = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedTimestampRequest1);
+
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(writeValueAsString);
+        SignedMessageBean verifySignedMessage1 = ChatCryptoUtils.verifySignedMessage(writeValueAsString1);
+
+        assertNotNull(verifySignedMessage.getSignature());
+        assertNotNull(verifySignedMessage1.getSignature());
+        log.info("signed message signature: {} ", verifySignedMessage.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage.getFrom());
+        log.info("signed message signature: {} ", verifySignedMessage1.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage1.getFrom());
+
+    }
+
+    @Test
+    public void testSignedUploadRequestBean() throws ChatMessageException, JsonProcessingException, MessageException {
+
+        SignedUploadRequestBean signedUploadRequestBean = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder", "signature of the file to be uploaded", Long.MAX_VALUE, iwkED, 0);
+        SignedUploadRequestBean signedUploadRequestBean1 = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder1", "signature of the file to be uploaded1", Long.MIN_VALUE, iwkED, 1);
+
+        
+        String writeValueAsString = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedUploadRequestBean);
+        String writeValueAsString1 = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedUploadRequestBean1);
 
         SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(writeValueAsString);
         SignedMessageBean verifySignedMessage1 = ChatCryptoUtils.verifySignedMessage(writeValueAsString1);

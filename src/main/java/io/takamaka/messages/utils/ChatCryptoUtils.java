@@ -18,6 +18,7 @@ import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicKeyDistributionMapBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.chat.UploadRequestBean;
 import io.takamaka.messages.chat.notifications.SignedNotificationRequestContent;
 import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
@@ -32,6 +33,7 @@ import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageSignedRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
 import io.takamaka.messages.chat.responses.RetriveMessagesResponseBean;
@@ -185,7 +187,7 @@ public class ChatCryptoUtils {
             throw new ChatMessageException(ex);
         }
     }
-    
+
     public static final ChatMediaBean decryptMediaMessageEncryptedContentBeanWithScope(EncMessageBean encryptedBasicMessageBean, String symmetricKey, CHAT_MESSAGE_TYPES scope) throws ChatMessageException {
         try {
             String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricKey, scope.name(), encryptedBasicMessageBean);
@@ -239,6 +241,23 @@ public class ChatCryptoUtils {
                     signIwk.getWalletCypher().name());
             return signedTimestampRequestBean;
         } catch (WalletException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    public static final SignedUploadRequestBean getSignedUploadRequestBean(final String topicTitle, final String uploadContentSignature, final long size, final InstanceWalletKeystoreInterface signIwk, final int sigIwkIndex) throws CryptoMessageException {
+        try {
+            UploadRequestBean uploadRequestBean = new UploadRequestBean(topicTitle, uploadContentSignature, size);
+            String canonicalJson = SimpleRequestHelper.getCanonicalJson(uploadRequestBean);
+            String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new SignedUploadRequestBean(
+                    uploadRequestBean,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.UPLOAD_REQUEST.name(),
+                    signIwk.getWalletCypher().name()
+            );
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
         }
     }
@@ -389,6 +408,11 @@ public class ChatCryptoUtils {
                     SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToTimestampSignedRequestBean.getSignedTimestamp());
                     returnObj = fromJsonToTimestampSignedRequestBean;
+                }
+                case "UPLOAD_REQUEST" -> {
+                    SignedUploadRequestBean fromJsonToSignedUploadRequestBean = ChatUtils.fromJsonToSignedUploadRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToSignedUploadRequestBean.getUploadRequestBean());
+                    returnObj = fromJsonToSignedUploadRequestBean;
                 }
 
                 case "RETRIEVE_CONVERSATION" -> {
