@@ -327,20 +327,11 @@ public class ChatCryptoUtils {
         }
     }
 
-    //    public static final boolean verifyCreateConversationRequestSignature(CreateConversationRequest createConversationRequest) throws ChatMessageException {
-    //        try {
-    ////            SignedContentTopicBean topic = createConversationRequest.getTopic();
-    ////            String canonicalJson = SimpleRequestHelper.getCanonicalJson(topic);
-    //            SignedMessageBean verifySignedMessage = verifySignedMessage(canonicalJson);
-    //            if (verifySignedMessage.getFrom() != null) {
-    //                return true;
-    //            }
-    //            return false;
-    //        } catch (JsonProcessingException ex) {
-    //            throw new ChatMessageException(ex);
-    //        }
-    //    }
     public static final SignedMessageBean verifySignedMessage(String messageJson, String... from) throws ChatMessageException {
+        return verifySignedMessage(messageJson, null, from);
+    }
+
+    public static final SignedMessageBean verifySignedMessage(String messageJson, Integer maxChar, String... from) throws ChatMessageException {
         try {
             SignedMessageBean fromJsonToSignedMessageBean = ChatUtils.fromJsonToSignedMessageBean(messageJson);
             final String jsonCanonical;
@@ -384,10 +375,21 @@ public class ChatCryptoUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
                     returnObj = fromJsonToCreateConversationRequest;
                 }
-                case "TOPIC_MESSAGE", "TOPIC_MESSAGE_MEDIA" -> {
+                case "TOPIC_MESSAGE" -> {
                     BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                     returnObj = fromJsonToBasicMessageBeanRequest;
+                }
+                case "TOPIC_MESSAGE_MEDIA" -> {
+                    if (maxChar == null) {
+                        BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
+                        jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
+                        returnObj = fromJsonToBasicMessageBeanRequest;
+                    } else {
+                        BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson, maxChar);
+                        jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
+                        returnObj = fromJsonToBasicMessageBeanRequest;
+                    }
                 }
                 case "NOTIFICATION_REQUEST" -> {
                     UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);

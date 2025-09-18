@@ -15,9 +15,12 @@
  */
 package io.takamaka.messages.utils;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.beans.BaseBean;
@@ -131,6 +134,15 @@ public class ChatUtils {
 
     public static final BasicMessageRequestBean fromJsonToBasicMessageBeanRequest(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, BasicMessageRequestBean.class);
+    }
+
+    public static final BasicMessageRequestBean fromJsonToBasicMessageBeanRequest(String jsonMessage, int maxChar) throws JsonProcessingException {
+        JsonFactory streamReadConstraints
+                = TkmTextUtils
+                        .getJacksonMapper()
+                        .getFactory()
+                        .setStreamReadConstraints(StreamReadConstraints.builder().maxStringLength(maxChar).build());
+        return JsonMapper.builder(streamReadConstraints).build().readValue(jsonMessage, BasicMessageRequestBean.class);
     }
 
     public static final UserNotificationRequestBean fromJsonToUserNotificationRequestBean(String jsonMessage) throws JsonProcessingException {
