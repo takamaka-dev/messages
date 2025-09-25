@@ -16,6 +16,7 @@
 package io.takamaka.messages.chat;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.extra.beans.StreamEncryptedDescriptor;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -54,5 +55,6 @@ public class ChatMediaPlaceholderBean {
      */
     @JsonProperty("request_signature")
     private String objectSignature;
+    private StreamEncryptedDescriptor sed;
 
 }

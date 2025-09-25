@@ -13,7 +13,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.takamaka.messages</groupId>
     <artifactId>messages</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
+    <version>1.0.4-SNAPSHOT</version>
     <packaging>jar</packaging>
     <licenses>
         <license>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>io.takamaka.extra</groupId>
             <artifactId>takamaka-extra</artifactId>
-            <version>0.4.0-SNAPSHOT</version>
+            <version>0.4.1-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
         <dependency>
