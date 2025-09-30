@@ -41,6 +41,11 @@ public enum TransferStatus {
      */
     VERIFING_SIGNATURE,
     /**
+     * Indicates that the system is currently verifying the hash of the
+     * transferred file.
+     */
+    VERIFING_HASH,
+    /**
      * Indicates that the file transfer operation is being prepared.
      */
     PREPARING,

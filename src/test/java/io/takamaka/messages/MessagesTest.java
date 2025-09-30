@@ -16,6 +16,7 @@
 package io.takamaka.messages;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.takamaka.extra.beans.StreamEncryptedDescriptor;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 //import io.takamaka.messages.chat.ChatMediaBean;
 import io.takamaka.messages.chat.responses.NonceResponseBean;
@@ -274,7 +275,6 @@ public class MessagesTest {
 //                        .equals(decodedString));
 //        //assertEquals(CHAT_MESSAGE_TYPES.TOPIC_MESSAGE_MEDIA.name(), verifySignedMessage.getMessageType());
 //    }
-
     @Test
     public void testUserNotification() throws ChatMessageException, JsonProcessingException, MessageException {
 
@@ -314,10 +314,9 @@ public class MessagesTest {
     @Test
     public void testSignedUploadRequestBean() throws ChatMessageException, JsonProcessingException, MessageException {
 
-        SignedUploadRequestBean signedUploadRequestBean = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder", "signature of the file to be uploaded", Long.MAX_VALUE, iwkED, 0);
-        SignedUploadRequestBean signedUploadRequestBean1 = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder1", "signature of the file to be uploaded1", Long.MIN_VALUE, iwkED, 1);
+        SignedUploadRequestBean signedUploadRequestBean = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder", "signature of the file to be uploaded", Long.MAX_VALUE, new StreamEncryptedDescriptor(), iwkED, 0);
+        SignedUploadRequestBean signedUploadRequestBean1 = ChatCryptoUtils.getSignedUploadRequestBean("topic_title_placeholder1", "signature of the file to be uploaded1", Long.MIN_VALUE, new StreamEncryptedDescriptor(), iwkED, 1);
 
-        
         String writeValueAsString = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedUploadRequestBean);
         String writeValueAsString1 = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedUploadRequestBean1);
 

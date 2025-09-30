@@ -16,6 +16,7 @@
 package io.takamaka.messages.chat;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.extra.beans.StreamEncryptedDescriptor;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -43,5 +44,6 @@ public class UploadRequestBean {
      * upper bound, in bytes, of the content size
      */
     private Long size;
+    private StreamEncryptedDescriptor sed;
 
 }
