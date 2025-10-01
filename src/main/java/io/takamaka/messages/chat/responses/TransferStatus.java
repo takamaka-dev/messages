@@ -46,6 +46,10 @@ public enum TransferStatus {
      */
     VERIFING_HASH,
     /**
+     * Indicates that the file transfer operation is being executed.
+     */
+    BATCH_MOVE,
+    /**
      * Indicates that the file transfer operation is being prepared.
      */
     PREPARING,
