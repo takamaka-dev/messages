@@ -38,8 +38,8 @@ public class UploadRequestBean {
     /**
      * signature of the content to be uploaded
      */
-    @JsonProperty("upload_content_signature")
-    private String uploadContentSignature;
+    @JsonProperty("upload_content_id_hash")
+    private String uploadContentIdentifingHash;
     /**
      * upper bound, in bytes, of the content size
      */
