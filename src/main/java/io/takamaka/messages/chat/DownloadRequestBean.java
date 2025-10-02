@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.chat.responses;
+package io.takamaka.messages.chat;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -27,12 +27,20 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UploadStatusBean {
+public class DownloadRequestBean {
 
+    /**
+     * conversation to which the message will be mapped
+     */
+    @JsonProperty("topic_title")
+    private String topicTitle;
+    /**
+     * signature of the content to be uploaded
+     */
     @JsonProperty("upload_content_id_hash")
     private String uploadContentIdentifingHash;
-    private String status;
-    @JsonProperty("uploaded_chunk")
-    private Long uploadedChunk;
-    private String error;
+    /**
+     * upper bound, in bytes, of the content size
+     */
+    private Long timestamp;
 }

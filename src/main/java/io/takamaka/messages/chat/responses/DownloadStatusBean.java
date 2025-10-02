@@ -27,12 +27,12 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UploadStatusBean {
+public class DownloadStatusBean {
 
     @JsonProperty("upload_content_id_hash")
     private String uploadContentIdentifingHash;
     private String status;
-    @JsonProperty("uploaded_chunk")
-    private Long uploadedChunk;
+    @JsonProperty("downloaded_chunk")
+    private Long downloadedChunk;
     private String error;
 }

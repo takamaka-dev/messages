@@ -13,6 +13,7 @@ import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
 import io.takamaka.messages.chat.BasicMessageSignedContentBean;
 import io.takamaka.messages.chat.BasicTimestampBean;
+import io.takamaka.messages.chat.DownloadRequestBean;
 //import io.takamaka.messages.chat.ChatMediaBean;
 import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
@@ -33,6 +34,7 @@ import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageSignedRequestBean;
+import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
@@ -244,6 +246,29 @@ public class ChatCryptoUtils {
         }
     }
 
+    public static final SignedDownloadRequestBean getSignedDownloadRequestBean(
+            final String topicTitle,
+            final String uploadContentIdentifingHash,
+            final Long timestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int signIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final DownloadRequestBean downloadRequestBean = new DownloadRequestBean(topicTitle, uploadContentIdentifingHash, timestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(downloadRequestBean);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, signIwkIndex);
+            final SignedDownloadRequestBean signedDownloadRequestBean = new SignedDownloadRequestBean(
+                    downloadRequestBean,
+                    signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.DOWNLOAD_REQUEST.name(),
+                    signIwk.getWalletCypher().name());
+            return signedDownloadRequestBean;
+        } catch (MessageException | WalletException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
     public static final SignedUploadRequestBean getSignedUploadRequestBean(
             final String topicTitle,
             final String uploadContentSignature,
@@ -367,64 +392,69 @@ public class ChatCryptoUtils {
             }
             switch (fromJsonToSignedMessageBean.getMessageType()) {
                 case "REGISTER_USER_SIGNED_REQUEST" -> {
-                    RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
+                    final RegisterUserRequestBean fromJsonToRegisterUserRequestBean = ChatUtils.fromJsonToRegisterUserRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRegisterUserRequestBean.getRegisterUserRequestSignedContentBean());
                     returnObj = fromJsonToRegisterUserRequestBean;
                 }
                 case "REQUEST_USER_KEYS" -> {
-                    RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean = ChatUtils.fromJsonToRequestUserKeyRequestBean(messageJson);
+                    final RequestUserKeyRequestBean fromJsonToRequestUserKeyRequestBean = ChatUtils.fromJsonToRequestUserKeyRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRequestUserKeyRequestBean.getRequestUserKeyRequestBeanSignedContent());
                     returnObj = fromJsonToRequestUserKeyRequestBean;
                 }
                 case "TOPIC_CREATION" -> {
-                    CreateConversationRequestBean fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
+                    final CreateConversationRequestBean fromJsonToCreateConversationRequest = ChatUtils.fromJsonToCreateConversationRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToCreateConversationRequest.getTopic());
                     returnObj = fromJsonToCreateConversationRequest;
                 }
                 case "TOPIC_MESSAGE" -> {
-                    BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
+                    final BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                     returnObj = fromJsonToBasicMessageBeanRequest;
                 }
                 case "TOPIC_MESSAGE_MEDIA" -> {
                     if (maxChar == null) {
-                        BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
+                        final BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson);
                         jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                         returnObj = fromJsonToBasicMessageBeanRequest;
                     } else {
-                        BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson, maxChar);
+                        final BasicMessageRequestBean fromJsonToBasicMessageBeanRequest = ChatUtils.fromJsonToBasicMessageBeanRequest(messageJson, maxChar);
                         jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToBasicMessageBeanRequest.getBasicMessageSignedContentBean());
                         returnObj = fromJsonToBasicMessageBeanRequest;
                     }
                 }
                 case "NOTIFICATION_REQUEST" -> {
-                    UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);
+                    final UserNotificationRequestBean fromJsonToUserNotificationRequestBean = ChatUtils.fromJsonToUserNotificationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToUserNotificationRequestBean.getSignedNotificationRequestContent());
                     returnObj = fromJsonToUserNotificationRequestBean;
                 }
                 case "RETRIEVE_ALL_CONVERSATIONS" -> {
-                    RetrieveAllConversationsRequestBean fromJsonToRetrieveAllConversationsRequestBean = ChatUtils.fromJsonToRetrieveAllConversationsRequestBean(messageJson);
+                    final RetrieveAllConversationsRequestBean fromJsonToRetrieveAllConversationsRequestBean = ChatUtils.fromJsonToRetrieveAllConversationsRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveAllConversationsRequestBean.getAllConversationsRequestContentBean());
                     returnObj = fromJsonToRetrieveAllConversationsRequestBean;
                 }
                 case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N", "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE" -> {
-                    RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);
+                    final RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveMessageRequestBean.getRetrieveMessageSignedRequestBean());
                     returnObj = fromJsonToRetrieveMessageRequestBean;
                 }
                 case "SIGNED_TIMESTAMP" -> {
-                    SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
+                    final SignedTimestampRequestBean fromJsonToTimestampSignedRequestBean = ChatUtils.fromJsonToTimestampSignedRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToTimestampSignedRequestBean.getSignedTimestamp());
                     returnObj = fromJsonToTimestampSignedRequestBean;
                 }
+                case "DOWNLOAD_REQUEST" -> {
+                    final SignedDownloadRequestBean fromJsonToSignedDownloadRequestBean = ChatUtils.fromJsonToSignedDownloadRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToSignedDownloadRequestBean.getDownloadRequestBean());
+                    returnObj = fromJsonToSignedDownloadRequestBean;
+                }
                 case "UPLOAD_REQUEST" -> {
-                    SignedUploadRequestBean fromJsonToSignedUploadRequestBean = ChatUtils.fromJsonToSignedUploadRequestBean(messageJson);
+                    final SignedUploadRequestBean fromJsonToSignedUploadRequestBean = ChatUtils.fromJsonToSignedUploadRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToSignedUploadRequestBean.getUploadRequestBean());
                     returnObj = fromJsonToSignedUploadRequestBean;
                 }
 
                 case "RETRIEVE_CONVERSATION" -> {
-                    RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean = ChatUtils.fromJsonToRetrieveConversationRequestBean(messageJson);
+                    final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean = ChatUtils.fromJsonToRetrieveConversationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveConversationRequestBean.getRetrieveConversationRequestContentBean());
                     returnObj = fromJsonToRetrieveConversationRequestBean;
                 }

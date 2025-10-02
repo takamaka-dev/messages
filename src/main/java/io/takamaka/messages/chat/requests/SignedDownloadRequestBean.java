@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.chat.responses;
+package io.takamaka.messages.chat.requests;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.messages.chat.DownloadRequestBean;
+import io.takamaka.messages.chat.SignedMessageBean;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
@@ -27,12 +30,15 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UploadStatusBean {
+@EqualsAndHashCode(callSuper = true)
+public class SignedDownloadRequestBean extends SignedMessageBean {
 
-    @JsonProperty("upload_content_id_hash")
-    private String uploadContentIdentifingHash;
-    private String status;
-    @JsonProperty("uploaded_chunk")
-    private Long uploadedChunk;
-    private String error;
+    public SignedDownloadRequestBean(DownloadRequestBean downloadRequestBean, String from, String signature, String messageType, String signatureType) {
+        super(from, signature, messageType, signatureType);
+        this.downloadRequestBean = downloadRequestBean;
+    }
+
+    @JsonProperty("download_request")
+    private DownloadRequestBean downloadRequestBean;
+
 }

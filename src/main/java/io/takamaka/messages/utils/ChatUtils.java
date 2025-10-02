@@ -31,6 +31,7 @@ import io.takamaka.messages.chat.SignedContentTopicBean;
 import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
 import io.takamaka.messages.chat.TopicTitleKeyBean;
+import io.takamaka.messages.chat.UploadRequestBean;
 import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
@@ -41,6 +42,7 @@ import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
+import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
@@ -163,6 +165,14 @@ public class ChatUtils {
 
     public static final SignedUploadRequestBean fromJsonToSignedUploadRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SignedUploadRequestBean.class);
+    }
+
+    public static final UploadRequestBean fromJsonToUploadRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, UploadRequestBean.class);
+    }
+
+    public static final SignedDownloadRequestBean fromJsonToSignedDownloadRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SignedDownloadRequestBean.class);
     }
 
     public static final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean(String jsonMessage) throws JsonProcessingException {

@@ -66,6 +66,7 @@ public enum TransferStatus {
      * Indicates that a concurrent upload operation is already running,
      * preventing a new transfer.
      */
-    CONCURRENT_UPLOAD_ALREADY_RUNNING
+    CONCURRENT_UPLOAD_ALREADY_RUNNING,
+    CONTENT_NOT_FOUND
 
 }
