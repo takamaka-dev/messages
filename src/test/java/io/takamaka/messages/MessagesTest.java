@@ -24,6 +24,7 @@ import io.takamaka.messages.chat.SignedMessageBean;
 import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
 import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
 import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
@@ -343,6 +344,48 @@ public class MessagesTest {
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getRegisterUserRequestSignedContentBean().getEncryptionPublicKey(), "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA1JZv9-QpeWjxJkIpNT7iZgU6L4CJ4L99mZQ7j82ZzGHYlvJxCge-hKo1KFzK0rWKs_oj_Cv-GTathAC-BYguLoiNV9VrMBpGTWQd5u-7Au7Lc7Q3NoDx9y4UHYOWfOxqTIEiI6y_FR-aDzgJvkfI1f4jx5l8aZycHas5meltIvP_Ay_w2jsLNL-9YekPh8MpIa3eYI0qSzAvKRmM9vrhviazX1zL4Y5HAHVVZE7sJdRtE0AL_m8wy2ML51051cXICKevVa-XICzmEtR2opV0My8O9_ItT_3wV5WwzQ03YmjFPWkaQjU0EgiLJGce9uEnG_YTY0SsQkkYFDNXaLFv6sAppLmuxlwpPUbz9Y1hbV5oUsmcDckmNmpHSCYxWUU_JQqidviG0yGE4_CJV0Fk3NSfgHPOcfOk6EWFHA68MfWG275vV8nKAnw4o2fkI_rXFEnNxYVsrd2cwb7J7bwim2eBt4sa9UP8pw97BYY6RDI2XLNjZNfJYIQrYYUftSic50HCIJpE3FXwZ4_-ZjioyadPz8GLVcpHdSDm11VLCHr2lMdcWT2nVPvzswvuk2GtfND_FfH7c1bX0LqBEesp3YdiTJQBJJ1nSQXr__jDJNz84kU0MSvUhJixwf8icdNBx0ZrRKclxERtq3K1SA6gKq5CJDqNNAbhznvkmsp7Bn8CAwEAAQ..");
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getFrom(), "vIDbAo-uJixSSalg9nEc_7PjwU17RpoLYqxm0tLH9S8.");
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getMessageType(), "REGISTER_USER_SIGNED_REQUEST");
+
+    }
+
+    @Test
+    public void testSignedDownloadRequestBean() throws ChatMessageException, JsonProcessingException, MessageException {
+
+        SignedDownloadRequestBean signedDownloadRequestBean = ChatCryptoUtils.getSignedDownloadRequestBean(
+                "topic_title_placeholder",
+                "hash_of_file_to_download",
+                new Date().getTime(),
+                iwkED,
+                0
+        );
+        SignedDownloadRequestBean signedDownloadRequestBean1 = ChatCryptoUtils.getSignedDownloadRequestBean(
+                "topic_title_placeholder1",
+                "hash_of_file_to_download1",
+                Long.MIN_VALUE,
+                iwkED,
+                1
+        );
+
+        String writeValueAsString = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedDownloadRequestBean);
+        String writeValueAsString1 = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(signedDownloadRequestBean1);
+
+        SignedMessageBean verifySignedMessage = ChatCryptoUtils.verifySignedMessage(writeValueAsString);
+        SignedMessageBean verifySignedMessage1 = ChatCryptoUtils.verifySignedMessage(writeValueAsString1);
+
+        assertNotNull(verifySignedMessage.getSignature());
+        assertNotNull(verifySignedMessage1.getSignature());
+        log.info("signed message signature: {} ", verifySignedMessage.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage.getFrom());
+        log.info("signed message signature: {} ", verifySignedMessage1.getSignature());
+        log.info("signed message from: {} ", verifySignedMessage1.getFrom());
+
+        SignedDownloadRequestBean downloadBean = (SignedDownloadRequestBean) verifySignedMessage;
+        SignedDownloadRequestBean downloadBean1 = (SignedDownloadRequestBean) verifySignedMessage1;
+
+        assertEquals(downloadBean.getDownloadRequestBean().getTopicTitle(), "topic_title_placeholder");
+        assertEquals(downloadBean.getDownloadRequestBean().getUploadContentIdentifingHash(), "hash_of_file_to_download");
+        assertEquals(downloadBean1.getDownloadRequestBean().getTopicTitle(), "topic_title_placeholder1");
+        assertEquals(downloadBean1.getDownloadRequestBean().getUploadContentIdentifingHash(), "hash_of_file_to_download1");
+        assertEquals(downloadBean1.getDownloadRequestBean().getTimestamp(), Long.valueOf(Long.MIN_VALUE));
 
     }
 
