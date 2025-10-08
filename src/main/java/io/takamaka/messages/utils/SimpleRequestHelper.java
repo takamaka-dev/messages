@@ -33,7 +33,7 @@ import io.takamaka.messages.beans.BaseBean;
 import io.takamaka.messages.beans.MessageAction;
 import io.takamaka.messages.beans.MessageAddress;
 import io.takamaka.messages.beans.implementation.MessageActionClazz;
-import io.takamaka.messages.chat.SignedMessageBean;
+import io.takamaka.messages.chat.core.SignedMessageBean;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;

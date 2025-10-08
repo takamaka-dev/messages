@@ -17,18 +17,18 @@ package io.takamaka.messages;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.takamaka.extra.beans.StreamEncryptedDescriptor;
-import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
+import io.takamaka.messages.chat.message.BasicMessageEncryptedContentBean;
 //import io.takamaka.messages.chat.ChatMediaBean;
-import io.takamaka.messages.chat.responses.NonceResponseBean;
-import io.takamaka.messages.chat.SignedMessageBean;
-import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
-import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
-import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
-import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
-import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
-import io.takamaka.messages.chat.utils.ChatSD;
+import io.takamaka.messages.chat.core.NonceResponseBean;
+import io.takamaka.messages.chat.core.SignedMessageBean;
+import io.takamaka.messages.chat.message.BasicMessageRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
+import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
+import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
+import io.takamaka.messages.chat.constant.ChatConstants;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.ChatMessageSerializationException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
@@ -340,7 +340,7 @@ public class MessagesTest {
                               [{"register_user_request_signed_content":{"encryption_public_key_type":"RSA_4096_ECB_OAEP","nonce":{"liveness":300000,"nonce":"4137c563-f579-4007-8df6-e4306d6869ec","timestamp":1733910127281},"encryption_public_key":"MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA1JZv9-QpeWjxJkIpNT7iZgU6L4CJ4L99mZQ7j82ZzGHYlvJxCge-hKo1KFzK0rWKs_oj_Cv-GTathAC-BYguLoiNV9VrMBpGTWQd5u-7Au7Lc7Q3NoDx9y4UHYOWfOxqTIEiI6y_FR-aDzgJvkfI1f4jx5l8aZycHas5meltIvP_Ay_w2jsLNL-9YekPh8MpIa3eYI0qSzAvKRmM9vrhviazX1zL4Y5HAHVVZE7sJdRtE0AL_m8wy2ML51051cXICKevVa-XICzmEtR2opV0My8O9_ItT_3wV5WwzQ03YmjFPWkaQjU0EgiLJGce9uEnG_YTY0SsQkkYFDNXaLFv6sAppLmuxlwpPUbz9Y1hbV5oUsmcDckmNmpHSCYxWUU_JQqidviG0yGE4_CJV0Fk3NSfgHPOcfOk6EWFHA68MfWG275vV8nKAnw4o2fkI_rXFEnNxYVsrd2cwb7J7bwim2eBt4sa9UP8pw97BYY6RDI2XLNjZNfJYIQrYYUftSic50HCIJpE3FXwZ4_-ZjioyadPz8GLVcpHdSDm11VLCHr2lMdcWT2nVPvzswvuk2GtfND_FfH7c1bX0LqBEesp3YdiTJQBJJ1nSQXr__jDJNz84kU0MSvUhJixwf8icdNBx0ZrRKclxERtq3K1SA6gKq5CJDqNNAbhznvkmsp7Bn8CAwEAAQ.."},"signature":"bSjfKFiSMBoy5s7fkMvYD5oFJ-tLlvO0q_R1P0qdLAtqW-5Ab-dA-KXaSKvd309SsPAfcqvNYutNrTmVAaxdCg..","from":"vIDbAo-uJixSSalg9nEc_7PjwU17RpoLYqxm0tLH9S8.","message_type":"REGISTER_USER_SIGNED_REQUEST","signature_type":"Ed25519BC"}]
                               """;
 
-        List<RegisterUserRequestBean> fromJsonToListRegisterUserRequestBean = ChatSD.fromJsonToListRegisterUserRequestBean(testResponse);
+        List<RegisterUserRequestBean> fromJsonToListRegisterUserRequestBean = ChatConstants.fromJsonToListRegisterUserRequestBean(testResponse);
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getRegisterUserRequestSignedContentBean().getEncryptionPublicKey(), "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA1JZv9-QpeWjxJkIpNT7iZgU6L4CJ4L99mZQ7j82ZzGHYlvJxCge-hKo1KFzK0rWKs_oj_Cv-GTathAC-BYguLoiNV9VrMBpGTWQd5u-7Au7Lc7Q3NoDx9y4UHYOWfOxqTIEiI6y_FR-aDzgJvkfI1f4jx5l8aZycHas5meltIvP_Ay_w2jsLNL-9YekPh8MpIa3eYI0qSzAvKRmM9vrhviazX1zL4Y5HAHVVZE7sJdRtE0AL_m8wy2ML51051cXICKevVa-XICzmEtR2opV0My8O9_ItT_3wV5WwzQ03YmjFPWkaQjU0EgiLJGce9uEnG_YTY0SsQkkYFDNXaLFv6sAppLmuxlwpPUbz9Y1hbV5oUsmcDckmNmpHSCYxWUU_JQqidviG0yGE4_CJV0Fk3NSfgHPOcfOk6EWFHA68MfWG275vV8nKAnw4o2fkI_rXFEnNxYVsrd2cwb7J7bwim2eBt4sa9UP8pw97BYY6RDI2XLNjZNfJYIQrYYUftSic50HCIJpE3FXwZ4_-ZjioyadPz8GLVcpHdSDm11VLCHr2lMdcWT2nVPvzswvuk2GtfND_FfH7c1bX0LqBEesp3YdiTJQBJJ1nSQXr__jDJNz84kU0MSvUhJixwf8icdNBx0ZrRKclxERtq3K1SA6gKq5CJDqNNAbhznvkmsp7Bn8CAwEAAQ..");
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getFrom(), "vIDbAo-uJixSSalg9nEc_7PjwU17RpoLYqxm0tLH9S8.");
         assertEquals(fromJsonToListRegisterUserRequestBean.get(0).getMessageType(), "REGISTER_USER_SIGNED_REQUEST");

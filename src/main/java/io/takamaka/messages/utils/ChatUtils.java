@@ -24,28 +24,28 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
 import io.takamaka.messages.beans.BaseBean;
-import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
-import io.takamaka.messages.chat.BasicMessageSignedContentBean;
-import io.takamaka.messages.chat.ConversationNameHashBean;
-import io.takamaka.messages.chat.SignedContentTopicBean;
-import io.takamaka.messages.chat.SignedMessageBean;
-import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
-import io.takamaka.messages.chat.TopicTitleKeyBean;
-import io.takamaka.messages.chat.UploadRequestBean;
-import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
-import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
-import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
-import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
-import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestBean;
-import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
-import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
-import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
-import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
-import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
-import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
-import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
+import io.takamaka.messages.chat.message.BasicMessageEncryptedContentBean;
+import io.takamaka.messages.chat.message.BasicMessageSignedContentBean;
+import io.takamaka.messages.chat.conversation.ConversationNameHashBean;
+import io.takamaka.messages.chat.core.SignedContentTopicBean;
+import io.takamaka.messages.chat.core.SignedMessageBean;
+import io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean;
+import io.takamaka.messages.chat.conversation.TopicTitleKeyBean;
+import io.takamaka.messages.chat.attachment.UploadRequestBean;
+import io.takamaka.messages.chat.message.BasicMessageRequestBean;
+import io.takamaka.messages.chat.conversation.CreateConversationRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.user.RequestUserKeyRequestBean;
+import io.takamaka.messages.chat.user.RequestUserKeyRequestSignedContentBean;
+import io.takamaka.messages.chat.conversation.RetrieveAllConversationsRequestBean;
+import io.takamaka.messages.chat.conversation.RetrieveConversationRequestBean;
+import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContentBean;
+import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
+import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
+import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
+import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.InvalidParameterException;
@@ -97,7 +97,7 @@ public class ChatUtils {
         throw new InvalidParameterException("invalid conversation hash name");
     }
 
-    public static final TypeReference<List<RequestUserKeyRequestBeanSignedContent>> type_ListRequestUserKeyRequestBeanSignedContent = new TypeReference<>() {
+    public static final TypeReference<List<RequestUserKeyRequestSignedContentBean>> type_ListRequestUserKeyRequestBeanSignedContent = new TypeReference<>() {
     };
 
     public static final TypeReference<Map<String, TopicKeyDistributionItemBean>> type_MapTopicKeyDistributionItemBean = new TypeReference<>() {
@@ -118,7 +118,7 @@ public class ChatUtils {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RegisterUserRequestBean.class);
     }
 
-    public static final List<RequestUserKeyRequestBeanSignedContent> fromJsonToListRequestUserKeyRequestBeanSignedContent(String jsonMessage) throws JsonProcessingException {
+    public static final List<RequestUserKeyRequestSignedContentBean> fromJsonToListRequestUserKeyRequestBeanSignedContent(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, type_ListRequestUserKeyRequestBeanSignedContent);
     }
 

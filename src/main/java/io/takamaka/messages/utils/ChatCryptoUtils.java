@@ -10,36 +10,36 @@ import io.takamaka.extra.beans.EncMessageBean;
 import io.takamaka.extra.beans.StreamEncryptedDescriptor;
 import io.takamaka.extra.utils.EncryptionContext;
 import io.takamaka.extra.utils.TkmEncryptionUtils;
-import io.takamaka.messages.chat.BasicMessageEncryptedContentBean;
-import io.takamaka.messages.chat.BasicMessageSignedContentBean;
-import io.takamaka.messages.chat.BasicTimestampBean;
-import io.takamaka.messages.chat.DownloadRequestBean;
+import io.takamaka.messages.chat.message.BasicMessageEncryptedContentBean;
+import io.takamaka.messages.chat.message.BasicMessageSignedContentBean;
+import io.takamaka.messages.chat.core.BasicTimestampBean;
+import io.takamaka.messages.chat.attachment.DownloadRequestBean;
 //import io.takamaka.messages.chat.ChatMediaBean;
-import io.takamaka.messages.chat.SignedContentTopicBean;
-import io.takamaka.messages.chat.SignedMessageBean;
-import io.takamaka.messages.chat.TopicKeyDistributionItemBean;
-import io.takamaka.messages.chat.TopicKeyDistributionMapBean;
-import io.takamaka.messages.chat.TopicTitleKeyBean;
-import io.takamaka.messages.chat.UploadRequestBean;
-import io.takamaka.messages.chat.notifications.SignedNotificationRequestContent;
-import io.takamaka.messages.chat.requests.BasicMessageRequestBean;
-import io.takamaka.messages.chat.requests.CreateConversationRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestBean;
-import io.takamaka.messages.chat.requests.RegisterUserRequestSignedContentBean;
-import io.takamaka.messages.chat.requests.RequestUserKeyRequestBean;
-import io.takamaka.messages.chat.requests.RequestUserKeyRequestBeanSignedContent;
-import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestBean;
-import io.takamaka.messages.chat.requests.RetrieveAllConversationsRequestContentBean;
-import io.takamaka.messages.chat.requests.RetrieveConversationRequestBean;
-import io.takamaka.messages.chat.requests.RetrieveConversationRequestContentBean;
-import io.takamaka.messages.chat.requests.RetrieveMessageRequestBean;
-import io.takamaka.messages.chat.requests.RetrieveMessageSignedRequestBean;
-import io.takamaka.messages.chat.requests.SignedDownloadRequestBean;
-import io.takamaka.messages.chat.requests.SignedTimestampRequestBean;
-import io.takamaka.messages.chat.requests.SignedUploadRequestBean;
-import io.takamaka.messages.chat.requests.UserNotificationRequestBean;
-import io.takamaka.messages.chat.responses.NonceResponseBean;
-import io.takamaka.messages.chat.responses.RetriveMessagesResponseBean;
+import io.takamaka.messages.chat.core.SignedContentTopicBean;
+import io.takamaka.messages.chat.core.SignedMessageBean;
+import io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean;
+import io.takamaka.messages.chat.conversation.TopicKeyDistributionMapBean;
+import io.takamaka.messages.chat.conversation.TopicTitleKeyBean;
+import io.takamaka.messages.chat.attachment.UploadRequestBean;
+import io.takamaka.messages.chat.notification.SignedNotificationRequestContentBean;
+import io.takamaka.messages.chat.message.BasicMessageRequestBean;
+import io.takamaka.messages.chat.conversation.CreateConversationRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestBean;
+import io.takamaka.messages.chat.user.RegisterUserRequestSignedContentBean;
+import io.takamaka.messages.chat.user.RequestUserKeyRequestBean;
+import io.takamaka.messages.chat.user.RequestUserKeyRequestSignedContentBean;
+import io.takamaka.messages.chat.conversation.RetrieveAllConversationsRequestBean;
+import io.takamaka.messages.chat.conversation.RetrieveAllConversationsRequestContentBean;
+import io.takamaka.messages.chat.conversation.RetrieveConversationRequestBean;
+import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContentBean;
+import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
+import io.takamaka.messages.chat.message.RetrieveMessageSignedRequestBean;
+import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
+import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
+import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
+import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
+import io.takamaka.messages.chat.core.NonceResponseBean;
+import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.CryptoMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
@@ -324,7 +324,7 @@ public class ChatCryptoUtils {
 
     public static final UserNotificationRequestBean getUserNotificationRequestBean(Long notBefore, boolean onlyUnread, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         try {
-            SignedNotificationRequestContent signedNotificationRequestContent = new SignedNotificationRequestContent(notBefore, onlyUnread);
+            SignedNotificationRequestContentBean signedNotificationRequestContent = new SignedNotificationRequestContentBean(notBefore, onlyUnread);
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(signedNotificationRequestContent), signIwk, sigIwkIndex);
             UserNotificationRequestBean userNotificationRequestBean = new UserNotificationRequestBean(
                     signedNotificationRequestContent,
@@ -566,7 +566,7 @@ public class ChatCryptoUtils {
         }
     }
 
-    public static final RequestUserKeyRequestBean getRequestUserKeyRequestBean(InstanceWalletKeystoreInterface iwk, int i, List<RequestUserKeyRequestBeanSignedContent> requestUserKeyRequestBeanSignedContent) throws MessageException {
+    public static final RequestUserKeyRequestBean getRequestUserKeyRequestBean(InstanceWalletKeystoreInterface iwk, int i, List<RequestUserKeyRequestSignedContentBean> requestUserKeyRequestBeanSignedContent) throws MessageException {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(requestUserKeyRequestBeanSignedContent), iwk, i);
             return new RequestUserKeyRequestBean(requestUserKeyRequestBeanSignedContent, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.REQUEST_USER_KEYS.name(), iwk.getWalletCypher().name());
