@@ -48,13 +48,13 @@ public class ChatMediaPlaceholderBean {
      * hash of the base64 content of the unencrypted object
      */
     @JsonProperty("unencrypted_content_hash")
-    private String conentHash;
+    private String unencryptedContentHash;
     /**
      * signature used to identify the object to be requested at the server
      * endpoint
      */
-    @JsonProperty("request_signature")
-    private String objectSignature;
+    @JsonProperty("encrypted_file_hash")
+    private String encryptedFileHash;
     private StreamEncryptedDescriptor sed;
 
 }

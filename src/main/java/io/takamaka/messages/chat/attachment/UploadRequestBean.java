@@ -36,7 +36,8 @@ public class UploadRequestBean {
     @JsonProperty("topic_title")
     private String topicTitle;
     /**
-     * signature of the content to be uploaded
+     * hash of the encrypted file, the remote server only konw this, the hash of
+     * the unencrypted file should never be leaked to the server
      */
     @JsonProperty("upload_content_id_hash")
     private String uploadContentIdentifingHash;
