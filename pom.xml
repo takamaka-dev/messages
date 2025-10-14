@@ -13,7 +13,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.takamaka.messages</groupId>
     <artifactId>messages</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.2.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <licenses>
         <license>
@@ -125,7 +125,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                
+                <version>3.1.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*Tests.java</include>
+                    </includes>
+                </configuration>
             </plugin>
             
         </plugins>
@@ -154,12 +160,6 @@
             <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>io.takamaka.extra</groupId>
             <artifactId>takamaka-extra</artifactId>
             <version>0.4.1-SNAPSHOT</version>
@@ -171,6 +171,24 @@
             <version>5.11.2</version>
             <scope>test</scope>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.11.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.vintage</groupId>
+            <artifactId>junit-vintage-engine</artifactId>
+            <version>5.11.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

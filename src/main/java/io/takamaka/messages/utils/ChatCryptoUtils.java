@@ -103,15 +103,21 @@ public class ChatCryptoUtils {
     }
 
     /**
-     * generate a random key using a secure rng implementation and appen the
-     * topic title
+     * Generate a topic key bean with random symmetric key and salt.
+     *
+     * <p><strong>Security Enhancement (v1.2.0):</strong> This method now generates
+     * a cryptographically random salt to prevent conversation enumeration attacks.
+     * The salt makes topic hashes non-deterministic.</p>
      *
      * @param topicTitle title of the topic
-     * @return
-     * @throws InvalidParameterException
+     * @return TopicTitleKeyBean with title, symmetric key, and random 32-char salt
+     * @throws InvalidParameterException if parameters are invalid
+     * @since 1.0.0
      */
     public static final TopicTitleKeyBean generateTopicKeyBean(String topicTitle) throws InvalidParameterException {
-        return new TopicTitleKeyBean(topicTitle, generateRandomSafeKey());
+        String symmetricKey = generateRandomSafeKey();
+        String conversationSalt = generateRandomSafeKey(32);  // NEW: 32-char random salt
+        return new TopicTitleKeyBean(topicTitle, symmetricKey, conversationSalt);
     }
 
 //    public static final CombinedRSAAESBean getTopicEncryptedForUser(TopicTitleKeyBean topicTitleKeyBean, String userEncryptionKet) throws CryptoMessageException {
@@ -137,16 +143,36 @@ public class ChatCryptoUtils {
         }
     }
 
+    /**
+     * Decrypt topic title key bean and validate security requirements.
+     *
+     * <p><strong>SECURITY:</strong> This method validates that the decrypted bean
+     * contains all required security fields including the conversation salt.
+     * Missing salt indicates a critical security bug or old protocol version.</p>
+     *
+     * @param topicDescription encrypted topic description
+     * @param symmetricConversationKey symmetric key for decryption
+     * @param keyHash expected hash of the symmetric key (for integrity check)
+     * @return decrypted and validated TopicTitleKeyBean
+     * @throws ChatMessageException if decryption fails or validation fails
+     * @since 1.0.0
+     */
     public static final TopicTitleKeyBean decryptTopicTitleKeyBean(EncMessageBean topicDescription, String symmetricConversationKey, String keyHash) throws ChatMessageException {
         try {
             String fromPasswordEncryptedContent = TkmEncryptionUtils.fromPasswordEncryptedContent(symmetricConversationKey, CHAT_MESSAGE_TYPES.TOPIC_CREATION.name(), topicDescription);
             TopicTitleKeyBean tkb = TkmTextUtils.getJacksonMapper().readValue(fromPasswordEncryptedContent, TopicTitleKeyBean.class);
+
             String decryptedKeyHash = TkmSignUtils.Hash256B64URL(tkb.getSymmetricKey());
             if (!decryptedKeyHash.equals(keyHash)) {
                 throw new ChatMessageException(String.format("key hash %s does not match declared hash %s", decryptedKeyHash, keyHash));
             }
+
+            // SECURITY: Validate salt presence after decryption (v1.2.0+)
+            // Missing salt indicates old protocol version or critical bug
+            tkb.validate();
+
             return tkb;
-        } catch (WalletException | JsonProcessingException | HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException ex) {
+        } catch (WalletException | JsonProcessingException | HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | InvalidParameterException ex) {
             throw new ChatMessageException(ex);
         }
     }
@@ -209,18 +235,49 @@ public class ChatCryptoUtils {
         }
     }
 
+    /**
+     * Create signed content topic bean with salted topic hash.
+     *
+     * <p><strong>SECURITY CRITICAL:</strong> This method computes a salted topic hash
+     * to prevent conversation enumeration attacks. The salt MUST be present in the
+     * TopicTitleKeyBean or this method will throw an exception.</p>
+     *
+     * <p><strong>Hash Computation (v1.2.0+):</strong><br>
+     * topicTitleHash = SHA3-256(topicTitle + conversationSalt)</p>
+     *
+     * <p>This makes the topic hash non-deterministic and unpredictable without
+     * knowledge of the salt, which is encrypted in the topic description.</p>
+     *
+     * @param topicKeyDistributionMapBean key distribution for participants
+     * @param topicTitleKeyBean topic metadata including MANDATORY salt
+     * @return SignedContentTopicBean with salted topic hash
+     * @throws CryptoMessageException if salt is missing or crypto operations fail
+     * @since 1.0.0
+     */
     public static final SignedContentTopicBean getSignedContentTopicBean(TopicKeyDistributionMapBean topicKeyDistributionMapBean, TopicTitleKeyBean topicTitleKeyBean) throws CryptoMessageException {
         try {
+            // SECURITY: Validate salt presence before proceeding
+            topicTitleKeyBean.validate();
+
             String topicSymmetricKeySignature = TkmSignUtils.Hash256B64URL(topicTitleKeyBean.getSymmetricKey());
-            String topicTitleHash = TkmSignUtils.Hash256B64URL(topicTitleKeyBean.getTopicTitle());
+
+            // FIXED: Include salt in topic hash computation (prevents enumeration attacks)
+            // This makes the topic hash non-deterministic and unpredictable
+            String saltedTopicString = topicTitleKeyBean.getTopicTitle() +
+                                       topicTitleKeyBean.getConversationSalt();
+            String topicTitleHash = TkmSignUtils.Hash256B64URL(saltedTopicString);
+
+            // Encrypt TopicTitleKeyBean (including salt)
+            // Only participants can decrypt and retrieve the salt
             EncMessageBean topicDescription = getEncryptedTopic(topicTitleKeyBean, topicTitleKeyBean.getSymmetricKey());
+
             SignedContentTopicBean signedContentTopicBean = new SignedContentTopicBean(
-                    topicTitleHash,
+                    topicTitleHash,  // Now contains salted hash
                     topicSymmetricKeySignature,
-                    topicDescription,
+                    topicDescription,  // Contains encrypted salt
                     topicKeyDistributionMapBean);
             return signedContentTopicBean;
-        } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | CryptoMessageException ex) {
+        } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | CryptoMessageException | InvalidParameterException ex) {
             throw new CryptoMessageException(ex);
         }
     }
