@@ -647,3 +647,93 @@ Message after decoding:
 }
 ```
 
+---
+
+## Chat Mention Utilities
+
+**Version:** 1.3.0
+**Package:** `io.takamaka.messages.chat.mention`
+**Since:** 1.3.0
+
+The Messages module includes utilities for parsing, validating, and rendering user mentions in E2E encrypted chat messages. These utilities support **dual mention syntax** to balance privacy and convenience in zero-knowledge server architectures.
+
+### Dual Mention Syntax
+
+Two types of mentions are supported:
+
+- **@ mentions (public):** Server can see these mentions for notification routing and indexing. Added to `citedUsers` field in message protocol.
+- **# mentions (private):** Remain encrypted, server cannot see them. Preserved for maximum privacy in sensitive conversations.
+
+### Quick Start
+
+#### Parsing Mentions from User Input
+
+```java
+import io.takamaka.messages.chat.mention.*;
+
+List<String> conversationMembers = getConversationMembers();
+
+try {
+    ParseResult result = MentionParser.parseMessage(
+        "Hey @7tVZucubIlMg2eWX6CzOOOU1-GMPQmNFK-R4i1tczms. check this",
+        conversationMembers
+    );
+
+    // Use public mentions for citedUsers field
+    List<String> citedUsers = result.getPublicMentions();
+
+    // Private mentions (# syntax) are validated but not sent to server
+    List<String> privateMentions = result.getPrivateMentions();
+
+} catch (InvalidMentionException e) {
+    // Handle invalid mention or non-member mention
+    System.err.println("Invalid mention: " + e.getMessage());
+}
+```
+
+#### Rendering Mentions for Display
+
+```java
+import io.takamaka.messages.chat.mention.*;
+
+String messageText = "Hey @" + qTeslaKey + " check this";
+
+// Abbreviate long qTesla keys to 96-char hex for display
+String displayText = MentionRenderer.renderForDisplay(messageText);
+// Returns: "Hey @f54848b4c119be77... check this"
+```
+
+### Supported Key Formats
+
+The mention utilities support all Takamaka public key formats:
+
+| Format | Length | Character Set | Display Behavior |
+|--------|--------|---------------|------------------|
+| **Ed25519** | 44 chars | `[a-zA-Z0-9-_.]` | Shown in full |
+| **Short B64** | 64 chars | `[a-zA-Z0-9-_.]` | Shown in full |
+| **Short Hex** | 96 chars | `[a-zA-Z0-9]` | Shown in full |
+| **qTesla** | 19,840 chars | `[a-zA-Z0-9-_.]` | Abbreviated to 96-char hex (SHA3-384) |
+
+### API Classes
+
+- **`MentionParser`** - Extracts and validates mentions from message text
+- **`MentionRenderer`** - Renders mentions with abbreviated keys for display
+- **`AddressValidation`** - Validates public key formats and abbreviates long keys
+- **`InvalidMentionException`** - Thrown when mention validation fails
+
+### Complete API Documentation
+
+For comprehensive API reference, usage examples, and integration patterns, see:
+
+**[Mention Utilities API Documentation](docs/MENTION_UTILITIES_API.md)**
+
+### Related Documentation
+
+- [Dual Mention Syntax Analysis](../DUAL_MENTION_SYNTAX_ANALYSIS.md) - Design rationale and privacy considerations
+- [Message Structure and Field Visibility](../MESSAGE_STRUCTURE_AND_FIELD_VISIBILITY.md) - Protocol-level message visibility
+
+---
+
+**Module:** `io.takamaka.messages:messages:1.3.0-SNAPSHOT`
+**Last Updated:** 2025-10-15
+
