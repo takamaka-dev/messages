@@ -22,11 +22,14 @@ import io.takamaka.messages.beans.implementation.PayRequestAction;
 import io.takamaka.messages.beans.implementation.StakeRequestAction;
 import io.takamaka.messages.beans.implementation.StakeUndoRequestAction;
 import io.takamaka.messages.beans.implementation.WalletEncryptedAction;
+import io.takamaka.messages.beans.implementation.WalletWordsAction;
+import io.takamaka.messages.beans.implementation.WalletWordsBean;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.beans.EncKeyBean;
 import io.takamaka.wallet.beans.KeyBean;
+import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
 import io.takamaka.wallet.exceptions.HashEncodeException;
 import io.takamaka.wallet.exceptions.HashProviderNotFoundException;
@@ -145,6 +148,28 @@ public class SimpleRequestModels {
         } catch (InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException | UnlockWalletException | IOException | HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | InvalidKeySpecException | NoSuchAlgorithmException | NoSuchPaddingException ex) {
             throw new MessageException(ex);
         }
+    }
+
+    /**
+     * Creates a wallet words export message (unencrypted mnemonic for cloud backup).
+     *
+     * <p><b>WARNING:</b> This exports sensitive wallet data in plaintext.
+     * Users must explicitly accept privacy disclaimer before use.</p>
+     *
+     * @param cypher the wallet cypher type (e.g., Ed25519BC)
+     * @param words the 25-word mnemonic phrase (space-separated)
+     * @return BaseBean containing the wallet words export action
+     * @throws MessageException if message creation fails
+     */
+    public static final BaseBean getWalletWords_V_1_0(KeyContexts.WalletCypher cypher, String words) throws MessageException {
+        WalletWordsBean walletWordsBean = new WalletWordsBean(cypher, words);
+        return new BaseBean("1.0",
+                new WalletWordsAction(walletWordsBean),
+                ActionType.EXPORT_WALLET_WORDS.getShortCode(),
+                null,
+                null,
+                null
+        );
     }
 
 }

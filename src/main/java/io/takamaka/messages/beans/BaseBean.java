@@ -25,6 +25,7 @@ import lombok.NoArgsConstructor;
  * <li><b>st</b> stake to node <i> (v1.0)</i></li>
  * <li><b>su</b> stake undo <i> (v1.0)</i></li>
  * <li><b>we</b> wallet encrypted <i> (v1.0)</i></li>
+ * <li><b>ww</b> wallet words (unencrypted mnemonic for cloud backup) <i> (v1.0)</i></li>
  * </ul>
  *
  *

@@ -6,6 +6,7 @@ package io.takamaka.messages.beans;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.messages.beans.implementation.WalletWordsBean;
 import io.takamaka.wallet.beans.EncKeyBean;
 import java.math.BigInteger;
 import lombok.AllArgsConstructor;
@@ -22,6 +23,7 @@ import lombok.NoArgsConstructor;
  * <li><b>st</b> stake to node <i> (v1.0)</i></li>
  * <li><b>su</b> stake undo <i> (v1.0)</i></li>
  * <li><b>we</b> wallet encrypted <i> (v1.0)</i></li>
+ * <li><b>ww</b> wallet words (unencrypted mnemonic for cloud backup) <i> (v1.0)</i></li>
  * </ul>
  *
  *
@@ -54,5 +56,7 @@ public abstract class MessageAction {
     private String textMessage;
     @JsonProperty("ew")
     private EncKeyBean encodedWallet;
+    @JsonProperty("ww")
+    private WalletWordsBean walletWords;
 
 }

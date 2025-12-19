@@ -29,7 +29,12 @@ public enum ActionType {
     STAKE("st"),
     STAKE_UNDO("su"),
     BLOB("b"),
-    EXPORT_WALLET_ENCRYPTED("we");
+    EXPORT_WALLET_ENCRYPTED("we"),
+    /**
+     * export wallet words (unencrypted mnemonic for cloud backup)
+     * Requires user acceptance of privacy disclaimer
+     */
+    EXPORT_WALLET_WORDS("ww");
     @Getter
     private final String shortCode;
 
