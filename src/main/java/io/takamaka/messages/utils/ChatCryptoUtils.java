@@ -52,6 +52,7 @@ import io.takamaka.wallet.InstanceWalletKeyStoreBCRSA4096ENC;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;
 import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC;
+import io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC256;
 import io.takamaka.wallet.beans.TkmCypherBean;
 import io.takamaka.wallet.exceptions.HashAlgorithmNotFoundException;
 import io.takamaka.wallet.exceptions.HashEncodeException;
@@ -405,10 +406,14 @@ public class ChatCryptoUtils {
     public static final TopicKeyDistributionItemBean getInviteForUser(RegisterUserRequestBean registerUserRequestBean, String topicSymmetricKey) throws CryptoMessageException {
         try {
             String encryptionPublicKey = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKey();
+            String encryptionPublicKeyType = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKeyType();
+            String encryptedKey = switch (encryptionPublicKeyType) {
+                case "RSA_4096_ECB_OAEP_SHA256" -> TkmCypherProviderBCRSA4096ENC256.encrypt(encryptionPublicKey, topicSymmetricKey);
+                default -> TkmCypherProviderBCRSA4096ENC.encrypt(encryptionPublicKey, topicSymmetricKey);
+            };
             TopicKeyDistributionItemBean invite = new TopicKeyDistributionItemBean(
                     TkmSignUtils.Hash256B64URL(encryptionPublicKey),
-                    TkmCypherProviderBCRSA4096ENC
-                            .encrypt(encryptionPublicKey, topicSymmetricKey));
+                    encryptedKey);
             return invite;
         } catch (HashEncodeException | HashAlgorithmNotFoundException | HashProviderNotFoundException | WalletException ex) {
             throw new CryptoMessageException(ex);
