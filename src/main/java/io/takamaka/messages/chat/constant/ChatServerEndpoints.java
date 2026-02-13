@@ -72,5 +72,17 @@ public class ChatServerEndpoints {
     public static final String SUBMIT_MESSAGE = "messages";
     public static final String SUBMIT_ATTACHMENT = "submitattachment";
     public static final String RETRIEVE_ATTACHMENT = "retrieveattachment";
-    
+
+    /**
+     * The relative path for registering an FCM token for push notifications.
+     * Requires a signed request with the FCM token and device information.
+     */
+    public static final String REGISTER_FCM_TOKEN = "registerfcmtoken";
+
+    /**
+     * The relative path for unregistering an FCM token.
+     * Used when logging out or disabling push notifications.
+     */
+    public static final String UNREGISTER_FCM_TOKEN = "unregisterfcmtoken";
+
 }
