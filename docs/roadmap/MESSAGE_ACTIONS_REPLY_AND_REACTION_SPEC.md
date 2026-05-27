@@ -109,7 +109,16 @@ Must be regenerated with `flutter pub run build_runner build --delete-conflictin
 |---|---|---|---|
 | `null` / absent | n/a | n/a | Plain message. Indistinguishable from pre-1.5 behaviour. |
 | `"reply"` | exactly 1 | `text_message` non-empty (typical); `attached_media` optional | Quotes a single parent message. |
-| `"reaction"` | exactly 1 (see §3.1) | one of: inline image / `sticker_id` / `emoji` | `text_message` SHOULD be empty. |
+| `"reaction"` | exactly 1 (see §3.1) | one of: inline image / `sticker_id` / `emoji` | `text_message` SHOULD be `""` (see §3.2). |
+
+### 3.2 `text_message` for reactions (normative, RFC 2119)
+
+For action `"reaction"`, the `text_message` field SHOULD be the empty string `""`.
+
+- **Senders** SHOULD set `text_message = ""` on outgoing reactions. Senders MAY emit `null` for compactness when `@JsonInclude(NON_NULL)` is in effect; this is equivalent to `""` for protocol purposes.
+- **Receivers** MUST accept reactions whose `text_message` is `""`, `null`, or absent — all three are equivalent.
+- **Receivers** that encounter a reaction with a non-empty `text_message` MUST NOT discard the message. They SHOULD render the reaction payload (emoji / sticker / inline image) normally and MAY additionally render the accompanying text, with an implementation-defined visual cue indicating that text on a reaction is non-canonical (e.g. tooltip "reaction carried unexpected text"). Logging or telemetry at the warning level is permitted.
+- This rule is **SHOULD**, not **MUST**, because the wire format cannot enforce text emptiness without either rejecting valid signed messages or breaking forward compatibility with future reaction variants that might carry an optional caption (e.g. "thumbs up + comment"). Promoting this to MUST is deferred.
 
 ### 3.1 Reaction targets cardinality — design decision
 
@@ -175,15 +184,21 @@ Exactly one of the following must hold on the reaction message:
 
 | Variant | Conditions |
 |---|---|
-| **Emoji** | `attached_media[0].emoji` set, `attached_media[0].sticker_id` null, `is_the_object == true` not required (emoji is the payload). `text_message` empty. |
-| **Sticker** | `attached_media[0].sticker_id` set (+ optional `pack_hash`), `emoji` null. `text_message` empty. |
-| **Inline image** | exactly one element in `attached_media`, `is_the_object == true`, `media_type` starts with `image/`, `preview` populated with the full base64 content, `original_size <= INLINE_MEDIA_MAX_BYTES`, image decodable to ≤ 256×256 pixels. `encrypted_file_hash` and `sed` MUST be null. `text_message` empty. |
+| **Emoji** | `attached_media[0].emoji` set, `attached_media[0].sticker_id` null, `is_the_object == true` not required (emoji is the payload). `text_message` SHOULD be `""` (§3.2). |
+| **Sticker** | `attached_media[0].sticker_id` set (+ optional `pack_hash`), `emoji` null. `text_message` SHOULD be `""` (§3.2). |
+| **Inline image** | exactly one element in `attached_media`, `is_the_object == true`, `media_type` starts with `image/` and is in the reaction whitelist, `preview` populated with the full standard-Base64 content, `original_size <= InlineContentLimits.MAX_INLINE_BYTES`, image decodable to ≤ `InlineContentLimits.MAX_THUMBNAIL_DIMENSION_PX` pixels in both dimensions. `encrypted_file_hash` and `sed` MUST be null. `text_message` SHOULD be `""` (§3.2). |
 
-`INLINE_MEDIA_MAX_BYTES` — referenced by the existing inline-content policy ("≤256×256, ≤50 KB"). **Open issue:** I could not locate a Java constant enforcing this 50 KB cap. Before this spec ships, either:
-- introduce `ChatMediaPlaceholderBean.INLINE_MEDIA_MAX_BYTES = 51200L`, or
-- add it to `rschat` validation config so the constraint is enforceable client-side and noted server-side (server cannot enforce since the payload is encrypted — but documenting it keeps clients consistent).
+Inline cap constants live in `io.takamaka.messages.chat.attachment.InlineContentLimits` (defined under this branch). Values: `MAX_INLINE_BYTES = 51200` (50 KiB), `MAX_THUMBNAIL_DIMENSION_PX = 256`. See §11.3 for full constant definitions and the migration of `shell/.../ThumbnailService` to reference them.
 
-Allowed reaction MIME subtypes (when using inline image): `image/png`, `image/jpeg`, `image/webp`, `image/gif`. Other types fall back to broken-reference decoration.
+Reactions using inline-image payload MUST carry a `mediaType` from the closed set defined in `InlineContentLimits.REACTION_ALLOWED_IMAGE_MIMES`:
+
+```
+image/png, image/jpeg, image/webp, image/gif
+```
+
+Any other MIME — including `image/bmp`, `image/tiff`, the looser `image/jpg` synonym, or non-image families — MUST be rejected at the action-validation layer (decoration code `INLINE_MIME_VIOLATION`, parent `text_message` still rendered). Animated `image/gif` and `image/webp` are permitted iff they also satisfy `MAX_INLINE_BYTES` and `MAX_THUMBNAIL_DIMENSION_PX`.
+
+The whitelist is closed. Adding a MIME requires a wire-protocol revision and coordinated client updates.
 
 ---
 
@@ -330,7 +345,7 @@ Dependency declarations in `pom.xml`/`pubspec.yaml` must be updated consistently
 | # | Question | Decision |
 |---|---|---|
 | 1 | Reaction `targets` cardinality | **= 1**. Multi-target reactions disallowed at the protocol level. |
-| 2 | `text_message` for reactions | **MUST be `""` (empty string)**. `null` permitted on input but normalized to `""` on output. |
+| 2 | `text_message` for reactions | **SHOULD be `""` (empty string)** (RFC 2119). Senders SHOULD emit `""`; `null` or absent is equivalent on receive. Non-empty text on a reaction is renderable but non-canonical — receivers MUST NOT discard. Full normative text in §3.2. |
 | 3 | Where to declare inline constants | Move existing constants from `shell/utils/ThumbnailService.java` to a new `Messages/.../chat/attachment/InlineContentLimits.java`. See §11. |
 | 4 | Notify-on-reply mechanism | **Out of protocol.** Whether to add the parent author to `cited_users` for FCM routing is a per-client implementation choice, made explicitly at implementation time. No protocol mandate. |
 | 5 | Animated WebP / GIF in reactions | **Allowed**, provided they satisfy inline limits (≤256×256, ≤50 KB). See §11.4. |
@@ -416,59 +431,56 @@ When `isTheObject == false` (regular attachment, unchanged):
 - `preview` is optional (256×256 WebP thumbnail).
 - `size` = encrypted/Base64 size; `originalSize` = plaintext file size.
 
-### 11.3 Constants — protocol promotion
+### 11.3 Constants — protocol-level (defined under this branch)
 
-Create `Messages/src/main/java/io/takamaka/messages/chat/attachment/InlineContentLimits.java`:
+The numeric inline limits and the reaction MIME whitelist are now formally declared in
+`Messages/src/main/java/io/takamaka/messages/chat/attachment/InlineContentLimits.java`
+(this branch). Authoritative values:
 
-```java
-package io.takamaka.messages.chat.attachment;
+| Constant | Value | Meaning |
+|---|---|---|
+| `InlineContentLimits.MAX_INLINE_BYTES` | `51200` (= 50 × 1024) | Maximum byte length of `base64StandardDecode(preview)` |
+| `InlineContentLimits.MAX_THUMBNAIL_DIMENSION_PX` | `256` | Maximum width AND height (pixels) for inline images |
+| `InlineContentLimits.INLINE_IMAGE_MIME_FAMILY` | `"image/"` | Required `mediaType` prefix for inline images |
+| `InlineContentLimits.REACTION_ALLOWED_IMAGE_MIMES` | `{image/png, image/jpeg, image/webp, image/gif}` | Closed MIME whitelist for reaction inline-image payloads |
 
-/**
- * Protocol-level limits for inline content (isTheObject=true).
- * <p>These constants are normative for both Java and Dart clients.
- * Any inline placeholder violating them MUST be rejected by the receiver.
- */
-public final class InlineContentLimits {
-    /** Maximum pixel dimension (width and height) for an inline image. */
-    public static final int MAX_THUMBNAIL_DIMENSION_PX = 256;
+The Javadoc on `InlineContentLimits` records the provenance (values were previously declared in `shell/.../utils/ThumbnailService.java` as `MAX_INLINE_SIZE` and `MAX_THUMBNAIL_SIZE`), the server-blindness caveat (the server cannot enforce these — they exist to keep clients consistent), and the cross-platform parity requirement.
 
-    /** Maximum byte length of the decoded inline payload (i.e. base64Decode(preview).length). */
-    public static final int MAX_INLINE_BYTES = 50 * 1024; // 51_200
+**Migration tasks (this branch establishes only the Java side):**
 
-    /** Allowed top-level MIME family for inline content carrying image data. */
-    public static final String INLINE_IMAGE_MIME_FAMILY = "image/";
+1. **shell:** update `io.takamaka.manage.shell.utils.ThumbnailService` to reference `InlineContentLimits.MAX_INLINE_BYTES` / `MAX_THUMBNAIL_DIMENSION_PX` instead of its own `MAX_INLINE_SIZE` / `MAX_THUMBNAIL_SIZE`. Delete the local copies.
+2. **rsclient-flutter:** create `lib/src/beans/attachment/inline_content_limits.dart` mirroring the Java values:
+   ```dart
+   class InlineContentLimits {
+     static const int maxInlineBytes = 50 * 1024;
+     static const int maxThumbnailDimensionPx = 256;
+     static const String inlineImageMimeFamily = 'image/';
+     static const Set<String> reactionAllowedImageMimes = {
+       'image/png', 'image/jpeg', 'image/webp', 'image/gif',
+     };
+     static bool isReactionImageMimeAllowed(String? mediaType) =>
+         mediaType != null &&
+         reactionAllowedImageMimes.contains(mediaType.toLowerCase());
+     InlineContentLimits._();
+   }
+   ```
+3. **rschat-docs / E2E protocol doc:** bump to v1.6 and reference these constants in the file-attachment section.
 
-    private InlineContentLimits() {}
-}
-```
+### 11.4 Inline MIME whitelists (normative)
 
-Update `ThumbnailService` (shell) to import and reference these constants instead of declaring its own. Mirror in Dart:
+Two whitelists coexist, distinguished by the action context:
 
-```dart
-// rsclient-flutter/lib/src/beans/attachment/inline_content_limits.dart
-class InlineContentLimits {
-  static const int maxThumbnailDimensionPx = 256;
-  static const int maxInlineBytes = 50 * 1024;
-  static const String inlineImageMimeFamily = 'image/';
-  InlineContentLimits._();
-}
-```
-
-### 11.4 Inline MIME whitelist (normative)
-
-Two whitelists coexist:
-
-**General inline image whitelist** (current `ThumbnailService.IMAGE_MIME_TYPES`, retained for non-reaction inline attachments):
-```
-image/png, image/jpeg, image/jpg, image/gif, image/webp, image/bmp, image/tiff
-```
-
-**Reaction-payload whitelist** (narrower — per the decision in §3.1 / §4.4):
+**Reaction-payload whitelist** — closed, normative (`InlineContentLimits.REACTION_ALLOWED_IMAGE_MIMES`):
 ```
 image/png, image/jpeg, image/webp, image/gif
 ```
+Used iff `action == "reaction"` and the reaction carries an inline-image payload. Animated `image/webp` and `image/gif` are permitted iff they satisfy `MAX_INLINE_BYTES` and `MAX_THUMBNAIL_DIMENSION_PX`. Any other MIME — including `image/bmp`, `image/tiff`, `image/jpg` (the non-canonical synonym for `image/jpeg`), or non-image families — MUST be rejected with decoration code `INLINE_MIME_VIOLATION`.
 
-`image/webp` and `image/gif` include animated variants. Animated payloads are allowed iff they satisfy the byte and dimension limits above. `image/bmp` and `image/tiff` are deliberately excluded from reactions — they bloat for trivial content and don't match common emoji-pack tooling.
+**General inline-image whitelist** — broader, for non-reaction inline content (e.g. sticker packs, regular small-image attachments inlined for round-trip efficiency). Currently `ThumbnailService.IMAGE_MIME_TYPES`:
+```
+image/png, image/jpeg, image/jpg, image/gif, image/webp, image/bmp, image/tiff
+```
+This is **not** the reaction whitelist. Reactions are deliberately narrower so that emoji/sticker payloads cannot smuggle in archival or platform-specific image formats.
 
 ### 11.5 Encoding asymmetry (footgun documentation)
 
