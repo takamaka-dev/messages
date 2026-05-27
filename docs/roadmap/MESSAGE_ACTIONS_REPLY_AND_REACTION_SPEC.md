@@ -113,6 +113,7 @@ Must be regenerated with `flutter pub run build_runner build --delete-conflictin
 | `"pin"` | exactly 1 (message signature) | `text_message` optional pin reason, SHOULD be ≤ 200 chars; `attached_media` MUST be null | creator-only | See §5.5 for aggregation, §12.5 for full design. |
 | `"unpin"` | **0** (`targets` MUST be null / empty / absent) | `text_message` SHOULD be `""`; `attached_media` MUST be null | creator-only | Clears the pin slot for the conversation. |
 | `"forward"` | **0 or 1** (claimed-origin public key, or absent for anonymous forward) | `text_message` carries the forwarded text; `attached_media` MAY carry re-encrypted attachments | none | See §12.10. `targets[0]` is a **public key**, not a signature — different regex. Origin claim is **unverifiable** by design. |
+| `"share_history"` | **0** | `text_message` optional relayer note; `original_message` MUST be populated with the encrypted original envelope | none | See §12.11. In-conversation only. The embedded original signature is preserved and **cryptographically verifiable** — a different trust model from `forward`. |
 
 ### 3.2 `text_message` for reactions (normative, RFC 2119)
 
@@ -218,7 +219,7 @@ For every received message with non-null `action`:
 1. **Action recognized?** If `action` is not in the registered set (§3 table), fall back to plain-message rendering and ignore `targets`. **Do not discard the message.**
 2. **Per-action cardinality.** Each action declares its `targets` cardinality in the registry. Receivers MUST validate the incoming `targets` against the declared cardinality. Current values:
    - `reply`, `reaction`, `reaction_remove`, `edit`, `redact`, `pin` → **exactly 1**
-   - `unpin` → **0** (null, empty list, or absent — all equivalent)
+   - `unpin`, `share_history` → **0** (null, empty list, or absent — all equivalent)
    - `forward` → **0 or 1** (1 = claimed origin, 0 = anonymous forward)
 
    Mismatch → decoration `INVALID <action> reference — malformed targets`, body still rendered.
@@ -658,6 +659,7 @@ The `(action, targets)` shape generalizes cleanly. The following actions plug in
 | `pin` | 1 | optional reason, SHOULD ≤ 200 chars | MUST be null | creator-only (envelope.from == creation_request.from) | §5.5, §12.5 |
 | `unpin` | **0** (null / empty / absent) | SHOULD be `""` | MUST be null | creator-only (same check) | §5.5, §12.5 |
 | `forward` | **0 or 1** (claimed-origin PK; 0 = anonymous) | re-encoded forwarded text | re-encrypted attachments under target conversation key | none | §12.10. Targets type = **public key**, not signature. Origin claim is unverifiable. |
+| `share_history` | **0** | optional relayer note | optional (rare) | none | §12.11. Carries `original_message` = the encrypted original envelope, signature preserved. **Verifiable** original-sender attribution. In-conversation only. |
 
 The following are **deferred** with rationale in §12.6: `forward`, `read_receipt`, `typing`, `vote`/`poll_response`, generic `acknowledge`.
 
@@ -786,7 +788,7 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 
 | Pattern | Check | Currently used by | Notes |
 |---|---|---|---|
-| **No check** | any conversation participant may emit | `reply`, `reaction`, `forward` | Validator does only structural validation; no authorization step. |
+| **No check** | any conversation participant may emit | `reply`, `reaction`, `forward`, `share_history` | Validator does only structural validation; no authorization step. |
 | **Self-author check** | `envelope.from == lookup(target_signature).from` | `edit`, `redact`, `reaction_remove` | Requires the target message to be in the local cache for the check to succeed. If the target is unknown, action is held in a deferred-validation queue or rejected with a "cannot verify authorship" decoration (client choice). |
 | **Conversation-creator check** | `envelope.from == creation_request.from` | `pin`, `unpin` | The `creation_request` is the decrypted `CreateConversationRequestBean` for this conversation, present in client state as soon as the conversation is set up. Check is deterministic, local, and requires no server query. |
 
@@ -825,6 +827,15 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 | Forwarded message decrypts but `targets[0]` PK is unknown to recipient | Not a validation failure. Client renders the forward badge with a truncated PK label or "(unknown user)". |
 | Forwarding a message with `attached_media` containing regular (server-uploaded) attachments | Forwarder MUST re-encrypt and re-upload under the destination conversation's key (§12.10.1). Reusing the original `encrypted_file_hash` is forbidden. |
 | Forwarding a message with `attached_media` containing inline (`isTheObject=true`) content | Forwarder re-encodes the placeholder for the destination message; the bytes travel inside the new encrypted body. `unencrypted_content_hash` MUST be recomputed from the new placeholder's preview. |
+| `share_history` of a previously-redacted message | The relayer's local cache may hold a pre-redact copy. Replaying it carries the original signed envelope; the recipient sees verified original content. This is the same honest-implementation issue as forward-of-redacted: the protocol cannot enforce cooperating-clients-only behaviour. |
+| `share_history` of an edited message | The relayer shares whatever they have locally — either the original or an edit. The receiver verifies the embedded inner signature and renders the embedded content. Edit chain resolution from §12.3 still applies if the receiver later receives subsequent edits. |
+| `share_history` whose embedded `conversation_hash_name` differs from the outer | Rejected. Cross-conversation `share_history` is disallowed: the embedded content was encrypted under a different key, the recipient cannot decrypt it, and the use case is meaningless. Decoration `INVALID share_history (cross-conversation)`. Outer wrapper still renders. |
+| `share_history` whose embedded inner signature does not verify | Decoration `INVALID share_history (inner signature)`. Outer wrapper still renders. |
+| Nested `share_history` (inner decrypted bean itself has `action="share_history"`) | **Rejected.** The recovery use case does not need forensic chain tracking. Decoration `INVALID share_history (nested share_history)`. Outer wrapper still renders. |
+| `share_history` of a `forward` | Allowed. The embedded envelope IS the forward; the relayer is helping a late receiver recover a forward they missed. Recipient verifies the forwarder's signature (inner) and then renders the forward's `fw_content` chain as normal. |
+| `forward` of a `share_history` | Allowed. The forwarder is taking a relayed message and carrying its content to another conversation. The `share_history` semantics dissolve into a normal `forward` — the destination recipient sees a forward, not a history-share (they were never in the source conversation). |
+| Reply to a `share_history` message | Standard reply; targets the relayer's wrapper signature in this conversation. To reply to the original sender directly, the recipient should target the inner envelope's signature (which now lives in their cache via the relay) — but this is the same as replying to any verified message they have a signature for. |
+| React to a `share_history` message | Standard reaction; targets the relayer's wrapper signature. |
 
 ### 12.9 Implementation plan addendum (extends §7)
 
@@ -848,6 +859,8 @@ If the Tier-1 extensions (`reaction_remove`, `edit`, `redact`) ship together wit
 **Pin / unpin** (single-slot model, §5.5 / §12.5) ships in 1.5.0 alongside reply / reaction. Creator-only authorization adds zero new wire surface — the check is a PK equality against already-decrypted `creation_request.from`. No `users_to_conversations.conversation_role` consultation; that column is dead data (see §6.6).
 
 **Forward** (§12.10) ships in 1.5.0 alongside the rest. No new wire fields. The forward action graduates from §12.6 (deferred) once the design accepts that the original signature and original encrypted blob are not transmitted — only a re-encoded body under the destination conversation's key, plus an **unverifiable claimed-origin public key** in `targets[0]`.
+
+**Share-history** (§12.11) ships in 1.5.0 as a structurally distinct feature from forward. Adds one new bean field, `original_message`, carrying the encrypted original `BasicMessageRequestBean` intact for in-conversation late-receiver recovery. The original sender's Ed25519 signature is preserved end-to-end and **cryptographically verifiable** by the recipient (who shares the conversation key). Different trust model, different UI treatment, different field — not a variant of forward.
 
 ### 12.10 `forward` — re-encoded content with claimed origin
 
@@ -904,6 +917,8 @@ A forward whose `targets[0]` is the forwarder's own PK (self-attribution) is per
 
 #### 12.10.3 Lossy semantics — what is NOT carried (intentional, see §12.10.5)
 
+**Wrapper vs inner — what is preserved.** Cross-conversation forward preserves the **decrypted inner content** of the original (the `BasicMessageEncryptedContentBean`) inside `fw_content` — text, media, **action**, **targets**, and recursive `fw_content` if the original was itself a forward. It does **not** preserve the original signed wrapper or its `cited_users` (which lived at the outer signed-content level). The preserved inner action/targets remain structurally visible (e.g. "this was originally a reply") but their targets are signatures from the **source** conversation, so they will almost always be broken-reference in the destination. Clients SHOULD render the embedded references with the same broken-reference decoration used elsewhere (§4.2 step 4) — the structural signal is informative and the forwarder explicitly vouched for it; silently stripping it would underclaim.
+
 By design, a forward **does not preserve**:
 
 - The original signature (the forwarded envelope was signed by the original author; the new envelope is signed by the forwarder).
@@ -945,6 +960,151 @@ This stance is recorded so reviewers can reject future "enrichment" proposals wi
 
 ---
 
+### 12.11 `share_history` — in-conversation rebroadcast of an encrypted original
+
+#### TL;DR — Why share_history exists and how it differs from forward
+
+The Takamaka chat server bounds message retention. By default a conversation's `server_messages_liveness` is 7 days (see `rschat ConversationService.java:145`); after that, the server has discarded the original encrypted blob. Participants who were offline during that window, restored from a backup that predates it, or lost their local cache have **no path** to recover the message through the server. The only remaining source is another participant — someone who still has the message in local cache — relaying it back.
+
+Because every participant of the same conversation shares the same symmetric key K, the relayed copy needs none of the re-encoding that cross-conversation forward requires. The original signed envelope travels intact: same encrypted content blob, same Ed25519 signature by the original sender, same `encrypted_file_hash` references (still resolvable on the server if attachment retention allows, or stale if not). The receiving participant decrypts the embedded content using the same conversation key they were going to use for native messages, verifies the original sender's signature against the embedded `from` PK, and obtains **full cryptographic provenance** — end-to-end original-author authentication, not a claim.
+
+This is the inverse of forward's trust story. Forward delivers an unverifiable claim across conversation boundaries; share_history delivers a verifiable original within the same conversation. The UI treatment matches the cryptography: forwards MUST be visually distinguished from native content because their authentication chain is short and ends at the forwarder. Share-history can be rendered with the original sender's verified attribution — the cryptography backs that attribution. The only honest acknowledgement to add to the UI is a small "shared by [relayer]" badge indicating the delivery path; it is informational, not skeptical.
+
+Share-history is a participant-courtesy mechanism, not a durability guarantee. If everyone with a local copy lost their cache, share_history cannot help — the data is gone. It also does not restore the **original `reception_timestamp`**: the share gets a fresh server timestamp at re-delivery, so the message appears in conversation history at the share time rather than the original time. These are accepted limitations of going through the standard `messages` channel rather than a dedicated history-share endpoint; a future specialized endpoint with batching, compression, and timestamp preservation can be added without breaking this design.
+
+The feature is deliberately not a chain. There is no "share_history of a share_history." A second-hop late receiver should be served by sharing the **original** directly, not by relaying a chain of relays. Forensic data about who has shared what to whom is explicitly **not** something this feature collects — see §12.11.3.
+
+#### 12.11.1 Wire shape
+
+- `action = "share_history"`
+- `targets` cardinality **0** (MUST be null, empty list, or absent — the embedded envelope self-identifies; there is no signature pointer to target).
+- `original_message` MUST be a non-null `BasicMessageRequestBean` — the full original signed envelope (from + signature + signed-content-bean containing conversation_hash, cited_users, and encrypted_content).
+- `text_message` MAY carry an optional relayer note ("Sharing this because Bob asked for it"). SHOULD be ≤ 200 chars; not normative.
+- `attached_media` MAY carry additional content from the relayer (rare; usually empty). The embedded envelope's own attachments are inside `original_message.basic_message_signed_content_bean.encrypted_content` and travel with it.
+- `fw_content` MUST be null. Share-history and cross-conversation forward do not compose at the same level — they are different operations with different keys.
+- `re_shared` (optional Boolean). `true` if the relayer themselves received this content via a prior share_history (not directly). `false`/null if the relayer is the original direct receiver doing a first share. Unverifiable trace, informational only. See §12.11.10.
+
+#### 12.11.2 Authorization
+
+None (Pattern 1, §12.7a). Any conversation participant may share history. Limiting to creator-only would defeat the use case: the creator might not be the participant with the local cached copy that's needed.
+
+#### 12.11.3 Why no nested share_history — explicit non-feature
+
+A `share_history` message whose embedded `original_message` itself decrypts to a bean with `action="share_history"` is **rejected** by validation (decoration `INVALID share_history (nested share_history)`, outer wrapper still renders).
+
+The reasoning is positive, not just structural:
+
+- The recovery use case is "deliver the original to a late receiver." A late receiver who eventually receives a relayed copy of *another* relayed copy gains nothing the direct relay wouldn't have given them. They want the original, not a chain.
+- Tracking the chain of relayers would create **forensic metadata** about who has been sharing what with whom, including timing. That is information the protocol explicitly does not need and should not collect. Forwards carry chain metadata as a deliberate accountability signal (§12.10 — recursive `fw_content`); share_history is the opposite kind of operation and has no equivalent need.
+- Without the nesting prohibition, a relayer could construct arbitrarily-deep nested envelopes simply by replaying their cached copies of previous shares. Bandwidth and parsing cost grow with no benefit.
+
+The rule is therefore: cardinality of the chain is 1 (the relayer's wrapper + one embedded original), enforced by validation. Anyone who wants more receivers to get the same content sends multiple `share_history` messages — each is independent, each verifiable, none chained.
+
+#### 12.11.4 Receiver validation pipeline
+
+For an incoming message with `action="share_history"`, after the standard outer-envelope verification:
+
+1. Verify `original_message != null`. If null, decoration `INVALID share_history (missing original_message)`, body still renders.
+2. **Verify the embedded inner signature** against `original_message.from`. Use the same Ed25519 verification machinery as the outer envelope. Mismatch → decoration `INVALID share_history (inner signature)`, outer wrapper still renders.
+3. **Verify same-conversation invariant.** `original_message.basic_message_signed_content_bean.conversation_hash_name` MUST equal the outer message's `conversation_hash_name`. Mismatch → decoration `INVALID share_history (cross-conversation)`. (Cross-conversation share_history is meaningless: the embedded content is encrypted under a different key and cannot be decrypted by the receiver.)
+4. **Decrypt the inner `encrypted_content`** using the same conversation key the receiver already holds.
+5. **Reject nested share_history.** If the decrypted inner `BasicMessageEncryptedContentBean` has `action="share_history"`, decoration `INVALID share_history (nested share_history)`, outer wrapper still renders.
+6. **Render the inner content** as if it were a native message from the original sender — same trust treatment, same attribution. Add an informational "shared by [relayer]" badge or equivalent indicator of the delivery path.
+
+#### 12.11.5 Attachment behavior
+
+Because share_history operates within a single conversation, attachment references in the embedded `original_message` MUST NOT be modified. The original `encrypted_file_hash`, the original `sed`, and the original `unencrypted_content_hash` travel unchanged. The receiver, sharing the same conversation key, can fetch and decrypt the attachment from the server using the unchanged `encrypted_file_hash` — exactly as they would have if they had received the original directly.
+
+Caveat: server-side attachment retention is also bounded. If the encrypted blob has been garbage-collected from `verified_attachment`, the receiver's fetch will fail. The UI renders the embedded attachment with a `[attachment no longer available]` decoration. The signed envelope's metadata (filename, size, hashes) is still preserved and visible.
+
+#### 12.11.6 Lossy semantics — what is NOT preserved
+
+By design:
+
+- **Original `reception_timestamp`.** The share gets a fresh server-side timestamp. The original's timestamp existed only in `RetrieveMessagesResponseBean.receptionTimestamp` from the original delivery, which is server-layer metadata not part of the signed envelope. The relayer cannot reconstruct it cryptographically. Recipients see the message at the share time and apply contextual judgment.
+- **Original conversation-history position.** The share appears in the conversation timeline at the share time, not the original send time. Reactions that aggregated against the original signature still aggregate correctly (§5.4 uses the original envelope's signature, which is preserved).
+- **Server-side attachment availability** (see §12.11.5).
+
+#### 12.11.7 What IS preserved (and why this is different from forward)
+
+- **Original sender's signature** — verifiable.
+- **Original `encrypted_content`** — decryptable with the same key.
+- **Original message structure**, including its own `action` and `targets`. If the original was a reply, a reaction, or an edit, the share recipient sees the embedded `action`/`targets` and resolves them against their local cache normally.
+- **Original sender's identity** — cryptographically attested, not claimed.
+- **Original `cited_users`** — preserved at the outer signed-content level of `original_message` (the embedded envelope). These were the original sender's mention list and reference conversation members; they remain meaningful in the same conversation. Server fan-out for FCM does not re-fire on them (the server only reads the **current** outer wrapper's `cited_users`, which belongs to the relayer's intent for this hop).
+- **Inner action/targets references** — preserved AND **typically resolvable** because the receiver is in the same conversation as the original. If the original was a reply, the receiver can typically resolve `targets[0]` to the parent message in their local cache and render the reply with its parent context. This is the key contrast with forward, where the same action/targets are preserved but unresolvable.
+
+This is the structural inverse of `forward`: forward preserves the structured inner content but loses the signature and the `cited_users`; share_history preserves the entire signed envelope including `cited_users`. The honest framing is therefore not "structurally a screenshot" (forward's framing in §12.10.5) but "structurally a delayed receipt of an authentic original."
+
+#### 12.11.8 UI guidance — informational, not skeptical
+
+Clients SHOULD render a share_history-delivered message with the **original sender's verified attribution** treated identically to natively-delivered messages, with a small informational badge or icon indicating the delivery path ("shared by Carol", "shared message").
+
+What clients MUST NOT do:
+
+- Apply forward-style "claimed-from" skeptical decoration. The cryptography is real here; suggesting it isn't would underclaim.
+- Hide the relayer's identity. The relayer signed the wrapper; their participation in the recovery path is visible and verifiable, and that visibility is part of why this is a courtesy rather than an anonymous broadcast.
+
+What clients MAY do:
+
+- Group multiple share_history-delivered messages of the same logical original into a single "recovered from history" pane, deduplicating by the original envelope's signature.
+- Suppress the relayer badge for messages that the receiver had already received natively (the share is redundant).
+- Offer the receiver a "request history" affordance that asks other participants to send share_history messages for a date range.
+
+#### 12.11.9 Cost analysis and future optimization
+
+**Bandwidth.** A share roughly doubles per-message size (outer wrapper + inner envelope). Acceptable for small messages, more expensive for attachment-heavy content (though the attachments themselves are not duplicated — only their metadata travels in the embedded bean).
+
+**Crypto.** Two AES-GCM decryptions and two Ed25519 verifications per shared message: outer wrapper + embedded original. Linear in number of shared messages.
+
+**Server-side storage.** Each share is a fresh message in `rschat.messages` with its own row, its own server timestamp, its own retention clock. Rate-limited by the existing `RateLimitService` on per-user message emission.
+
+**Specialized optimization, deferred.** A future dedicated `sharehistory` (or similar) RSocket endpoint could provide batched delivery of multiple originals in a single request, with optional compression. It would not change the trust model — clients would still verify each embedded envelope individually. Out of scope for v1.5.
+
+#### 12.11.10 Canonical re-share — unwrap-and-rewrap (normative)
+
+When a participant who **themselves received** a `share_history` message wants to relay the same content to another late receiver in the same conversation, the canonical operation is **unwrap-and-rewrap**: the relayer discards the previous outer wrapper entirely and emits a fresh outer wrapper around the same preserved inner envelope.
+
+**The operation:**
+
+1. **Verify the incoming envelope.** Validate the previous relayer's signature on the outer wrapper (standard envelope check), then validate the embedded `original_message` per §12.11.4 (inner signature, same-conversation invariant). If either fails, the relayer's local cache should have rejected this content in the first place; do not propagate.
+2. **Extract the embedded `BasicMessageRequestBean`** (the original signed envelope from `original_message`). Do **not** modify it. The byte-for-byte preservation of the original envelope is what gives every downstream recipient verifiable original-sender attribution.
+3. **Construct a fresh `BasicMessageEncryptedContentBean`** with:
+   - `action = "share_history"`
+   - `targets = []` (cardinality 0)
+   - `original_message =` the verified inner envelope from step 2, unchanged
+   - `re_shared = true` (you received this via a prior share_history, so the trace flag indicates not-first-share)
+   - `text_message =` optional relayer note for the new recipient (anything you wrote in your local view of the previous relayer's wrapper is **not** propagated — see §12.11.11)
+   - all other fields null
+4. **Sign and encrypt** the new outer envelope normally. Your envelope is signed by your identity; the encrypted content is under the conversation's symmetric key.
+5. **Submit** via the standard `messages` endpoint.
+
+**Why unwrap-and-rewrap, not nest:**
+
+- **Bounded message size.** Every re-share is the size of a first-share. The wire payload does not grow with the relay chain.
+- **No forensic chain.** Each downstream recipient sees only the most recent relayer and the original sender. Intermediate relayers are not enumerated. This is the privacy stance you accept by adopting share_history.
+- **The original signature is preserved across an unlimited chain.** Every recipient at every hop verifies the same Ed25519 signature against the same original `from` PK.
+- **No "nested share_history" can be constructed by a correct client.** The recursive case is structurally impossible. The validation rule §12.11.3 still rejects nested share_history defensively, but cooperating clients will never produce it.
+
+#### 12.11.11 Per-hop wrapper — losses on unwrap (accepted by design)
+
+The unwrap-and-rewrap pattern is **lossy at the wrapper level**. The following are deliberately discarded when a relayer unwraps the previous wrapper:
+
+- **The previous relayer's `cited_users` list.** The previous wrapper may have included recipient-targeted `cited_users` for FCM push routing to its specific intended audience. When unwrapped, this list is gone. The new relayer constructs their own `cited_users` for their own intended recipient(s). The inner envelope's `cited_users` (the original sender's mentions, at the time the original was authored) are preserved inside `original_message` but are never read by the server — they live inside the encrypted body and only become visible to clients after decryption.
+- **The previous relayer's wrapper-level `text_message` note.** If Carol wrote "FYI Dave, here's that message Bob asked about" in her wrapper when she shared to Dave, Dave does not propagate that note when he re-shares to Erin. Each wrapper's note is **per-hop**: it speaks from the current relayer to the current recipient and does not carry downstream. Dave writes his own note for Erin (or omits it).
+- **The previous relayer's `attached_media`** (the wrapper-level additions, rare). Same per-hop rule.
+- **The previous relayer's signature.** Their participation in the relay chain is not visible downstream. They contributed anonymously to the recovery path.
+
+What is **never** lost on unwrap:
+
+- The original sender's signature (inside the preserved `original_message` envelope).
+- The original sender's identity, encrypted content, action/targets context, and attachments.
+- The fact that the new recipient gets a cryptographically-verifiable original.
+
+This per-hop semantics is what makes share_history different from cross-conversation forward: forward deliberately accumulates a chain of claims (each `fw_content` level visible to all downstream recipients); share_history deliberately strips the chain (only the original and the most recent relayer are visible). The two operations have opposite metadata stances by design — both intentional.
+
+---
+
 ## 13. Decisions (resolved 2026-05-27, second round)
 
 | # | Question | Decision |
@@ -954,6 +1114,7 @@ This stance is recorded so reviewers can reject future "enrichment" proposals wi
 | 3 | Pin/unpin shape | **Single-slot model** (§5.5). One pinned message per conversation; `pin` overwrites, `unpin` clears the slot. `unpin` has empty `targets` (cleaner than a `pin_clear` action with sentinel targets). |
 | 4 | Cross-action matrix (§12.8) | Approved as written. |
 | 5 | Edit-chain max depth | 4 levels. |
-| 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; chain provenance is FLAT; visual distinction from native content is mandatory in clients. **Deliberately minimal — see §12.10.5.** Future enrichment proposals are out of scope on principle, not for lack of effort. |
-| 7 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
-| 8 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
+| 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; chain is recursive via `fw_content` (depth cap 10); visual distinction from native content is mandatory in clients. **Deliberately minimal — see §12.10.5.** Future enrichment proposals are out of scope on principle, not for lack of effort. |
+| 7 | `share_history` action | **In scope for 1.5.0** (§12.11). Different feature from forward. In-conversation only. Cardinality 0; embedded `original_message` carries the encrypted original signed envelope, preserved intact (signature verifiable, same conversation key). Nested share_history rejected — no forensic chain. UI renders the verified original-sender attribution normally with an informational "shared by" badge; no skeptical decoration. |
+| 8 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
+| 9 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
