@@ -281,8 +281,37 @@ Use the existing reply preview widget (`message_bubble.dart:242 _ReplyPreview`).
 ### 5.3 General
 
 - Clients MAY render reactions inline on the parent message (overlay) **or** as separate timeline entries — protocol does not mandate either.
-- Reactions are **additive**. When the same sender reacts twice to the same parent, the most recent reaction supersedes earlier ones (client-side dedup by `(sender_pk, target_signature)`).
+- Reactions are **additive**. When the same sender reacts twice to the same parent, the most recent reaction supersedes earlier ones (client-side dedup by `(sender_pk, target_signature)`). Authoritative aggregation rule in §5.4.
 - No protocol-level "remove reaction" in v1.5. A future `reaction_remove` action can be added (closed list reopened).
+
+### 5.4 Reaction aggregation (normative)
+
+> §5.1–§5.3 above are **informative** rendering guidelines. **§5.4 is normative** — all clients MUST implement the same logical aggregation, otherwise they will show divergent reaction state for the same conversation history.
+
+Each client MUST maintain, per conversation, a logical table:
+
+```
+reactions: (parent_signature, sender_pk) → reaction_payload
+```
+
+where `(parent_signature, sender_pk)` is the primary key.
+
+**On receipt of a valid `action="reaction"`** targeting `parent_signature` from `sender_pk`:
+
+1. If no row exists for the key, **insert** with the reaction's payload and its `reception_timestamp`.
+2. If a row exists, **overwrite iff** the incoming reaction's `reception_timestamp` is strictly greater than the stored row's `reception_timestamp`. On exact timestamp equality, overwrite iff the incoming envelope signature is lexicographically greater than the stored row's envelope signature.
+
+**On receipt of a valid `action="reaction_remove"`** (§12.2) from `sender_pk` targeting `parent_signature`: **delete** the corresponding row (no-op if absent). If a `reaction` and a `reaction_remove` arrive out-of-order, treat them as two events at the same key and let the one with the larger `(reception_timestamp, envelope_signature)` tuple win — i.e. the most recent action for `(parent_signature, sender_pk)` is authoritative, whether it is a `reaction` (row present) or a `reaction_remove` (row absent).
+
+**The chronological clock** is the **server-assigned `RetrieveMessagesResponseBean.receptionTimestamp`** (rschat writes this as `messages.message_timestamp` when it accepts the message; it is propagated to clients verbatim in every retrieval response). Sender-claimed timestamps inside the encrypted body, if present for other purposes, **MUST NOT** be used for reaction ordering.
+
+**Why server timestamp** — design rationale, summarized:
+
+- It is the only candidate that is deterministic across clients (sender-claimed times can be forged by a malicious sender; per-client receipt order is non-deterministic by definition).
+- Using it grants the server no new capability — the server already controls message delivery order and timing, an accepted out-of-scope threat under the zero-trust relay model (E2E protocol doc §8.5).
+- The narrow residual threat — server choosing which of one sender's duplicate reactions wins — is documented in §6.4 of this spec.
+
+The above defines the **logical state** of reactions on a parent. **How** that state is rendered (layout, counts, ordering within a reaction strip, animation, reactor-identity disclosure, overflow handling, grouping by emoji) is entirely client-defined and out of scope.
 
 ---
 
@@ -321,6 +350,7 @@ Exception: a "reaction" message whose payload (emoji/sticker/inline) is also mal
 - **DoS:** `targets` is bounded by §3.1 cardinality rule. No payload bloat risk.
 - **Reaction storm:** a malicious participant could spam reactions. That is a rate-limit concern (`rschat` already has `RateLimitService`), not a protocol concern.
 - **Cross-conversation leakage:** §4.2 step 4 enforces same-conversation parents — prevents a malicious sender from "pointing at" a message they shouldn't reference. The check is client-side and best-effort.
+- **Server-timestamp ordering of duplicate reactions (narrow accepted threat):** The reaction aggregation rule (§5.4) uses the server-assigned `reception_timestamp` as the chronological clock. A hostile server CAN reorder duplicate reactions from the same sender on the same parent message — i.e. choose which of that sender's own reactions wins in the per-conversation aggregate. It CANNOT forge reactions, change the reactor's identity, alter the reaction payload, or affect ordering across different senders (each `(parent, sender)` key is independent). The affected sender retains an authoritative local outbox and can detect divergence between what they sent and what other participants see. This is a narrow case of the general "server controls message delivery order" accepted threat already documented in `rschat-docs/.../E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5 / `rschat/docs/architecture/E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5. **TODO (during implementation):** propagate this bullet verbatim into that parent threat-model section so its enumeration of "out-of-scope availability attacks" explicitly names duplicate-reaction reordering.
 
 ### 6.5 Cycle handling
 
