@@ -105,11 +105,13 @@ Must be regenerated with `flutter pub run build_runner build --delete-conflictin
 
 `action` is a **closed-vocabulary string**. Clients MUST NOT invent values. Unknown values trigger graceful-degradation behaviour (§6.3).
 
-| Value | Cardinality of `targets` | Required content | Notes |
-|---|---|---|---|
-| `null` / absent | n/a | n/a | Plain message. Indistinguishable from pre-1.5 behaviour. |
-| `"reply"` | exactly 1 | `text_message` non-empty (typical); `attached_media` optional | Quotes a single parent message. |
-| `"reaction"` | exactly 1 (see §3.1) | one of: inline image / `sticker_id` / `emoji` | `text_message` SHOULD be `""` (see §3.2). |
+| Value | Cardinality of `targets` | Required content | Authorization | Notes |
+|---|---|---|---|---|
+| `null` / absent | n/a | n/a | none | Plain message. Indistinguishable from pre-1.5 behaviour. |
+| `"reply"` | exactly 1 | `text_message` non-empty (typical); `attached_media` optional | none | Quotes a single parent message. |
+| `"reaction"` | exactly 1 (see §3.1) | one of: inline image / `sticker_id` / `emoji` | none | `text_message` SHOULD be `""` (see §3.2). |
+| `"pin"` | exactly 1 (message signature) | `text_message` optional pin reason, SHOULD be ≤ 200 chars; `attached_media` MUST be null | creator-only | See §5.5 for aggregation, §12.5 for full design. |
+| `"unpin"` | **0** (`targets` MUST be null / empty / absent) | `text_message` SHOULD be `""`; `attached_media` MUST be null | creator-only | Clears the pin slot for the conversation. |
 
 ### 3.2 `text_message` for reactions (normative, RFC 2119)
 
@@ -212,13 +214,19 @@ Today the rschat schema column `messages.message_signature VARCHAR(88)` only acc
 
 For every received message with non-null `action`:
 
-1. **Action recognized?** If `action` is not in `{"reply", "reaction"}`, fall back to plain-message rendering and ignore `targets`. **Do not discard the message.**
-2. **`targets` present and `size == 1`?** If absent, empty, or oversized, render "INVALID `<action>` reference — malformed targets" decoration and continue with normal body.
-3. **Each target matches signature regex?** If not, "INVALID `<action>` reference — bad signature format" decoration.
-4. **Each target belongs to the conversation the message was sent in?** Lookup against the client's local message cache for this `conversation_hash_name`. If the parent is unknown:
-   - **Reply:** decorate "INVALID reply reference to `<target>`" or, if user prefers, "reply to (message not in cache)" — softer wording for known offline scenarios. Continue rendering the message.
-   - **Reaction:** decorate "reaction targeting unknown message `<target>`". Optionally skip rendering entirely depending on client UX.
-5. **Action-specific checks** — see §4.3 and §4.4.
+1. **Action recognized?** If `action` is not in the registered set (§3 table), fall back to plain-message rendering and ignore `targets`. **Do not discard the message.**
+2. **Per-action cardinality.** Each action declares its `targets` cardinality in the registry. Receivers MUST validate the incoming `targets` against the declared cardinality. Current values:
+   - `reply`, `reaction`, `reaction_remove`, `edit`, `redact`, `pin` → **exactly 1**
+   - `unpin` → **0** (null, empty list, or absent — all equivalent)
+
+   Mismatch → decoration `INVALID <action> reference — malformed targets`, body still rendered.
+3. **Each target matches signature regex?** (Skipped if cardinality is 0.) If not, `INVALID <action> reference — bad signature format` decoration.
+4. **Each target belongs to the conversation the message was sent in?** (Skipped if cardinality is 0.) Lookup against the client's local message cache for this `conversation_hash_name`. If the parent is unknown:
+   - **Reply:** decorate `INVALID reply reference to <target>` or, if user prefers, "reply to (message not in cache)" — softer wording for known offline scenarios. Continue rendering the message.
+   - **Reaction:** decorate `reaction targeting unknown message <target>`. Optionally skip rendering entirely depending on client UX.
+   - **Pin:** decorate `[pinned message not in cache]` in the pinned-message slot. The pin slot still updates (target signature is recorded); resolution is best-effort whenever the parent eventually arrives.
+5. **Authorization.** Some actions require an authorization check (see §12.7 for the three patterns). For `pin` and `unpin`: `envelope.from` MUST equal the conversation creator's PK (= `from` of the decrypted `CreateConversationRequestBean`). For `edit`, `redact`, `reaction_remove`: see action-specific rules. Failure → `INVALID <action> (not authorized)` decoration, body still rendered.
+6. **Action-specific checks** — see §4.3 and §4.4.
 
 The parent message is identified by its **outer envelope Ed25519 signature** — i.e. the same value used as the rschat `messages.message_signature` primary key, and as the `signature` field of `SignedMessageBean`.
 
@@ -313,6 +321,33 @@ where `(parent_signature, sender_pk)` is the primary key.
 
 The above defines the **logical state** of reactions on a parent. **How** that state is rendered (layout, counts, ordering within a reaction strip, animation, reactor-identity disclosure, overflow handling, grouping by emoji) is entirely client-defined and out of scope.
 
+### 5.5 Pin aggregation (normative)
+
+Each client MUST maintain, per conversation, a logical single-slot table:
+
+```
+pinned: conversation_hash → pinned_message_signature
+```
+
+where `conversation_hash` is the primary key. Each conversation has **at most one pinned message at any time** — there is no list of pinned messages, no ranking, no priority.
+
+**On receipt of a valid `action="pin"`** (authorization passed — see §4.2 step 5 and below) targeting `pinned_message_signature` in conversation `conversation_hash`:
+
+1. If no row exists for the key, **insert** with the pin's `targets[0]` and its `reception_timestamp`.
+2. If a row exists, **overwrite iff** the incoming pin's `reception_timestamp` is strictly greater than the stored row's `reception_timestamp`. On exact timestamp equality, overwrite iff the incoming envelope signature is lexicographically greater than the stored row's envelope signature.
+
+**On receipt of a valid `action="unpin"`** (authorization passed) for conversation `conversation_hash`: **delete** the corresponding row (no-op if absent). If a `pin` and an `unpin` arrive out-of-order, treat them as competing events at the same key and let the one with the larger `(reception_timestamp, envelope_signature)` tuple win — exactly mirroring the `reaction` / `reaction_remove` rule in §5.4.
+
+**Authorization is creator-only** for both `pin` and `unpin`. A client MUST verify, before applying the state change, that `envelope.from` equals the `from` field of the decrypted `CreateConversationRequestBean` for this conversation. Non-creator pins / unpins are rejected with decoration `INVALID <pin|unpin> (not conversation creator)`; the slot does not update. The check is purely local — both values live in already-decrypted client state.
+
+**Clock and tiebreaker** are identical to §5.4: server-assigned `RetrieveMessagesResponseBean.receptionTimestamp`, signature lex tiebreaker on equality. Server-timestamp ordering of duplicate pins is subject to the same narrow accepted threat documented in §6.4.
+
+**Resolution of the pinned target.** Display-time, the client looks up `pinned_message_signature` in its local message cache. If present → render normally in the pinned slot. If absent (the pinned message has not yet been received, or was redacted, or was never sent to this client) → render the slot with a broken-reference decoration (e.g. `[pinned message not in cache]`). The slot's logical state is still authoritative; rendering is best-effort.
+
+**Empty state.** When no row exists for the conversation, no pinned-message slot is rendered. Clients SHOULD NOT show an empty placeholder.
+
+**How** the pinned slot is rendered (top-of-conversation strip, sidebar, hover affordance, jump-to-message action, animation) is entirely client-defined and out of scope.
+
 ---
 
 ## 6. Critical analysis
@@ -351,6 +386,8 @@ Exception: a "reaction" message whose payload (emoji/sticker/inline) is also mal
 - **Reaction storm:** a malicious participant could spam reactions. That is a rate-limit concern (`rschat` already has `RateLimitService`), not a protocol concern.
 - **Cross-conversation leakage:** §4.2 step 4 enforces same-conversation parents — prevents a malicious sender from "pointing at" a message they shouldn't reference. The check is client-side and best-effort.
 - **Server-timestamp ordering of duplicate reactions (narrow accepted threat):** The reaction aggregation rule (§5.4) uses the server-assigned `reception_timestamp` as the chronological clock. A hostile server CAN reorder duplicate reactions from the same sender on the same parent message — i.e. choose which of that sender's own reactions wins in the per-conversation aggregate. It CANNOT forge reactions, change the reactor's identity, alter the reaction payload, or affect ordering across different senders (each `(parent, sender)` key is independent). The affected sender retains an authoritative local outbox and can detect divergence between what they sent and what other participants see. This is a narrow case of the general "server controls message delivery order" accepted threat already documented in `rschat-docs/.../E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5 / `rschat/docs/architecture/E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5. **TODO (during implementation):** propagate this bullet verbatim into that parent threat-model section so its enumeration of "out-of-scope availability attacks" explicitly names duplicate-reaction reordering.
+- **Server-timestamp ordering of competing pin / unpin (narrow accepted threat):** Same shape as the reaction case. A hostile server CAN reorder competing `pin` and `unpin` events authored by the conversation creator, selecting which of the creator's own pin decisions wins. It CANNOT forge pins (creator-only authorization is checked client-side against the signed envelope), change which message is pinned by a forged pin, or pin from a non-creator identity. The creator can detect divergence between their own action log and what other participants see. Subsumed by the same "server controls message delivery order" out-of-scope threat.
+- **Creator-only authorization (current model):** `pin` / `unpin` are authorized by PK equality between the action's `envelope.from` and the conversation creator (= `from` of the decrypted `CreateConversationRequestBean`). The check is purely client-side, deterministic, and uses data every cooperating client already holds. Limitations honestly stated: there is no protocol mechanism to add, remove, or transfer admins. The creator is the sole authority for pin operations for the conversation's lifetime. If a richer admin model is ever needed, it requires a separate protocol revision adding promote/demote actions plus a derived admin-set per conversation — out of scope here.
 
 ### 6.5 Cycle handling
 
@@ -359,8 +396,9 @@ Exception: a "reaction" message whose payload (emoji/sticker/inline) is also mal
 ### 6.6 Storage implications
 
 - rschat: zero schema change. The new fields are inside the encrypted blob.
-- tkmChat local Drift DB: already has `replyToSignature` column (`tables.dart:97`). Needs a parallel column for reactions (e.g. `reaction_target_signature`) and a reaction kind discriminator. Or a separate `reactions` table keyed by `(target_signature, sender_pk)` for dedup.
+- tkmChat local Drift DB: already has `replyToSignature` column (`tables.dart:97`). Needs a parallel column for reactions (e.g. `reaction_target_signature`) and a reaction kind discriminator. Or a separate `reactions` table keyed by `(target_signature, sender_pk)` for dedup. Pin state needs a single-row-per-conversation `pinned_messages` table or a `pinned_signature` column on `conversations`.
 - shell: in-memory display only; no persistent storage.
+- **Dead-data finding (separate cleanup, not blocking):** `rschat.users_to_conversations.conversation_role` is currently unread by every code path (server never authorizes against it, never sends it in any response bean). Clients derive their own role view from `creation_request.from` (Flutter: `conversation_sync_service.dart:361`). Either remove the column and its lookup table `conversation_roles` in a future schema migration, or wire it to a real authorization model — both options are out of scope for this branch. Flagged so the column does not silently drift further out of sync with client-derived state.
 
 ---
 
@@ -601,15 +639,15 @@ The `(action, targets)` shape generalizes cleanly. The following actions plug in
 
 ### 12.1 Action registry — extended
 
-| Action | `targets` cardinality | `text_message` | `attached_media` | Author check | Notes |
+| Action | `targets` cardinality | `text_message` | `attached_media` | Authorization | Notes |
 |---|---|---|---|---|---|
 | `reply` | 1 | non-empty (typical) | optional | none | §3-§5 |
-| `reaction` | 1 | `""` | exactly 1 (emoji/sticker/inline-image) | none | §3-§5, §11 |
-| `reaction_remove` | 1 | `""` | absent / null | sender must match prior reaction's sender | §12.2 |
-| `edit` | 1 | new text | new media (optional) | sender must equal parent author | §12.3 |
-| `redact` | 1 | optional reason ("" allowed) | absent | sender must equal parent author | §12.4 |
-| `pin` | 1 | optional note | absent | conversation participant (admin-only optional) | §12.5 |
-| `unpin` | 1 | `""` | absent | same as pin | §12.5 |
+| `reaction` | 1 | `""` (SHOULD) | exactly 1 (emoji/sticker/inline-image) | none | §3-§5, §11 |
+| `reaction_remove` | 1 | `""` | absent / null | self-author (envelope.from == prior reaction's from) | §12.2 |
+| `edit` | 1 | new text | new media (optional) | self-author (envelope.from == parent's from) | §12.3 |
+| `redact` | 1 | optional reason ("" allowed) | absent | self-author (envelope.from == parent's from) | §12.4 |
+| `pin` | 1 | optional reason, SHOULD ≤ 200 chars | MUST be null | creator-only (envelope.from == creation_request.from) | §5.5, §12.5 |
+| `unpin` | **0** (null / empty / absent) | SHOULD be `""` | MUST be null | creator-only (same check) | §5.5, §12.5 |
 
 The following are **deferred** with rationale in §12.6: `forward`, `read_receipt`, `typing`, `vote`/`poll_response`, generic `acknowledge`.
 
@@ -672,26 +710,43 @@ The following are **deferred** with rationale in §12.6: `forward`, `read_receip
 
 **Caveat.** Same cooperation requirement as `edit`. The relay server retains the redacted message; only cooperating clients honor the directive.
 
-### 12.5 `pin` / `unpin`
+### 12.5 `pin` / `unpin` — single-slot model
 
-**Purpose.** Designate one or more messages as conversation-pinned (sticky / featured).
+**Purpose.** Designate **one** message as the conversation's pinned message. Each conversation has at most one pinned message at any time. Pinning a new message overwrites the previous pin; `unpin` clears the slot entirely.
 
 **Semantics.**
-- `pin`: `targets[0]` = message signature to pin. `text_message` = optional admin note. `attached_media` = null.
-- `unpin`: `targets[0]` = previously-pinned message signature. `text_message = ""`. `attached_media = null`.
+
+`pin`:
+- `targets[0]` = signature of the message to pin (Ed25519 envelope signature, matching `^[A-Za-z0-9_-]{86}\.\.$`).
+- `text_message` = optional pin reason. SHOULD be ≤ 200 chars. Default `""`.
+- `attached_media` MUST be null.
+
+`unpin`:
+- `targets` MUST be null, empty list, or absent — all equivalent. There is no target to reference because the slot identity is the conversation itself (carried in the outer envelope's `conversation_hash_name`).
+- `text_message` SHOULD be `""`.
+- `attached_media` MUST be null.
 
 **Receiver validation.**
-- Standard target validation.
-- **Authorization choice (decide before implementation):**
-  - **Option A — open:** any conversation participant may pin/unpin. Last action wins.
-  - **Option B — admin only:** only senders whose role in `users_to_conversations` is `administrator`. The role is not in the encrypted message — clients consult their local copy of conversation membership. A non-admin pinning would be flagged with `INVALID pin (not admin)` decoration.
-- Recommend **Option B** for v1.5+1: aligns with the existing role model and prevents pin spam.
+
+1. Standard validation per §4.2, with the per-action cardinality applied (`pin` → exactly 1, `unpin` → 0).
+2. **Authorization (creator-only).** Before applying any state change, verify `envelope.from == creation_request.from` for this conversation, where `creation_request.from` is the `from` field of the conversation's decrypted `CreateConversationRequestBean`. The value lives in already-decrypted client state — no server call, no role table consultation.
+
+   Non-creator emissions are rejected with decoration `INVALID <pin|unpin> (not conversation creator)`. The pin slot is **not** updated. The parent envelope's `text_message` (if any) still renders normally — failed authorization at the action layer never discards user content.
+
+3. For `pin` only: target signature regex match + same-conversation-membership lookup (best-effort, see §4.2 step 4 / §5.5).
+
+**Aggregation.** See §5.5 for the normative state-machine. Summary: a single-slot table `pinned: conversation_hash → pinned_message_signature` updated by `(reception_timestamp, envelope_signature)`-ordered events; `pin` overwrites, `unpin` clears.
 
 **Client behaviour.**
-- Maintains an ordered list of pinned messages per conversation by replaying `pin`/`unpin` actions in conversation order. The state is **derived**, not stored on the server.
-- UI: pinned strip at the top of the conversation; tap → jump-to-message.
 
-**Why design now.** Pin/unpin is the most common conversation feature beyond reply/react in modern chats. The action shape fits perfectly. Cost: one optional admin check at the validator layer.
+- **Pin slot state** is derived from the conversation's action history per §5.5 — not server-side state.
+- **Display:** if the slot holds a signature and the parent message is in the local cache → render the pinned message in a client-defined visual affordance (top strip, sidebar, hover, etc.). If the parent is not in the local cache → render the slot with a broken-reference decoration; do not clear the slot.
+- **Empty state:** no pinned-message affordance is rendered. SHOULD NOT show empty placeholders.
+- **Layout / placement / interactions** (jump-to-message, animation, hover preview, dismiss UI) are entirely client-defined and out of scope.
+
+**Authorization model is intentionally narrow.** "Creator-only" was chosen because the current protocol has no mechanism to promote, demote, or transfer admin status — see the dead-data finding for `users_to_conversations.conversation_role` in §6.6. The creator of a conversation is its sole pin authority for the conversation's lifetime. If a richer admin model is added in a future protocol revision (`promote_admin` / `demote_admin` actions with consensus / inheritance rules), the pin authorization MAY widen to "creator or admin" without a wire change — only the validator's authorization check would update.
+
+**Why design now.** Pin is the third-most-common conversation feature after reply and react. The single-slot model is the simplest possible design that delivers the user-visible feature, fits the existing `(action, targets)` shape, and reuses the §5.4 aggregation machinery wholesale. Cost: zero new wire fields, zero new endpoints, one PK equality check.
 
 ### 12.6 Deferred actions — with reasoning
 
@@ -715,6 +770,20 @@ A receiver encountering an unrecognized `action` value MUST:
 
 This guarantee is what makes piecemeal action additions safe across version skew. It MUST be tested with a synthetic action `"__test_unknown_action__"` in the test suite.
 
+### 12.7a Authorization patterns — name the three
+
+Every new action picks exactly one of three authorization patterns. The spec records them here so future actions don't reinvent the check.
+
+| Pattern | Check | Currently used by | Notes |
+|---|---|---|---|
+| **No check** | any conversation participant may emit | `reply`, `reaction` | Validator does only structural validation; no authorization step. |
+| **Self-author check** | `envelope.from == lookup(target_signature).from` | `edit`, `redact`, `reaction_remove` | Requires the target message to be in the local cache for the check to succeed. If the target is unknown, action is held in a deferred-validation queue or rejected with a "cannot verify authorship" decoration (client choice). |
+| **Conversation-creator check** | `envelope.from == creation_request.from` | `pin`, `unpin` | The `creation_request` is the decrypted `CreateConversationRequestBean` for this conversation, present in client state as soon as the conversation is set up. Check is deterministic, local, and requires no server query. |
+
+**Why these three and no others.** The protocol currently has no concept of an "admin set" or any other persistent role state. The only identity-level facts a client can verify locally are: (a) who sent THIS message (envelope.from), (b) who sent the TARGET message (envelope.from of the lookup), (c) who CREATED the conversation (from of the decrypted creation request). Every authorization decision must compose from these three. Until a future protocol revision introduces explicit role-management actions, no fourth pattern is possible.
+
+**Server-side enforcement: none of the above.** All authorization checks are client-side. A non-cooperating client could ignore an authorization failure and render the action anyway (e.g. show a non-creator's pin in its own UI). Same caveat as `edit` and `redact`: directives that depend on cooperating implementations.
+
 ### 12.8 Cross-action interactions
 
 | Scenario | Behaviour |
@@ -725,8 +794,14 @@ This guarantee is what makes piecemeal action additions safe across version skew
 | React to a redacted message | Reaction is delivered; receiver renders the reaction with `[deleted message]` as the target preview. |
 | Edit of a reaction | **Forbidden by spec.** Reactions are immutable; use `reaction_remove` + new `reaction`. |
 | Redact of a reaction | Allowed (it's just deleting your own message). Equivalent in effect to `reaction_remove`. Clients SHOULD treat both as the same delete operation. |
-| Pin/unpin of a redacted message | Pinning is permitted but UI MAY hide pinned tombstones. Unpinning a redacted pin is straightforward. |
-| Multiple pins | Conversation may have multiple pinned messages; pin order is the order of `pin` actions. Optional client cap (e.g. 5) for display. |
+| Pin of a redacted message | Pin is permitted protocol-wise. Slot updates to that signature. Display: client MAY render the pinned slot as `[pinned message deleted]` or MAY auto-clear from view (slot state unchanged). |
+| Pin of an edited message | `targets[0]` is the original signature, never an edit. Display resolution walks the edit chain to render the latest content. |
+| Pin pointing at a message not in local cache | Slot updates to that signature; display renders `[pinned message not in cache]`. Slot resolves when the parent arrives. |
+| Multiple sequential pins | Single-slot model: latest by `(reception_timestamp, signature)` wins. No list of pinned messages exists. |
+| Pin followed by edit of pinned message | The edit changes the displayed content of the pinned message (clients resolve via the edit chain). The pin slot itself is untouched. |
+| `unpin` arriving before any `pin` | No-op. Slot was already empty; remains empty. |
+| Concurrent `pin` and `unpin` from creator | Latest by `(reception_timestamp, signature)` tuple wins, exactly as §5.5 specifies. |
+| Pin attempt by non-creator | Rejected with decoration `INVALID pin (not conversation creator)`. Slot unchanged. Parent body still renders. |
 
 ### 12.9 Implementation plan addendum (extends §7)
 
@@ -747,14 +822,18 @@ If the Tier-1 extensions (`reaction_remove`, `edit`, `redact`) ship together wit
 - `reaction_remove` without prior reaction → decoration, no state change.
 - Unknown action `"__test_unknown_action__"` → text body rendered, decoration emitted.
 
-**Pin (Tier 2)** can ship in the same release if admin-check logic is reused from existing membership code (`users_to_conversations`). Otherwise punt to v1.6.
+**Pin / unpin** (single-slot model, §5.5 / §12.5) ships in 1.5.0 alongside reply / reaction. Creator-only authorization adds zero new wire surface — the check is a PK equality against already-decrypted `creation_request.from`. No `users_to_conversations.conversation_role` consultation; that column is dead data (see §6.6).
 
 ---
 
-## 13. Decision request for §12 (before extension implementation)
+## 13. Decisions (resolved 2026-05-27, second round)
 
-1. Tier-1 (`reaction_remove`, `edit`, `redact`) — ship together with reply/reaction in 1.5.0, or in 1.5.1?
-2. Pin/unpin authorization — Option A (open) or Option B (admin only)?
-3. Cross-action interaction matrix (§12.8) — approved as written?
-4. Edit-chain max depth — 4 acceptable, or different?
-5. Forward, polls, read receipts — confirm deferral, or sponsor one for its own dedicated spec?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Tier-1 ship cadence (`reaction_remove`, `edit`, `redact`) | Ship together with reply/reaction in 1.5.0. |
+| 2 | Pin/unpin authorization | **Creator-only** — PK equality `envelope.from == creation_request.from`. No admin-set concept exists yet; if added later it would widen this check without a wire change. |
+| 3 | Pin/unpin shape | **Single-slot model** (§5.5). One pinned message per conversation; `pin` overwrites, `unpin` clears the slot. `unpin` has empty `targets` (cleaner than a `pin_clear` action with sentinel targets). |
+| 4 | Cross-action matrix (§12.8) | Approved as written. |
+| 5 | Edit-chain max depth | 4 levels. |
+| 6 | Forward, polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
+| 7 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
