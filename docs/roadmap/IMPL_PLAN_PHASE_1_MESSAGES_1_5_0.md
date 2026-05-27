@@ -259,33 +259,229 @@ The three small enums (`Cardinality`, `TargetFormat`, `AuthPattern`) are **inter
 - `MessageActionMeta.lookup("FORWARD")` returns the correct `ActionSpec` (case-insensitive).
 - **Registry-completeness test:** assert `MessageAction.KNOWN.equals(MessageActionMeta.registeredActions())` — guards against forgetting to register metadata for a new action.
 
-### 3.3 `MessageActionValidator` (commit 3)
+### 3.3 `MessageActionValidator` + hard/soft split (commit 3)
 
-**New file:** `src/main/java/io/takamaka/messages/chat/message/MessageActionValidator.java`
+**Decision recap.** The validator implements the §4.2 pipeline and the strict-drop family (§12.7 + §12.11.4 step 2). Two failure categories:
 
-Pure functions implementing the §4.2 pipeline. Receives a decrypted `BasicMessageEncryptedContentBean` plus context (conversation creator PK, local message cache lookup function, registered-user lookup function). Returns `ValidationResult` — a structured record:
+- **Hard violations (six total — H1-H6).** The validator **throws** a typed `HardProtocolViolationException` subclass. The caller catches; the message is dropped (not rendered). Hard violations correspond to "we cannot trust this bean's identity at all" — version mismatch (H1-H4), unknown action (H5), embedded inner-signature failure (H6).
+- **Soft violations.** The validator **returns** a `ValidationResult` record with a list of `Decoration` entries. The body still renders; decorations attach informational, structural, or tamper-signal hints. Severity is a String field with canonical values held in a constants class (consistent with `MessageAction`'s strings-not-enum pattern, per the cross-compat stance in §2.7).
+
+#### 3.3.1 Files created
+
+| File | Purpose |
+|---|---|
+| `MessageActionValidator.java` | Validator entry-point and helper methods |
+| `ValidationResult.java` | Record for soft-violation results |
+| `Decoration.java` | Record for a single decoration entry |
+| `DecorationSeverity.java` | String constants holder (INFO / WARN / ERROR) |
+| `ValidationDecorationCodes.java` | String constants holder for the soft-violation codes |
+| `HardProtocolViolationException.java` | Base hard-violation exception |
+| `MalformedProtocolVersionException.java` | H1 |
+| `IncompatibleMajorVersionException.java` | H2 |
+| `MissingVersionWithFeaturesException.java` | H3 |
+| `LegacyVersionWithFeaturesException.java` | H4 |
+| `UnknownActionException.java` | H5 |
+| `InnerSignatureFailureException.java` | H6 |
+
+All six hard-violation subclasses extend `HardProtocolViolationException` extends `ChatMessageException`. The base class carries a `code` field (string matching the H-list code), the offending value (e.g., the unrecognized action string), and optional context (conversation hash, sender PK) for logging.
+
+#### 3.3.2 Record shapes
 
 ```java
 public record ValidationResult(
-    boolean valid,
-    String decorationCode,    // null if valid; "INVALID_REPLY_BAD_SIGNATURE" etc. if not
-    String decorationMessage  // human-readable for client UI
+    boolean overallValid,            // true iff decorations contains no ERROR-severity entries
+    List<Decoration> decorations     // possibly empty; multiple findings compound
+) {
+    public boolean hasErrors() {
+        return decorations.stream()
+            .anyMatch(d -> DecorationSeverity.ERROR.equals(d.severity()));
+    }
+}
+
+public record Decoration(
+    String code,                     // e.g. "BROKEN_REFERENCE_REPLY" (from ValidationDecorationCodes)
+    String humanReadableMessage,     // for client UI
+    String severity,                 // canonical: "INFO" | "WARN" | "ERROR" (from DecorationSeverity)
+    String affectedField             // optional pointer to bean field, e.g. "targets[0]"; may be null
 ) {}
 ```
 
-Validator methods:
+`overallValid` is derived from the decoration list — `true` iff no decoration carries severity `ERROR`. Callers can either check `overallValid` for a single boolean dispatch or iterate `decorations` for fine-grained handling (logging, telemetry, per-decoration UI).
 
-- `validateAction(BasicMessageEncryptedContentBean bean)` — returns valid action, or graceful-degrade for unknown.
-- `validateCardinality(MessageAction action, List<String> targets)`.
-- `validateTargetFormat(MessageAction action, List<String> targets)` — dispatches regex on `getTargetFormat()`.
-- `validateAuthorization(MessageAction action, String envelopeFrom, Context ctx)` — dispatches on auth pattern.
-- `validateForwardDepth(BasicMessageEncryptedContentBean bean)` — walks `fw_content` chain, caps at 10.
-- `validateShareHistory(BasicMessageEncryptedContentBean bean, BasicMessageRequestBean outerEnvelope, Context ctx)` — embedded-signature verification, same-conversation check, no-nested-share check.
-- `validateAll(...)` — orchestrates the above and produces a single `ValidationResult`.
+#### 3.3.3 String-constants holders
 
-All decoration codes are constants in the validator class. They match the spec text exactly.
+**Severity constants** — `DecorationSeverity.java`:
 
-**Acceptance:** unit tests for every action × every failure mode (~30 cases). Forward-compat test: synthetic `"__test_unknown_action__"` → result is `valid=true` (graceful degrade) with a decoration noting the unknown action. Depth-11 forward → truncation decoration.
+```java
+public final class DecorationSeverity {
+    public static final String INFO  = "INFO";
+    public static final String WARN  = "WARN";
+    public static final String ERROR = "ERROR";
+
+    public static final Set<String> KNOWN = Set.of(INFO, WARN, ERROR);
+
+    public static String normalize(String raw) {
+        return raw == null ? null : raw.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public static boolean isKnown(String raw) {
+        return raw != null && KNOWN.contains(normalize(raw));
+    }
+
+    private DecorationSeverity() {}
+}
+```
+
+**Decoration codes** — `ValidationDecorationCodes.java`:
+
+```java
+public final class ValidationDecorationCodes {
+    // Cardinality / target format
+    public static final String INVALID_REPLY_MALFORMED_TARGETS         = "INVALID_REPLY_MALFORMED_TARGETS";
+    public static final String INVALID_REACTION_MALFORMED_TARGETS      = "INVALID_REACTION_MALFORMED_TARGETS";
+    public static final String INVALID_REACTION_REMOVE_MALFORMED_TARGETS = "INVALID_REACTION_REMOVE_MALFORMED_TARGETS";
+    public static final String INVALID_EDIT_MALFORMED_TARGETS          = "INVALID_EDIT_MALFORMED_TARGETS";
+    public static final String INVALID_REDACT_MALFORMED_TARGETS        = "INVALID_REDACT_MALFORMED_TARGETS";
+    public static final String INVALID_PIN_MALFORMED_TARGETS           = "INVALID_PIN_MALFORMED_TARGETS";
+    public static final String INVALID_UNPIN_MALFORMED_TARGETS         = "INVALID_UNPIN_MALFORMED_TARGETS";
+    public static final String INVALID_FORWARD_MALFORMED_TARGETS       = "INVALID_FORWARD_MALFORMED_TARGETS";
+    public static final String INVALID_SHARE_HISTORY_MALFORMED_TARGETS = "INVALID_SHARE_HISTORY_MALFORMED_TARGETS";
+
+    public static final String INVALID_REPLY_BAD_SIGNATURE_FORMAT    = "INVALID_REPLY_BAD_SIGNATURE_FORMAT";
+    public static final String INVALID_REACTION_BAD_SIGNATURE_FORMAT = "INVALID_REACTION_BAD_SIGNATURE_FORMAT";
+    // ... etc. for other signature-typed targets
+    public static final String INVALID_FORWARD_BAD_PUBLIC_KEY_FORMAT = "INVALID_FORWARD_BAD_PUBLIC_KEY_FORMAT";
+
+    // Broken references (target not in local cache)
+    public static final String BROKEN_REFERENCE_REPLY    = "BROKEN_REFERENCE_REPLY";
+    public static final String BROKEN_REFERENCE_REACTION = "BROKEN_REFERENCE_REACTION";
+    public static final String BROKEN_REFERENCE_PIN      = "BROKEN_REFERENCE_PIN";
+
+    // Authorization failures
+    public static final String UNAUTHORIZED_EDIT             = "UNAUTHORIZED_EDIT";
+    public static final String UNAUTHORIZED_REDACT           = "UNAUTHORIZED_REDACT";
+    public static final String UNAUTHORIZED_REACTION_REMOVE  = "UNAUTHORIZED_REACTION_REMOVE";
+    public static final String UNAUTHORIZED_PIN              = "UNAUTHORIZED_PIN";
+    public static final String UNAUTHORIZED_UNPIN            = "UNAUTHORIZED_UNPIN";
+
+    // share_history structural soft cases
+    public static final String INVALID_SHARE_HISTORY_MISSING_ORIGINAL_MESSAGE = "INVALID_SHARE_HISTORY_MISSING_ORIGINAL_MESSAGE";
+    public static final String INVALID_SHARE_HISTORY_CROSS_CONVERSATION       = "INVALID_SHARE_HISTORY_CROSS_CONVERSATION";   // severity ERROR
+    public static final String INVALID_SHARE_HISTORY_NESTED                   = "INVALID_SHARE_HISTORY_NESTED";
+
+    // Forward
+    public static final String FORWARD_DEPTH_EXCEEDED = "FORWARD_DEPTH_EXCEEDED";
+
+    // Inline content
+    public static final String INLINE_DECODE_ERROR        = "INLINE_DECODE_ERROR";
+    public static final String INLINE_SIZE_VIOLATION      = "INLINE_SIZE_VIOLATION";
+    public static final String INLINE_HASH_MISMATCH       = "INLINE_HASH_MISMATCH";        // severity ERROR
+    public static final String INLINE_DIMENSION_VIOLATION = "INLINE_DIMENSION_VIOLATION";
+    public static final String INLINE_SIZE_MISMATCH       = "INLINE_SIZE_MISMATCH";
+    public static final String INLINE_FIELD_VIOLATION     = "INLINE_FIELD_VIOLATION";
+    public static final String INLINE_MIME_VIOLATION      = "INLINE_MIME_VIOLATION";
+
+    // Reaction SHOULD-rules
+    public static final String REACTION_TEXT_NOT_EMPTY = "REACTION_TEXT_NOT_EMPTY";
+
+    // Closed set for completeness tests
+    public static final Set<String> ALL = Set.of(/* all of the above */);
+
+    private ValidationDecorationCodes() {}
+}
+```
+
+(Hard violation codes — `INVALID_PROTOCOL_VERSION_*`, `INVALID_ACTION`, `INNER_SIGNATURE_FAILURE` — are NOT in this class. They are exposed as `getCode()` accessors on the exception subclasses themselves, since they never appear in a `ValidationResult`.)
+
+#### 3.3.4 Validator methods
+
+```java
+public final class MessageActionValidator {
+
+    /**
+     * Top-level validation. Throws hard-violation exceptions; returns soft results.
+     */
+    public static ValidationResult validate(
+        BasicMessageEncryptedContentBean bean,
+        BasicMessageRequestBean outerEnvelope,
+        ValidationContext ctx
+    ) throws HardProtocolViolationException {
+        // Step 0: protocol version gate (may throw H1-H4)
+        validateProtocolVersion(bean);
+
+        // Step 1: action recognition (may throw H5)
+        String normalizedAction = validateActionRecognition(bean);
+        if (normalizedAction == null) {
+            // null/empty action → plain message, no further checks
+            return ValidationResult.empty();
+        }
+
+        // Steps 2-5: per-action validation (collects soft decorations)
+        List<Decoration> decorations = new ArrayList<>();
+        validateCardinality(normalizedAction, bean, decorations);
+        validateTargetFormat(normalizedAction, bean, decorations);
+        validateTargetResolvable(normalizedAction, bean, ctx, decorations);
+        validateAuthorization(normalizedAction, bean, outerEnvelope, ctx, decorations);
+        validateActionSpecific(normalizedAction, bean, outerEnvelope, ctx, decorations); // may throw H6 for share_history
+
+        return new ValidationResult(
+            decorations.stream().noneMatch(d -> DecorationSeverity.ERROR.equals(d.severity())),
+            List.copyOf(decorations)
+        );
+    }
+
+    // Step 0
+    private static void validateProtocolVersion(BasicMessageEncryptedContentBean bean)
+        throws HardProtocolViolationException { /* ... */ }
+
+    // Step 1
+    private static String validateActionRecognition(BasicMessageEncryptedContentBean bean)
+        throws UnknownActionException { /* returns normalized lowercase, or null for absent */ }
+
+    // Steps 2-5
+    private static void validateCardinality(String action, BasicMessageEncryptedContentBean bean, List<Decoration> out) { /* ... */ }
+    private static void validateTargetFormat(String action, BasicMessageEncryptedContentBean bean, List<Decoration> out) { /* ... */ }
+    private static void validateTargetResolvable(String action, BasicMessageEncryptedContentBean bean, ValidationContext ctx, List<Decoration> out) { /* ... */ }
+    private static void validateAuthorization(String action, BasicMessageEncryptedContentBean bean, BasicMessageRequestBean outer, ValidationContext ctx, List<Decoration> out) { /* ... */ }
+
+    // Action-specific
+    private static void validateActionSpecific(String action, BasicMessageEncryptedContentBean bean, BasicMessageRequestBean outer, ValidationContext ctx, List<Decoration> out)
+        throws InnerSignatureFailureException { /* H6 thrown for share_history inner-signature failure */ }
+
+    // Helper for the forward depth walk (caps at 10; emits FORWARD_DEPTH_EXCEEDED decoration if over)
+    private static void validateForwardDepth(BasicMessageEncryptedContentBean bean, List<Decoration> out) { /* ... */ }
+
+    private MessageActionValidator() {}
+}
+```
+
+`ValidationContext` is a small record bundling the conversation creator PK lookup, local message cache lookup function, registered-user lookup function. Pure data; passed by the client.
+
+#### 3.3.5 Validator behavior — hard/soft summary
+
+| Step | Failure mode | Behavior |
+|---|---|---|
+| 0 | Version malformed / incompatible MAJOR / missing-with-features / declares-legacy-with-features | **Throw H1-H4.** Message dropped. |
+| 1 | Action unrecognized (after case-insensitive normalization) | **Throw H5.** Message dropped. |
+| 2 | Cardinality mismatch for known action | Decoration (`INVALID_<ACTION>_MALFORMED_TARGETS`, severity WARN). Body renders. |
+| 3 | Target format mismatch (regex fail) | Decoration (`INVALID_<ACTION>_BAD_<SIGNATURE\|PUBLIC_KEY>_FORMAT`, severity WARN). Body renders. |
+| 4 | Target not resolvable in local cache (signature-typed targets only) | Decoration (`BROKEN_REFERENCE_<ACTION>`, severity INFO). Body renders. |
+| 5 | Authorization failure (self-author, creator-only) | Decoration (`UNAUTHORIZED_<ACTION>`, severity WARN). Body renders. |
+| share_history inner-signature failure | Embedded signature fails verification | **Throw H6.** Message dropped (per data-integrity-first stance, §13 decision 11). |
+| share_history cross-conversation | Embedded `conversation_hash_name` ≠ outer | Decoration (`INVALID_SHARE_HISTORY_CROSS_CONVERSATION`, severity ERROR — `overallValid: false`). Outer wrapper still renders. |
+| share_history nested | Embedded inner bean has `action="share_history"` | Decoration (`INVALID_SHARE_HISTORY_NESTED`, severity WARN). Outer wrapper still renders. |
+| Forward depth > 10 | `fw_content` chain too deep | Truncate deepest branch + Decoration (`FORWARD_DEPTH_EXCEEDED`, severity INFO). Body renders (truncated). |
+| Inline content checks | Various (decode, size, hash, dimension, MIME) | Decoration with appropriate code; severity ERROR for hash mismatch (tamper signal), WARN otherwise. Parent message renders; inline content shown as broken. |
+
+#### 3.3.6 Acceptance criteria
+
+- **Hard violations (six):** `assertThrows(<Exception>.class, () -> validator.validate(...))` for each H1-H6 with a fixture demonstrating the violation. The exception's `getCode()` returns the canonical code string.
+- **Soft violations (~18):** `assertEquals(<DecorationCode>, result.decorations().get(0).code())` for each soft case, with severity also asserted. Multiple-finding cases assert the decoration list size and contents.
+- **Plain message (no action):** returns `ValidationResult.empty()` (overallValid=true, empty list).
+- **Forward-compat synthetic test:** `assertThrows(UnknownActionException.class, ...)` for action `"__test_unknown_action__"`. The exception carries `getCode() == "INVALID_ACTION"` and `getOffendingValue() == "__test_unknown_action__"`.
+- **Registry-completeness tests:** assert `MessageAction.KNOWN.equals(MessageActionMeta.registeredActions())` and `DecorationSeverity.KNOWN.size() == 3`.
+- **Case-insensitive action normalization:** `"Reply"` and `"REPLY"` and `"reply"` all produce the same validation result.
+- **Coverage target:** 85%+ line coverage on `MessageActionValidator`. 100% of `DecorationSeverity.KNOWN`, 100% of `MessageAction.KNOWN`, all decoration codes in `ValidationDecorationCodes.ALL` exercised at least once.
 
 ### 3.4 `ChatCryptoUtils` helpers (commit 4)
 
