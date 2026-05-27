@@ -14,7 +14,7 @@ This plan describes Phase 1 of the implementation rollout for the message-action
 In scope (this branch):
 
 - Bean annotation polish on `BasicMessageEncryptedContentBean`.
-- New `MessageAction` enum / constants class.
+- New `MessageAction` constants class + `MessageActionMeta` registry (no enum — string-typed wire values; see §2.7 and §3.2).
 - New `MessageActionValidator` utility implementing the §4.2 pipeline.
 - New `ChatCryptoUtils` helpers — one canonical-construction method per action.
 - Cross-platform test vectors (fixtures generated from Java, consumed by future Dart port).
@@ -91,13 +91,19 @@ The `original_message` field is of type `BasicMessageRequestBean` (the full sign
 
 **Phase 1 commitment:** a test vector for a share_history message (action="share_history" with `original_message` populated, embedded encrypted_content blob included verbatim).
 
-### 2.7 Action enum value strings
+### 2.7 Action wire-string constants and case-insensitive normalization
 
-`MessageAction` enum values in Java MUST serialize to lowercase strings matching the spec exactly: `"reply"`, `"reaction"`, `"reaction_remove"`, `"edit"`, `"redact"`, `"pin"`, `"unpin"`, `"forward"`, `"share_history"`.
+**Decision (revised 2026-05-27):** the action value is represented across all language ports as a plain string with a fixed lowercase canonical form. **No enum.** Java enums interoperate poorly with non-Java implementations (Dart, Python, Rust, Go, JavaScript all have divergent enum semantics), and the wire format is a string regardless — the enum adds Java-side type safety we can mostly recover with `public static final String` constants while avoiding the cross-port headache.
 
-Dart implementations may model this as a `String` constant set or a Dart enum with `@JsonValue` annotations. The wire-level string is what's binding.
+**Canonical wire form:** lowercase strings — `"reply"`, `"reaction"`, `"reaction_remove"`, `"edit"`, `"redact"`, `"pin"`, `"unpin"`, `"forward"`, `"share_history"`.
 
-**Phase 1 commitment:** Java enum has explicit lowercase JSON value getter; tests assert exact wire-string match for every action.
+**Inbound normalization rule (normative for the validator):** every incoming `action` value MUST be normalized to lowercase via `Locale.ROOT.toLowerCase()` (Java) or `String.toLowerCase()` (Dart, language default is locale-independent) before comparison against the closed registry. This protects against rushed implementations or hand-rolled JSON that emit `"Reply"` or `"REPLY"`: clients accept the case variant and proceed to render as the canonical form.
+
+**Outbound emission rule:** all action values emitted by Phase-1 code MUST use the canonical lowercase form verbatim — no case mixing, no whitespace. Test vectors assert byte-exact match.
+
+**Phase 1 commitment:** the `MessageAction` constants class declares the canonical strings as `public static final String`. The `MessageActionMeta` registry is keyed by these constants. Inbound normalization is applied at a single chokepoint in the validator. Tests cover both happy-path lowercase and case-variant inbound strings.
+
+**Cross-platform implication:** Phase 2 (Dart) mirrors with `static const String reply = 'reply'` etc. in a `class MessageAction`. Dart's `String.toLowerCase()` is locale-independent by default; safe to use without `Locale.ROOT` equivalent. The bean's `action` field stays `String?` on both platforms — no `@JsonValue` annotation, no enum-mapping logic.
 
 ### 2.8 Regex parity
 
@@ -161,34 +167,97 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 **Acceptance:** `mvn clean compile` passes. JSON round-trip test confirms null fields are omitted. Round-trip with an extra unknown field (`{"text_message": "x", "unknown_field": 42}`) succeeds without exception.
 
-### 3.2 `MessageAction` enum (commit 2)
+### 3.2 `MessageAction` constants + `MessageActionMeta` registry (commit 2)
 
-**New file:** `src/main/java/io/takamaka/messages/chat/message/MessageAction.java`
+**New file 1:** `src/main/java/io/takamaka/messages/chat/message/MessageAction.java`
 
-Closed-vocabulary enum with explicit JSON values. Each enum constant carries its lowercase wire-string. Provides:
-
-- `value()` — returns the wire string (`"reply"`, etc.)
-- `fromValue(String)` — case-sensitive lookup; returns `Optional<MessageAction>` (null/empty → unknown action → graceful degrade)
-- `getTargetCardinality()` — returns `0`, `1`, or `0_OR_1` (small enum or constants)
-- `getTargetFormat()` — returns `SIGNATURE` or `PUBLIC_KEY` or `NONE`
-- `getAuthorizationPattern()` — returns `NO_CHECK`, `SELF_AUTHOR`, or `CONVERSATION_CREATOR`
+A constants holder — NOT an enum. Each action's canonical lowercase wire-string is exposed as a `public static final String`. Provides a closed registry (`KNOWN` set), a case-insensitive normalization helper, and a membership check.
 
 ```java
-public enum MessageAction {
-    REPLY("reply", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.NO_CHECK),
-    REACTION("reaction", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.NO_CHECK),
-    REACTION_REMOVE("reaction_remove", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.SELF_AUTHOR),
-    EDIT("edit", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.SELF_AUTHOR),
-    REDACT("redact", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.SELF_AUTHOR),
-    PIN("pin", Cardinality.ONE, TargetFormat.SIGNATURE, AuthPattern.CONVERSATION_CREATOR),
-    UNPIN("unpin", Cardinality.ZERO, TargetFormat.NONE, AuthPattern.CONVERSATION_CREATOR),
-    FORWARD("forward", Cardinality.ZERO_OR_ONE, TargetFormat.PUBLIC_KEY, AuthPattern.NO_CHECK),
-    SHARE_HISTORY("share_history", Cardinality.ZERO, TargetFormat.NONE, AuthPattern.NO_CHECK);
-    // ...
+public final class MessageAction {
+    public static final String REPLY            = "reply";
+    public static final String REACTION         = "reaction";
+    public static final String REACTION_REMOVE  = "reaction_remove";
+    public static final String EDIT             = "edit";
+    public static final String REDACT           = "redact";
+    public static final String PIN              = "pin";
+    public static final String UNPIN            = "unpin";
+    public static final String FORWARD          = "forward";
+    public static final String SHARE_HISTORY    = "share_history";
+
+    /** Closed registry of recognized actions. */
+    public static final Set<String> KNOWN = Set.of(
+        REPLY, REACTION, REACTION_REMOVE, EDIT, REDACT,
+        PIN, UNPIN, FORWARD, SHARE_HISTORY
+    );
+
+    /** Normalize an inbound action string for comparison. Returns null if input is null. */
+    public static String normalize(String raw) {
+        return raw == null ? null : raw.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /** Case-insensitive membership check. */
+    public static boolean isKnown(String raw) {
+        return raw != null && KNOWN.contains(normalize(raw));
+    }
+
+    private MessageAction() {}
 }
 ```
 
-**Acceptance:** unit tests assert exact wire strings for each action, round-trip parsing, and unknown-string handling returns empty Optional.
+**New file 2:** `src/main/java/io/takamaka/messages/chat/message/MessageActionMeta.java`
+
+Per-action metadata registry keyed by the lowercase action string. Carries cardinality, target format, and authorization pattern. The validator (§3.3) dispatches off this registry.
+
+```java
+public final class MessageActionMeta {
+
+    public enum Cardinality { ZERO, ONE, ZERO_OR_ONE }
+    public enum TargetFormat { NONE, SIGNATURE, PUBLIC_KEY }
+    public enum AuthPattern  { NO_CHECK, SELF_AUTHOR, CONVERSATION_CREATOR }
+
+    public record ActionSpec(Cardinality cardinality,
+                             TargetFormat targetFormat,
+                             AuthPattern  authPattern) {}
+
+    private static final Map<String, ActionSpec> REGISTRY = Map.of(
+        MessageAction.REPLY,           new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.NO_CHECK),
+        MessageAction.REACTION,        new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.NO_CHECK),
+        MessageAction.REACTION_REMOVE, new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.SELF_AUTHOR),
+        MessageAction.EDIT,            new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.SELF_AUTHOR),
+        MessageAction.REDACT,          new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.SELF_AUTHOR),
+        MessageAction.PIN,             new ActionSpec(Cardinality.ONE,         TargetFormat.SIGNATURE,  AuthPattern.CONVERSATION_CREATOR),
+        MessageAction.UNPIN,           new ActionSpec(Cardinality.ZERO,        TargetFormat.NONE,       AuthPattern.CONVERSATION_CREATOR),
+        MessageAction.FORWARD,         new ActionSpec(Cardinality.ZERO_OR_ONE, TargetFormat.PUBLIC_KEY, AuthPattern.NO_CHECK),
+        MessageAction.SHARE_HISTORY,   new ActionSpec(Cardinality.ZERO,        TargetFormat.NONE,       AuthPattern.NO_CHECK)
+    );
+
+    /** Lookup by case-insensitive action string. Returns empty for unknown actions
+     *  (graceful-degrade trigger per spec §12.7). */
+    public static Optional<ActionSpec> lookup(String action) {
+        if (action == null) return Optional.empty();
+        return Optional.ofNullable(REGISTRY.get(MessageAction.normalize(action)));
+    }
+
+    /** Closed registry view for completeness tests. */
+    public static Set<String> registeredActions() {
+        return REGISTRY.keySet();
+    }
+
+    private MessageActionMeta() {}
+}
+```
+
+The three small enums (`Cardinality`, `TargetFormat`, `AuthPattern`) are **internal-only** — they never appear on the wire and never travel between language ports. Cross-platform interop happens only through the string action value. The internal enums can be replaced with constants or sealed classes per language without protocol consequence.
+
+**Rationale recap (see §2.7):** keeping the wire-level value as `String` avoids enum-mapping divergence between Java, Dart, and any future port. Inbound `action` strings are normalized via `Locale.ROOT.toLowerCase()` so case variants like `"Reply"` are accepted gracefully. Outbound strings are emitted in canonical lowercase.
+
+**Acceptance:**
+- Unit tests assert each `public static final String` exposes the exact canonical lowercase form.
+- `MessageAction.isKnown("Reply")` returns `true` (case-insensitive).
+- `MessageAction.isKnown("__test_unknown_action__")` returns `false`.
+- `MessageActionMeta.lookup("FORWARD")` returns the correct `ActionSpec` (case-insensitive).
+- **Registry-completeness test:** assert `MessageAction.KNOWN.equals(MessageActionMeta.registeredActions())` — guards against forgetting to register metadata for a new action.
 
 ### 3.3 `MessageActionValidator` (commit 3)
 
@@ -314,7 +383,7 @@ Minimum fixture set:
 
 Coverage targets:
 
-- `MessageAction` enum — wire-string serialization, parsing, unknown handling. Target: 100% of enum values.
+- `MessageAction` constants + `MessageActionMeta` registry — canonical lowercase wire-string per constant; `isKnown` membership check (positive + negative + case-variant); `MessageActionMeta.lookup` returns correct `ActionSpec` for each registered action and empty `Optional` for unknown/null/whitespace input; **registry-completeness test** (`MessageAction.KNOWN == MessageActionMeta.registeredActions()`). Target: 100% of `MessageAction.KNOWN` set members, all three normalization paths (lowercase, mixed-case, null).
 - `MessageActionValidator` — every action × every failure mode in the spec. Target: every named decoration code triggered at least once.
 - `ChatCryptoUtils` helpers — construct, serialize, parse, validate. Target: every helper exercised.
 - `InlineContentLimits.isReactionImageMimeAllowed` — case-insensitive matching; reject all non-whitelisted types.
@@ -344,7 +413,7 @@ For each action, at least one negative case per failure mode in §4.2 of the spe
 ## 5. Acceptance criteria — Phase 1 complete when
 
 1. `mvn clean install` produces `messages-1.5.0-SNAPSHOT.jar` cleanly.
-2. All new tests pass (target: 80%+ coverage on `MessageActionValidator`, 100% on `MessageAction` enum).
+2. All new tests pass (target: 80%+ coverage on `MessageActionValidator`, 100% of constants in `MessageAction.KNOWN` plus the registry-completeness test).
 3. All cross-platform test vector fixtures load and round-trip in Java.
 4. `BasicMessageEncryptedContentBean` is annotated with `@JsonInclude(NON_NULL)` and `@JsonIgnoreProperties(ignoreUnknown=true)`.
 5. The Maven artifact has been published to local repo (`mvn install`) and the new artifact resolves cleanly when consumed by a test downstream project.
