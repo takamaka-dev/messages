@@ -81,7 +81,19 @@ The bean has a self-referential field (`fw_content` of its own type). Implicatio
 - **json_serializable (Dart):** code generation handles recursive types. The `.g.dart` file produced by `build_runner` must be checked into the rsclient-flutter repo and verified.
 - **Depth cap of 10** is enforced at the **validator** layer (Phase 1 Java responsibility), not at the Jackson layer. Both Java and Dart validators must implement the same cap.
 
-**Phase 1 commitment:** the `MessageActionValidator` implements depth counting; test vectors include depth-1, depth-9 (boundary OK), and depth-11 (over-cap, truncated). Phase 2 Dart validator must match.
+**Parser-depth confirmation (resolved 2026-05-27):** Both platforms' default JSON parsers accept depth 10 with comfortable headroom.
+
+| Platform | Default depth limit | Headroom at depth-10 fw_content (≈15-25 JSON levels with envelope wrapping) |
+|---|---|---|
+| Jackson 2.19.2 | `StreamReadConstraints.DEFAULT_MAX_DEPTH = 1000` | 40-60× margin |
+| Dart `dart:convert` | No explicit limit (stack-bounded, 2-4 MB typical) | Plenty of frames |
+| json_serializable generated code | Direct recursive method dispatch | No special handling |
+
+**Optional Phase-1 hardening (defense-in-depth, not blocking):** extend `ChatUtils.fromJsonToBasicMessageBeanRequest` (currently sets `StreamReadConstraints.builder().maxStringLength(...)`) to also set `.maxNestingDepth(50)`. Rationale: pathological depth-100 forwards would then be rejected at the parser stage instead of memory-loading and then being truncated by the validator. 50 = comfortable headroom (3-4× over realistic depth-10 with wrapping). Same hardening applies to any other ObjectMapper builders the codebase uses (e.g., `SimpleRequestHelper`).
+
+Either path is safe — validator's depth-10 cap is the authoritative constraint. Hardening is recommended but optional.
+
+**Phase 1 commitment:** the `MessageActionValidator` implements depth counting; snapshot fixtures V16 (depth 3), V17 (depth 9 — one below cap), and I16 (depth 11 — over cap, truncated) cover the boundary. Phase 2 Dart validator must match the same counting logic against the same fixtures.
 
 ### 2.6 Heterogeneous embedded type — `BasicMessageEncryptedContentBean.original_message`
 
