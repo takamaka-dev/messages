@@ -818,7 +818,7 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 | Redact of a forwarded message | Forwarder may redact their own forward. Does not affect the source. |
 | Pin of a forwarded message | Creator may pin a forward. Renders in the pinned slot with the forward decoration intact. |
 | Forward of a redacted message | The forwarder's local cache determines whether the tombstone or the pre-redaction content is forwarded. Both are protocol-valid. Forwarding pre-redaction content against the original author's intent is a client/user ethics concern, not a protocol-enforceable invariant. |
-| Forward of a forward | Allowed. `targets[0]` on the re-forward is whoever the current forwarder claims is the origin (either the original-claimed origin or the previous forwarder). Clients MAY display a "forwarded multiple times" badge based on detecting that the source they're forwarding is itself an `action="forward"`. |
+| Forward of a forward | Allowed. **Flat — chains are not preserved.** The re-forward carries exactly one (or zero) claimed-origin PK in `targets[0]`; the forwarder picks who to attribute to. Clients MAY render a "forwarded multiple times" UX badge as a local heuristic by detecting that the source they're forwarding is itself `action="forward"`, but no chain metadata travels over the wire. |
 | Forward to self (e.g., a personal notes conversation) | Allowed. Trivially handled. |
 | Forward with empty `targets` | Allowed (cardinality 0 path). Renders as anonymous forward without origin attribution. |
 | Forward with `targets[0]` equal to the forwarder's own PK | Allowed. UI renders normally; forwarder is attributing the content to themselves. |
@@ -896,7 +896,7 @@ By design, a forward **does not preserve**:
 - The original encrypted blob or its hash.
 - The source conversation's symmetric key (MUST NOT be transmitted).
 - The original message's `action` / `targets` context. If the source message was a reply, a reaction, or a redact, that semantic does not transfer to the forward. The forwarder is creating a new top-level message with `action="forward"`; any original-action context must be encoded into `text_message` if the forwarder wants to preserve it (purely informational, client-formatted).
-- Chain provenance beyond one hop. If the forwarder is themselves forwarding a forward, `targets[0]` carries whoever the current forwarder claims is the origin — either the original origin (preserving the chain's apparent root) or the previous forwarder (claiming the previous hop). Clients MAY display a "forwarded multiple times" indicator if the source message they're re-forwarding is itself an `action="forward"`, but this is purely a client UX heuristic.
+- **Chain provenance beyond one hop (FLAT model — normative).** Each forward carries **exactly zero or one** claimed-origin PK. The wire protocol does **not** preserve a chain of forwarders. If the forwarder is themselves forwarding a previously-forwarded message, they pick one PK to attribute to (their discretion — typically either the original-claimed origin or the previous forwarder) and emit a fresh `action="forward"`. The result is a single attribution rendered in the destination conversation. Clients MAY display a "forwarded multiple times" UX heuristic by detecting that the source they're re-forwarding is itself an `action="forward"` in their local cache; this is purely cosmetic and does not propagate over the wire to the next recipient.
 
 #### 12.10.4 Client UI — normative visual distinction
 
