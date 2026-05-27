@@ -36,12 +36,18 @@ The change is in the working tree, not yet committed. This document specifies th
 
 ```java
 public class BasicMessageEncryptedContentBean {
-    @JsonProperty("text_message")    private String textMessage;
-    @JsonProperty("attached_media")  private List<ChatMediaPlaceholderBean> attachedMedia;
-    @JsonProperty("action")          private String action;        // NEW
-    @JsonProperty("targets")         private List<String> targets; // NEW
+    @JsonProperty("text_message")            private String textMessage;
+    @JsonProperty("attached_media")          private List<ChatMediaPlaceholderBean> attachedMedia;
+    @JsonProperty("action")                  private String action;
+    @JsonProperty("targets")                 private List<String> targets;
+    @JsonProperty("fw_content")              private BasicMessageEncryptedContentBean fwContent;
+    @JsonProperty("original_message")        private BasicMessageRequestBean originalMessage;
+    @JsonProperty("re_shared")               private Boolean reShared;
+    @JsonProperty("client_protocol_version") private String clientProtocolVersion;
 }
 ```
+
+Eight fields total. The original two (`text_message`, `attached_media`) remain; six were added across this branch's iterations. See §3.4 for the version field's semantics.
 
 ### 2.2 Recommended annotations (not yet applied)
 
@@ -59,51 +65,71 @@ public class BasicMessageEncryptedContentBean { ... }
 ```dart
 @JsonSerializable(explicitToJson: true, includeIfNull: false)
 class BasicMessageEncryptedContentBean {
-  @JsonKey(name: 'text_message')    final String textMessage;
-  @JsonKey(name: 'attached_media')  final List<ChatMediaPlaceholderBean>? attachedMedia;
-  @JsonKey(name: 'action')          final String? action;     // NEW
-  @JsonKey(name: 'targets')         final List<String>? targets; // NEW
-  ...
+  @JsonKey(name: 'text_message')            final String textMessage;
+  @JsonKey(name: 'attached_media')          final List<ChatMediaPlaceholderBean>? attachedMedia;
+  @JsonKey(name: 'action')                  final String? action;
+  @JsonKey(name: 'targets')                 final List<String>? targets;
+  @JsonKey(name: 'fw_content')              final BasicMessageEncryptedContentBean? fwContent;
+  @JsonKey(name: 'original_message')        final BasicMessageRequestBean? originalMessage;
+  @JsonKey(name: 're_shared')               final bool? reShared;
+  @JsonKey(name: 'client_protocol_version') final String? clientProtocolVersion;
+  // ...constructors, fromJson, toJson
 }
 ```
 Must be regenerated with `flutter pub run build_runner build --delete-conflicting-outputs`.
 
 ### 2.4 JSON examples
 
-**Plain message (unchanged):**
+**Plain legacy message (v1.0, grandfathered — no version field, no v1.1+ fields):**
 ```json
 { "text_message": "hi" }
 ```
 
-**Reply:**
+**Plain v1.1 message (explicit version, no v1.1+ features):**
+```json
+{ "text_message": "hi", "client_protocol_version": "1.1" }
+```
+
+**Reply (v1.1):**
 ```json
 {
+  "client_protocol_version": "1.1",
   "text_message": "I disagree.",
   "action": "reply",
   "targets": ["v7DVzfG5U4Au5CIbGPNDZyV3qtKbEW08OWp1aeZxQb5pEUrHlnJ3FrOLWrAiwMJFRcaC3BN7ucq6MhhH34xrAg.."]
 }
 ```
 
-**Reaction (emoji):**
+**Reaction (v1.1, emoji):**
 ```json
 {
+  "client_protocol_version": "1.1",
   "text_message": "",
   "action": "reaction",
   "targets": ["v7DVzfG5U4Au5CIbGPNDZyV3qtKbEW08OWp1aeZxQb5pEUrHlnJ3FrOLWrAiwMJFRcaC3BN7ucq6MhhH34xrAg.."],
   "attached_media": [{
     "media_type": "image/png",
     "is_the_object": true,
-    "emoji": "👍",
-    ...
+    "emoji": "👍"
   }]
 }
 ```
+
+**Rejected — missing version with v1.1+ features (incoherent):**
+```json
+{
+  "text_message": "I disagree.",
+  "action": "reply",
+  "targets": ["..."]
+}
+```
+This message is dropped at validation step 0 (§4.2) with decoration code `INVALID_PROTOCOL_VERSION_MISSING_BUT_FEATURES_USED`.
 
 ---
 
 ## 3. Action registry
 
-`action` is a **closed-vocabulary string**. Clients MUST NOT invent values. Unknown values trigger graceful-degradation behaviour (§6.3).
+`action` is a **closed-vocabulary string**. Clients MUST NOT invent values. Unknown values trigger **strict drop** at the receiver (§12.7) — the message is rejected with `overallValid: false` and severity ERROR. This is a deliberate departure from earlier graceful-degrade designs; null is different from invalid. Senders that emit a non-null, non-blank action MUST also declare `client_protocol_version` (§3.4); the validator's §4.2 step 0 enforces this coupling.
 
 | Value | Cardinality of `targets` | Required content | Authorization | Notes |
 |---|---|---|---|---|
@@ -188,6 +214,81 @@ If you disagree and want batch reactions from day one, change this rule and adju
 
 ---
 
+### 3.4 Client protocol version field (normative)
+
+**Field:** `client_protocol_version` on `BasicMessageEncryptedContentBean`. Java property: `clientProtocolVersion`. Type: `String` (nullable).
+
+**Purpose.** Declares the sender's client-side message-management protocol version. Distinct from any cryptographic protocol version — this governs the action registry, target semantics, embedded-payload rules, and validator behavior at the receiver. Lives inside the encrypted body — server-blind by design.
+
+#### 3.4.1 Format
+
+Strict regex: `^\d+\.\d+$` — exactly two non-negative integer groups separated by a single dot. No pre-release suffixes, no build metadata, no patch level, no leading or trailing whitespace, no prefix characters.
+
+| Valid | Invalid |
+|---|---|
+| `"1.0"`, `"1.1"`, `"2.0"` | `"1"` (missing minor) |
+| `"1.234"`, `"100.0"` | `"1.0.0"` (patch level) |
+| `"0.1"` | `"v1.0"` (prefix) |
+|  | `"1.0-rc"` (suffix) |
+|  | `"1.0 "` / `" 1.0"` (whitespace) |
+|  | `"1."` / `".1"` (incomplete) |
+|  | `""` (empty — see §3.4.2) |
+
+Validators MUST trim surrounding whitespace before applying the regex (consistent with action normalization). Validators MUST parse each integer group as a 32-bit signed integer; overflow → malformed → reject.
+
+#### 3.4.2 Version-number assignment
+
+| Version | Meaning |
+|---|---|
+| **v1.0** | Pre-versioning legacy baseline. Messages with `client_protocol_version` absent / empty / whitespace-only are treated as v1.0 by definition, ONLY if no v1.1+ fields are populated. |
+| **v1.1** | **Current revision under this branch.** Introduces: `action`, `targets`, `fw_content`, `original_message`, `re_shared`, `client_protocol_version`, the action registry, the strict-drop rule for unknown actions, the version field itself. |
+| **v1.x (future)** | Minor revisions adding new actions or optional fields. Backward-compatible within MAJOR=1. |
+| **v2.0+ (future)** | Major revisions introducing breaking changes. v1.x receivers reject all v2.x messages (MAJOR mismatch). |
+
+The current MAJOR is **1**. MINOR is bumped for additive changes (new actions, new optional fields, new validation rules that are backward-compatible). MAJOR is bumped for breaking changes (removed fields, changed field semantics, changed wire format).
+
+#### 3.4.3 Three-state semantics
+
+| Bean state | Interpretation |
+|---|---|
+| `client_protocol_version` is null / `""` / whitespace-only AND no v1.1+ field is populated | **Legacy v1.0 (grandfathered).** Render plain `text_message` + `attached_media`. |
+| `client_protocol_version` is null / `""` / whitespace-only AND any v1.1+ field (`action`, `targets`, `fw_content`, `original_message`, `re_shared`) is populated | **Incoherent / spoofed-legacy claim.** Rejected. Decoration `INVALID_PROTOCOL_VERSION_MISSING_BUT_FEATURES_USED`. |
+| `"1.0"` declared explicitly, with no v1.1+ field populated | Valid legacy. Equivalent to no version. A v1.1+ client downgrading to plain-message mode is acceptable. |
+| `"1.0"` declared explicitly, with any v1.1+ field populated | **Self-contradictory.** Rejected. Decoration `INVALID_PROTOCOL_VERSION_DECLARES_LEGACY_USES_FEATURES`. |
+| `"1.x"` with x ≤ receiver's current MINOR | Standard v1.x validation per the spec. |
+| `"1.x"` with x > receiver's current MINOR | Same MAJOR — best-effort processing. Unknown actions / fields handled per the standard rules (strict-drop for unknown action; ignore unknown fields at parse). The receiver does not advertise as v1.x; it just doesn't choke on a newer message. |
+| `"M.x"` with M ≠ receiver's MAJOR | **Incompatible MAJOR.** Rejected. Decoration `INVALID_PROTOCOL_VERSION_INCOMPATIBLE_MAJOR`. |
+| Malformed (regex fail, integer overflow) | **Rejected.** Decoration `INVALID_PROTOCOL_VERSION_MALFORMED`. |
+
+#### 3.4.4 Honest sender vs malicious sender
+
+The grandfather rule's strict-companion makes the version a meaningful declaration:
+
+- **Honest legacy v1.0 client** (pre-revision, doesn't know about versioning): emits no version, no v1.1+ fields. Pass as legacy.
+- **Honest v1.1+ client**: emits `client_protocol_version: "1.x"`, may emit v1.1+ fields. Pass as v1.x.
+- **Mixed messages** (no version + v1.1+ fields populated): **rejected**. Either a buggy partial migration or an attempt to bypass v1.1+ validation by impersonating legacy.
+
+This rule is the structural enforcement of "explicit and honest" capability declaration.
+
+#### 3.4.5 Sender-side helper contract
+
+`ChatCryptoUtils.get*MessageBean(...)` helpers (the canonical-construction methods, plan §3.4) MUST automatically stamp `clientProtocolVersion = MessageProtocolVersion.CURRENT` (currently `"1.1"`) on every constructed bean. Senders never construct unversioned new-protocol messages by accident. The helpers MAY throw `ProtocolViolationException` if a caller asks for a v1.0-style plain message but also tries to set a v1.1+ field — the helper catches the incoherence before the bean reaches the wire.
+
+#### 3.4.6 Cross-platform parity
+
+The Dart port (Phase 2) introduces a matching `MessageProtocolVersion` class with the same constants (`V_1_0`, `V_1_1`, `CURRENT`), the same strict regex, and the same parse-and-validate behavior. Cross-platform test vectors (plan §3.5) include both rejected and accepted version-strings to lock parity.
+
+#### 3.4.7 Privacy
+
+Because `client_protocol_version` lives inside the AES-GCM-encrypted body, the server cannot:
+- See which clients use which versions.
+- Fingerprint clients by version.
+- Refuse service to specific versions.
+
+Privacy preserved. The trade-off is full decryption before rejection at version-gate time; bounded by the existing `max-encrypted-message-content-size-bytes` server cap and existing rate limiting.
+
+---
+
 ## 4. Validation — receiver side
 
 Validation runs **after** decryption and signature verification of the outer envelope. The signed envelope guarantees authenticity of the entire content (including `action` and `targets`).
@@ -214,9 +315,20 @@ Today the rschat schema column `messages.message_signature VARCHAR(88)` only acc
 
 ### 4.2 Validation pipeline
 
-For every received message with non-null `action`:
+For every received message:
 
-1. **Action recognized?** If `action` is not in the registered set (§3 table), fall back to plain-message rendering and ignore `targets`. **Do not discard the message.**
+0. **Protocol version gate (NORMATIVE — runs first, after decryption, before action interpretation).** Parse `client_protocol_version` per §3.4. The bean is **rejected** (`overallValid: false`, `severity: ERROR`, message dropped from rendering) if any of the following hold:
+   - Version is present but **malformed** (regex fails or integer overflow) → `INVALID_PROTOCOL_VERSION_MALFORMED`
+   - Version is present with **MAJOR ≠ receiver's MAJOR** → `INVALID_PROTOCOL_VERSION_INCOMPATIBLE_MAJOR`
+   - Version is **absent** (null / empty / whitespace) **AND any v1.1+ field** (`action`, `targets`, `fw_content`, `original_message`, `re_shared`) is non-default → `INVALID_PROTOCOL_VERSION_MISSING_BUT_FEATURES_USED`
+   - Version equals `"1.0"` **AND any v1.1+ field is populated** → `INVALID_PROTOCOL_VERSION_DECLARES_LEGACY_USES_FEATURES`
+
+   Otherwise the bean proceeds to step 1 with the version known:
+   - Absent or `"1.0"` with no v1.1+ fields → legacy mode; render plain (steps 1–6 skipped).
+   - `"1.x"` with x ≤ receiver's MINOR → continue with standard v1.x validation.
+   - `"1.x"` with x > receiver's MINOR → continue with best-effort same-MAJOR validation (strict-drop still applies to unknown actions per §12.7).
+
+1. **Action present and recognized?** If `action` is non-null, non-blank, and not in `MessageAction.KNOWN` (§3 closed registry, after case-insensitive normalization), **reject the message** per §12.7 strict-drop. If `action` is null / empty / whitespace after trim, treat as a plain message (no action validation).
 2. **Per-action cardinality.** Each action declares its `targets` cardinality in the registry. Receivers MUST validate the incoming `targets` against the declared cardinality. Current values:
    - `reply`, `reaction`, `reaction_remove`, `edit`, `redact`, `pin` → **exactly 1**
    - `unpin`, `share_history` → **0** (null, empty list, or absent — all equivalent)
@@ -788,16 +900,31 @@ The following are **deferred** with rationale in §12.6: `forward`, `read_receip
 | `acknowledge` (generic) | Subsumed by `read_receipt`'s issues. No clear additional use case. |
 | `bookmark`, `flag` | Purely local UX. No wire format needed; clients implement locally. |
 
-### 12.7 Forward-compatibility guarantee for unknown actions
+### 12.7 Unknown action — STRICT DROP (normative)
 
-A receiver encountering an unrecognized `action` value MUST:
+**This is a new protocol. Null is different from invalid. The strict-drop stance below replaces the prior "graceful degrade" rule that was considered during design.**
 
-1. NOT discard the message.
-2. Render the `text_message` (if non-empty) and any valid `attached_media`.
-3. Emit a single decoration line: `unsupported action "<value>" (target: <truncated_signature>)`.
-4. Not attempt to interpret `targets`.
+The `action` field operates under a closed-vocabulary stance (§3). Three input states are distinguished:
 
-This guarantee is what makes piecemeal action additions safe across version skew. It MUST be tested with a synthetic action `"__test_unknown_action__"` in the test suite.
+| Input | Treatment |
+|---|---|
+| `action` is `null`, `""`, or whitespace-only after trim | Equivalent to "no action set." The message is a plain native text/media message. Action-linked fields (`targets`, `fw_content`, `original_message`, `re_shared`) MUST also be null/absent; if any is set, the message is rejected at §4.2 step 0 (protocol-version gate) for incoherent legacy claim. |
+| `action` matches a registered value in `MessageAction.KNOWN` (after case-insensitive normalization) | Standard per-action validation pipeline applies (§4.2 steps 2–6). Failures within a known action produce decorations but never reject the message — the body still renders per the spec's "decorate and continue" stance. |
+| `action` is non-null, non-blank, and not in `MessageAction.KNOWN` | **REJECTED.** The message is not rendered. No content (`text_message`, `attached_media`, action-linked fields) is displayed. |
+
+**Rejected-message contract:**
+
+1. The message is not rendered. No content displayed to the user.
+2. Validator returns `ValidationResult{overallValid: false, decorations: [{code: "INVALID_ACTION", severity: ERROR, message: "action '<value>' is not in the registry"}]}`. Clients MUST honor `overallValid: false` and discard the message from any user-visible rendering.
+3. Receiver MUST log the rejection at ERROR level with the unknown action value, sender envelope PK, and conversation hash (telemetry, abuse detection).
+4. Clients MAY display a single conversation-level indicator (e.g., "1 message rejected — unsupported action") whose identity-exposure granularity is a client UX choice. The rejected message's content MUST NOT be displayed.
+5. The validator MUST NOT process action-linked fields when the action is invalid. They are not validated, displayed, or used for any logical state update. Defense-in-depth even though the message is rejected.
+
+**Rationale.** Null means "the sender chose not to set an action — render a plain native message." Invalid means "the sender said something we cannot interpret — we do not know what this message is supposed to be." Treating the latter as the former is a guess about safety; the protocol does not guess. Forward-compatibility for new actions across protocol revisions is the responsibility of explicit version negotiation (`client_protocol_version`, §3.4 / §4.2 step 0), not of graceful-degrade ambiguity.
+
+**Honest senders are never affected:** a correct v1.x client never emits an action outside the registered set, and the `MessageAction.KNOWN` membership check is case-insensitive (so `"Reply"` is accepted as `"reply"`).
+
+**Synthetic test vector** `"__test_unknown_action__"` exists for negative-test coverage and MUST be present in the cross-platform test fixture set (plan §3.5) with expected `overallValid: false` and decoration code `INVALID_ACTION`.
 
 ### 12.7a Authorization patterns — name the three
 
@@ -1140,5 +1267,7 @@ This per-hop semantics is what makes share_history different from cross-conversa
 | 5 | Edit-chain max depth | 4 levels. |
 | 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; chain is recursive via `fw_content` (depth cap 10); visual distinction from native content is mandatory in clients. **Deliberately minimal — see §12.10.5.** Future enrichment proposals are out of scope on principle, not for lack of effort. |
 | 7 | `share_history` action | **In scope for 1.5.0** (§12.11). Different feature from forward. In-conversation only. Cardinality 0; embedded `original_message` carries the encrypted original signed envelope, preserved intact (signature verifiable, same conversation key). Nested share_history rejected — no forensic chain. UI renders the verified original-sender attribution normally with an informational "shared by" badge; no skeptical decoration. |
-| 8 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
-| 9 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
+| 8 | Unknown action handling | **Strict drop** (§12.7). Null is different from invalid. `action == null/""/whitespace` → plain message (legacy v1.0); `action == "<unknown>"` → message rejected with `overallValid: false`, severity ERROR. No graceful-degrade rendering. |
+| 9 | `client_protocol_version` field (NEW) | **In scope for 1.5.0** (§3.4). String, strict `^\d+\.\d+$` format. Current revision = `"1.1"`. Absent/empty → legacy v1.0, valid only if no v1.1+ fields populated; mixed (no version + v1.1+ fields) → rejected. MAJOR mismatch → rejected. Inside encrypted body — server-blind. Honest senders stamp `MessageProtocolVersion.CURRENT` via helpers; honest receivers gate at §4.2 step 0 before action validation. |
+| 10 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
+| 11 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |

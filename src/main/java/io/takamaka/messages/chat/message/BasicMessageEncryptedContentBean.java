@@ -85,4 +85,43 @@ public class BasicMessageEncryptedContentBean {
      */
     @JsonProperty("re_shared")
     private Boolean reShared;
+    /**
+     * Client-side message-management protocol version, declared by the
+     * sender, in strict MAJOR.MINOR format (regex {@code ^\d+\.\d+$}).
+     * Distinct from the cryptographic protocol version — this field
+     * governs the message-action layer (action registry, target
+     * semantics, embedded-payload rules), not the E2E cryptographic
+     * stack. Lives inside the encrypted body — server-blind.
+     *
+     * <p>Three input states are distinguished:
+     * <ul>
+     *   <li>{@code null} / empty / whitespace-only after trim →
+     *       <strong>conditional grandfather to v1.0 (legacy)</strong>:
+     *       valid iff none of {@link #action}, {@link #targets},
+     *       {@link #fwContent}, {@link #originalMessage},
+     *       {@link #reShared} is populated. If any v1.1+ field is
+     *       populated without an explicit version, the message is
+     *       rejected (incoherent / spoofed legacy claim).</li>
+     *   <li>Recognized value matching the strict regex with MAJOR
+     *       equal to the receiver's MAJOR → validated per the
+     *       version-specific rules. Same-MAJOR / higher-MINOR is
+     *       processed best-effort.</li>
+     *   <li>Malformed, unrecognized MAJOR, or other parse failure →
+     *       <strong>message rejected</strong> (drop, ERROR severity).</li>
+     * </ul>
+     *
+     * <p>Honest senders:
+     * <ul>
+     *   <li>Legacy v1.0 (pre-revision): emit no version, no v1.1+
+     *       fields. Pass as legacy.</li>
+     *   <li>v1.1+: emit version, may emit v1.1+ fields. Pass as v1.x.</li>
+     *   <li>Mixed (no version + v1.1+ fields populated) → rejected.</li>
+     * </ul>
+     *
+     * <p>See spec §3.4 for the full version field definition, §4.2
+     * step 0 for the validation gate, and §12.7 for the strict-drop
+     * rule on invalid versions and unknown actions.
+     */
+    @JsonProperty("client_protocol_version")
+    private String clientProtocolVersion;
 }
