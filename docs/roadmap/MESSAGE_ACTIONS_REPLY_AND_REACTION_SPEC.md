@@ -120,6 +120,56 @@ For action `"reaction"`, the `text_message` field SHOULD be the empty string `""
 - **Receivers** that encounter a reaction with a non-empty `text_message` MUST NOT discard the message. They SHOULD render the reaction payload (emoji / sticker / inline image) normally and MAY additionally render the accompanying text, with an implementation-defined visual cue indicating that text on a reaction is non-canonical (e.g. tooltip "reaction carried unexpected text"). Logging or telemetry at the warning level is permitted.
 - This rule is **SHOULD**, not **MUST**, because the wire format cannot enforce text emptiness without either rejecting valid signed messages or breaking forward compatibility with future reaction variants that might carry an optional caption (e.g. "thumbs up + comment"). Promoting this to MUST is deferred.
 
+### 3.3 Notification routing — protocol support, client policy
+
+**The protocol SUPPORTS targeted notifications but does NOT FORCE them.** Whether a reply or reaction triggers a visible push notification to the targeted user is a **client policy decision**, not a protocol constraint. The protocol layer is, and remains, agnostic.
+
+#### The mechanism
+
+The only mechanism by which the server can route a targeted FCM push to a specific user is the **plaintext `cited_users` field** in `BasicMessageSignedContentBean` (see the parent E2E protocol doc §8.6). This field already exists, predates this spec, and is read by `rschat`'s notification pipeline at `MessageUtils.java:155` to fan out per-recipient pushes via `NotificationUtils.submitUserNotifications(...)` and `FcmService`.
+
+- `cited_users` lives in the **signed-but-unencrypted** envelope. The server reads it.
+- Encrypted-body fields (`action`, `targets`, `text_message`, attachments) are server-blind. The server cannot tell that message M is a reply to message N, nor who the reaction targets, because that information is inside the AES-GCM ciphertext.
+
+**Consequence:** if a client wants the server to deliver an "Alice replied to you" or "Bob reacted to your message" push, that client MUST add the parent author's public key to `cited_users` at send time. There is no other way. Conversely, a client that omits `cited_users` produces a message for which the server can at best emit a generic "new message in conversation" notification.
+
+#### Protocol stance — normative
+
+- The protocol **SUPPORTS** notification routing via `cited_users`. Servers and clients are required to honour `cited_users` exactly as before this spec — no semantic change.
+- The protocol **does NOT REQUIRE** that replies or reactions populate `cited_users`. Sending a reply with `cited_users = []` is fully valid. Sending a reaction with `cited_users = []` is fully valid.
+- The protocol **does NOT FORBID** populating `cited_users` for a reply/reaction either. Sending a reply with `cited_users = [parent_author_pk]` is fully valid.
+- Receivers MUST NOT change rendering or trust based on whether `cited_users` was populated. The `cited_users` field affects server-side push fan-out only; client-side display logic is governed by `action` + `targets` inside the encrypted body, which is the authoritative source.
+
+#### Client policy — where the decision lives
+
+The decision **whether** to populate `cited_users` on outgoing replies/reactions belongs to the **client implementation** and is expected to be controlled by user-visible privacy settings. Two layers, consistent with the dual-mention privacy model already proposed in `MENTION_PRIVACY_COMPLIANCE_ANALYSIS.md`:
+
+1. **Per-conversation override.** Settings attached to the active conversation (e.g. `ConversationSettings.notificationMode`) determine the default for messages in that conversation. Privacy-sensitive conversations (e.g. "anonymous tip line") can be configured to never populate `cited_users` regardless of message type.
+2. **Global default.** A user-level preference (e.g. `UserPrivacyPreferences.allowPlaintextMentions`, already proposed in the mention-privacy analysis) sets the fallback for conversations that do not override.
+
+Recommended defaults across clients:
+
+| Setting | Privacy-first default | Convenience default |
+|---|---|---|
+| Reply populates `cited_users` with parent author | off | on |
+| Reaction populates `cited_users` with parent author | off | on |
+| Generic `@mention` populates `cited_users` | off (mention text remains inside encrypted body) | on |
+
+Each client SHOULD ship with one of these as the out-of-box default and SHOULD expose a single visible toggle to switch. Per-conversation overrides SHOULD be available but MAY be hidden behind an advanced settings menu.
+
+#### Trade-offs surfaced to the user
+
+When `cited_users` is populated, the server can build a partial social-interaction graph: who replies to whom, who reacts to whom, mention frequency, time-of-day patterns. Message content remains encrypted; only the fact of citation leaks. When `cited_users` is empty, the server sees only generic conversation traffic — at the cost of: targeted offline pushes do not work for that message, so the recipient sees the reply/reaction only when they next open the app.
+
+This trade-off MUST be disclosed in client-facing privacy documentation. The same trade-off applies to all `cited_users` usage, not just reply/reaction — this section formalizes the existing protocol stance for the new actions.
+
+#### Cross-platform parity (informative)
+
+- **shell:** introduce a `chat-privacy notifications <on|off|per-conversation>` command and a `conversation set notifications <on|off|inherit>` per-conversation override. Default: privacy-first (off).
+- **tkmChat:** the existing privacy preferences UI should grow a "show me in others' mention notifications" toggle and per-conversation analog. Default: privacy-first.
+- **rsclient / rsclient-flutter:** no API changes. The `cited_users` list is already a per-call parameter on the message-send entry points.
+- **rschat:** no changes. Existing notification fan-out continues to honour whatever `cited_users` arrives.
+
 ### 3.1 Reaction targets cardinality — design decision
 
 The original proposal says "accepts a LIST of message signatures as a target". I recommend pinning **cardinality = 1** for reactions in v1.5, because:
@@ -347,7 +397,7 @@ Dependency declarations in `pom.xml`/`pubspec.yaml` must be updated consistently
 | 1 | Reaction `targets` cardinality | **= 1**. Multi-target reactions disallowed at the protocol level. |
 | 2 | `text_message` for reactions | **SHOULD be `""` (empty string)** (RFC 2119). Senders SHOULD emit `""`; `null` or absent is equivalent on receive. Non-empty text on a reaction is renderable but non-canonical — receivers MUST NOT discard. Full normative text in §3.2. |
 | 3 | Where to declare inline constants | Move existing constants from `shell/utils/ThumbnailService.java` to a new `Messages/.../chat/attachment/InlineContentLimits.java`. See §11. |
-| 4 | Notify-on-reply mechanism | **Out of protocol.** Whether to add the parent author to `cited_users` for FCM routing is a per-client implementation choice, made explicitly at implementation time. No protocol mandate. |
+| 4 | Notify-on-reply / notify-on-reaction mechanism | **Protocol SUPPORTS, does NOT FORCE.** Routing relies on the existing plaintext `cited_users` field in `BasicMessageSignedContentBean`. Whether a client populates it for replies/reactions is a per-client policy with a per-conversation override and a global default. Full normative paragraph in §3.3. |
 | 5 | Animated WebP / GIF in reactions | **Allowed**, provided they satisfy inline limits (≤256×256, ≤50 KB). See §11.4. |
 | 6 | Forbid reply-to-reaction and reaction-to-reaction at the protocol level | **No restriction.** Client renders a decoration line and the message body when encountering edge cases. |
 | 7 | Maximum reply-chain depth before client compresses display | **Client UX choice.** Recommend 8 as a default; not protocol-binding. |
