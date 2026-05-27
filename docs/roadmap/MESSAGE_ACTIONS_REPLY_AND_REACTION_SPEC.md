@@ -330,6 +330,23 @@ where `(parent_signature, sender_pk)` is the primary key.
 
 The above defines the **logical state** of reactions on a parent. **How** that state is rendered (layout, counts, ordering within a reaction strip, animation, reactor-identity disclosure, overflow handling, grouping by emoji) is entirely client-defined and out of scope.
 
+#### 5.4.1 Anchoring and re-delivery (normative)
+
+Reactions and replies key on **target signature**, computed at original signing time and independent of any re-delivery mechanism. Re-delivery operations (`forward`, `share_history`) do **NOT** re-anchor existing reactions or replies onto the re-delivery envelope.
+
+Two rules follow:
+
+**Anchoring rule.** A reaction or reply targeting signature S aggregates against the message with signature S, regardless of how that message reached the receiver.
+
+- For `forward`: source-conversation reactions and replies on the original message never reach the destination conversation; the destination receiver has no visibility into them. Post-forward reactions and replies in the destination target the **forwarder's** envelope signature (the forward is a new message in the destination conversation). The source's reaction history is structurally inaccessible to destination receivers and is not propagated through `fw_content`.
+- For `share_history`: the embedded `original_message` keeps its original signature; reactions and replies targeting that signature continue to anchor to the embedded original, not to the share wrapper. The share wrapper has its own signature (the relayer's envelope); reactions and replies targeting the wrapper anchor to the wrapper. The two sets are independent and do not combine.
+
+**Rendering rule.** Clients MUST NOT bind pre-existing reactions or replies — those whose `reception_timestamp` is earlier than the share's `reception_timestamp` — as decorations on the share's wrapper rendering. They were emitted in the original's conversational context, not in the late-receiver's context, and binding them to the share's rendering would misrepresent the reactor's intent. The reactions still aggregate against the original target's signature in the conversation's logical reaction table; clients MAY render the share without showing them inline, or MAY render the original at its native timeline position separately with its reactions attached there, or MAY offer a "view all reactions on this message" affordance that is independent of any specific rendering position.
+
+**Rationale.** A reactor at time T reacted to M1 in M1's native conversational context. A late receiver D obtaining M1 via a `share_history` at time T' > T sees M1 in a different context: their own view at T', which contains none of what was happening when the reactor reacted. Forcing T's reactions onto D's T' rendering would misrepresent the reactor as having reacted in D's context. The reactions remain real and remain anchored to M1's signature; they just don't decorate the re-delivery wrapper.
+
+Temporal causality between a reaction and its target is automatic: a reactor cannot know the target's signature before the target is signed, so reaction `reception_timestamp` is always ≥ target `reception_timestamp` under honest protocol use. No separate causality validation rule is needed.
+
 ### 5.5 Pin aggregation (normative)
 
 Each client MUST maintain, per conversation, a logical single-slot table:
@@ -814,13 +831,16 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 | `unpin` arriving before any `pin` | No-op. Slot was already empty; remains empty. |
 | Concurrent `pin` and `unpin` from creator | Latest by `(reception_timestamp, signature)` tuple wins, exactly as §5.5 specifies. |
 | Pin attempt by non-creator | Rejected with decoration `INVALID pin (not conversation creator)`. Slot unchanged. Parent body still renders. |
-| Reply to a forwarded message | Standard reply targeting the forward's signature in the destination conversation. The reply does NOT reach the source conversation; the source author (if claimed) does not receive it via this path. |
-| React to a forwarded message | Standard reaction on the forward. Same scope rule: the reaction stays in the destination conversation. |
+| React to a forwarded message | Standard reaction targeting the **forwarder's envelope signature** (the forward is a new message in the destination conversation). Source-conversation reactions on the original NEVER reach the destination; they aren't propagated through `fw_content`. Reaction anchoring per §5.4.1. |
+| Reply to a forwarded message | Standard reply targeting the **forwarder's envelope signature**. Source-conversation replies on the original do not propagate; the destination receiver cannot resolve source signatures. Reply anchoring per §5.4.1. |
+| Reactions on a `share_history`-delivered original | Pre-share reactions remain anchored to the embedded original's signature (per §5.4 aggregation), NOT to the share wrapper. Clients MUST NOT render pre-share reactions as decorations on the share's rendering — the reactor reacted in the original's context, not the late-receiver's context. Post-share reactions target whichever signature the reactor chose (typically the original's signature, since that's the persistent identifier the share carries). See §5.4.1 for the full anchoring + rendering rule. |
+| Replies on a `share_history`-delivered original | Same anchoring rule as reactions. Pre-share replies remain anchored to the embedded original; clients MUST NOT decorate the share with them. Post-share replies typically target the original's signature; clients can render them as reply-to-original threads. |
+| Reacting/replying to the share wrapper itself | Standard. The wrapper has its own signature; reactions/replies target that signature and anchor to it. Independent of any reactions on the embedded original. |
 | Edit of a forwarded message | Forwarder may edit their own forward (self-author check on the forward envelope). Does not affect the source. |
 | Redact of a forwarded message | Forwarder may redact their own forward. Does not affect the source. |
 | Pin of a forwarded message | Creator may pin a forward. Renders in the pinned slot with the forward decoration intact. |
 | Forward of a redacted message | The forwarder's local cache determines whether the tombstone or the pre-redaction content is forwarded. Both are protocol-valid. Forwarding pre-redaction content against the original author's intent is a client/user ethics concern, not a protocol-enforceable invariant. |
-| Forward of a forward | Allowed. **Flat — chains are not preserved.** The re-forward carries exactly one (or zero) claimed-origin PK in `targets[0]`; the forwarder picks who to attribute to. Clients MAY render a "forwarded multiple times" UX badge as a local heuristic by detecting that the source they're forwarding is itself `action="forward"`, but no chain metadata travels over the wire. |
+| Forward of a forward | Allowed. **Recursive via `fw_content`.** The re-forward's `fw_content` is the previous forward's full `BasicMessageEncryptedContentBean` (including its own `fw_content`, recursively, up to the hard depth cap of 10). Each hop carries a claimed-origin PK in `targets[0]` (or empty for anonymous); the chain of claimed origins and decrypted contents accumulates. Clients render the chain with informational decorations, not alarmist UI (§12.10.4). |
 | Forward to self (e.g., a personal notes conversation) | Allowed. Trivially handled. |
 | Forward with empty `targets` | Allowed (cardinality 0 path). Renders as anonymous forward without origin attribution. |
 | Forward with `targets[0]` equal to the forwarder's own PK | Allowed. UI renders normally; forwarder is attributing the content to themselves. |
@@ -918,6 +938,8 @@ A forward whose `targets[0]` is the forwarder's own PK (self-attribution) is per
 #### 12.10.3 Lossy semantics — what is NOT carried (intentional, see §12.10.5)
 
 **Wrapper vs inner — what is preserved.** Cross-conversation forward preserves the **decrypted inner content** of the original (the `BasicMessageEncryptedContentBean`) inside `fw_content` — text, media, **action**, **targets**, and recursive `fw_content` if the original was itself a forward. It does **not** preserve the original signed wrapper or its `cited_users` (which lived at the outer signed-content level). The preserved inner action/targets remain structurally visible (e.g. "this was originally a reply") but their targets are signatures from the **source** conversation, so they will almost always be broken-reference in the destination. Clients SHOULD render the embedded references with the same broken-reference decoration used elsewhere (§4.2 step 4) — the structural signal is informative and the forwarder explicitly vouched for it; silently stripping it would underclaim.
+
+**Reactions and replies do not travel with the forward.** Source-conversation reactions and replies on the original message never reach the destination conversation; they were independent signed messages in the source's history, not part of the original's content. Reactions and replies in the destination conversation target the **forwarder's** envelope signature (the forward IS a new message in the destination, with its own signature). The full rule is in §5.4.1.
 
 By design, a forward **does not preserve**:
 
@@ -1033,6 +1055,8 @@ By design:
 - **Original sender's identity** — cryptographically attested, not claimed.
 - **Original `cited_users`** — preserved at the outer signed-content level of `original_message` (the embedded envelope). These were the original sender's mention list and reference conversation members; they remain meaningful in the same conversation. Server fan-out for FCM does not re-fire on them (the server only reads the **current** outer wrapper's `cited_users`, which belongs to the relayer's intent for this hop).
 - **Inner action/targets references** — preserved AND **typically resolvable** because the receiver is in the same conversation as the original. If the original was a reply, the receiver can typically resolve `targets[0]` to the parent message in their local cache and render the reply with its parent context. This is the key contrast with forward, where the same action/targets are preserved but unresolvable.
+
+**Reactions and replies do not bind to the share wrapper.** Pre-existing reactions and replies on the embedded original remain anchored to the original's signature, not to the share's wrapper signature. A reactor reacted to the original in its conversational context at their time; a late receiver obtaining the original via a share at a later time sees it in a different context. Clients MUST NOT render pre-existing reactions/replies (those with `reception_timestamp` earlier than the share's `reception_timestamp`) as decorations on the share's rendering. The reactions still aggregate against the original target's signature per §5.4 — they just don't decorate the re-delivery envelope. Full rule in §5.4.1.
 
 This is the structural inverse of `forward`: forward preserves the structured inner content but loses the signature and the `cited_users`; share_history preserves the entire signed envelope including `cited_users`. The honest framing is therefore not "structurally a screenshot" (forward's framing in §12.10.5) but "structurally a delayed receipt of an authentic original."
 
