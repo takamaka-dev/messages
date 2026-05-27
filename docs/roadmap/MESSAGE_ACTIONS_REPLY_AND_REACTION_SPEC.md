@@ -112,6 +112,7 @@ Must be regenerated with `flutter pub run build_runner build --delete-conflictin
 | `"reaction"` | exactly 1 (see §3.1) | one of: inline image / `sticker_id` / `emoji` | none | `text_message` SHOULD be `""` (see §3.2). |
 | `"pin"` | exactly 1 (message signature) | `text_message` optional pin reason, SHOULD be ≤ 200 chars; `attached_media` MUST be null | creator-only | See §5.5 for aggregation, §12.5 for full design. |
 | `"unpin"` | **0** (`targets` MUST be null / empty / absent) | `text_message` SHOULD be `""`; `attached_media` MUST be null | creator-only | Clears the pin slot for the conversation. |
+| `"forward"` | **0 or 1** (claimed-origin public key, or absent for anonymous forward) | `text_message` carries the forwarded text; `attached_media` MAY carry re-encrypted attachments | none | See §12.10. `targets[0]` is a **public key**, not a signature — different regex. Origin claim is **unverifiable** by design. |
 
 ### 3.2 `text_message` for reactions (normative, RFC 2119)
 
@@ -218,13 +219,20 @@ For every received message with non-null `action`:
 2. **Per-action cardinality.** Each action declares its `targets` cardinality in the registry. Receivers MUST validate the incoming `targets` against the declared cardinality. Current values:
    - `reply`, `reaction`, `reaction_remove`, `edit`, `redact`, `pin` → **exactly 1**
    - `unpin` → **0** (null, empty list, or absent — all equivalent)
+   - `forward` → **0 or 1** (1 = claimed origin, 0 = anonymous forward)
 
    Mismatch → decoration `INVALID <action> reference — malformed targets`, body still rendered.
-3. **Each target matches signature regex?** (Skipped if cardinality is 0.) If not, `INVALID <action> reference — bad signature format` decoration.
-4. **Each target belongs to the conversation the message was sent in?** (Skipped if cardinality is 0.) Lookup against the client's local message cache for this `conversation_hash_name`. If the parent is unknown:
+3. **Per-action target format.** Each action declares the format of its `targets[0]`:
+   - **Signature-typed targets** (`reply`, `reaction`, `reaction_remove`, `edit`, `redact`, `pin`): match the Ed25519 envelope-signature regex `^[A-Za-z0-9_-]{86}\.\.$`.
+   - **Public-key-typed targets** (`forward`, when cardinality 1): match the Ed25519 public-key regex `^[A-Za-z0-9_-]{43}\.$` (32 bytes encoded as 43 base64url chars + 1 padding dot).
+   - **No targets** (`unpin`, `forward` with cardinality 0): no format check.
+
+   Mismatch → decoration `INVALID <action> reference — bad <signature|public-key> format`, body still rendered.
+4. **Each signature-typed target belongs to the conversation the message was sent in?** (Skipped for cardinality 0 and for public-key-typed targets.) Lookup against the client's local message cache for this `conversation_hash_name`. If the parent is unknown:
    - **Reply:** decorate `INVALID reply reference to <target>` or, if user prefers, "reply to (message not in cache)" — softer wording for known offline scenarios. Continue rendering the message.
    - **Reaction:** decorate `reaction targeting unknown message <target>`. Optionally skip rendering entirely depending on client UX.
    - **Pin:** decorate `[pinned message not in cache]` in the pinned-message slot. The pin slot still updates (target signature is recorded); resolution is best-effort whenever the parent eventually arrives.
+   - **Forward:** N/A — the target is a public key, not a signature, and not a resolvable message reference. Step 4 is skipped. Clients SHOULD try to resolve the PK against their local contacts / registered-users cache to render a display name; resolution failure is normal and not a validation failure.
 5. **Authorization.** Some actions require an authorization check (see §12.7 for the three patterns). For `pin` and `unpin`: `envelope.from` MUST equal the conversation creator's PK (= `from` of the decrypted `CreateConversationRequestBean`). For `edit`, `redact`, `reaction_remove`: see action-specific rules. Failure → `INVALID <action> (not authorized)` decoration, body still rendered.
 6. **Action-specific checks** — see §4.3 and §4.4.
 
@@ -388,6 +396,7 @@ Exception: a "reaction" message whose payload (emoji/sticker/inline) is also mal
 - **Server-timestamp ordering of duplicate reactions (narrow accepted threat):** The reaction aggregation rule (§5.4) uses the server-assigned `reception_timestamp` as the chronological clock. A hostile server CAN reorder duplicate reactions from the same sender on the same parent message — i.e. choose which of that sender's own reactions wins in the per-conversation aggregate. It CANNOT forge reactions, change the reactor's identity, alter the reaction payload, or affect ordering across different senders (each `(parent, sender)` key is independent). The affected sender retains an authoritative local outbox and can detect divergence between what they sent and what other participants see. This is a narrow case of the general "server controls message delivery order" accepted threat already documented in `rschat-docs/.../E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5 / `rschat/docs/architecture/E2E_ENCRYPTION_PROTOCOL_DOCUMENTATION.md` §8.5. **TODO (during implementation):** propagate this bullet verbatim into that parent threat-model section so its enumeration of "out-of-scope availability attacks" explicitly names duplicate-reaction reordering.
 - **Server-timestamp ordering of competing pin / unpin (narrow accepted threat):** Same shape as the reaction case. A hostile server CAN reorder competing `pin` and `unpin` events authored by the conversation creator, selecting which of the creator's own pin decisions wins. It CANNOT forge pins (creator-only authorization is checked client-side against the signed envelope), change which message is pinned by a forged pin, or pin from a non-creator identity. The creator can detect divergence between their own action log and what other participants see. Subsumed by the same "server controls message delivery order" out-of-scope threat.
 - **Creator-only authorization (current model):** `pin` / `unpin` are authorized by PK equality between the action's `envelope.from` and the conversation creator (= `from` of the decrypted `CreateConversationRequestBean`). The check is purely client-side, deterministic, and uses data every cooperating client already holds. Limitations honestly stated: there is no protocol mechanism to add, remove, or transfer admins. The creator is the sole authority for pin operations for the conversation's lifetime. If a richer admin model is ever needed, it requires a separate protocol revision adding promote/demote actions plus a derived admin-set per conversation — out of scope here.
+- **Unverifiable origin claim on `forward` (accepted by design):** The `forward` action carries the **claimed-origin public key** in `targets[0]` but transmits neither the original signature nor the original encrypted blob. The recipient cryptographically verifies the **forwarder's** signature on the envelope; the claimed origin is third-hand testimony and **CANNOT** be verified. A malicious or careless forwarder may attribute fabricated content to any public key. This is structurally equivalent to a screenshot and is the only model compatible with cross-conversation forwarding under zero-knowledge E2E (the source conversation's symmetric key MUST NOT travel with the forwarded content). Client UI **MUST** visually distinguish forwarded content from native (signed-by-claimed-author) content — e.g., a distinct envelope, badge, or "forwarded" decoration — so users can apply appropriate skepticism. Treating forwarded text as natively-attributable would mislead the user about what the cryptographic guarantees actually cover.
 
 ### 6.5 Cycle handling
 
@@ -648,6 +657,7 @@ The `(action, targets)` shape generalizes cleanly. The following actions plug in
 | `redact` | 1 | optional reason ("" allowed) | absent | self-author (envelope.from == parent's from) | §12.4 |
 | `pin` | 1 | optional reason, SHOULD ≤ 200 chars | MUST be null | creator-only (envelope.from == creation_request.from) | §5.5, §12.5 |
 | `unpin` | **0** (null / empty / absent) | SHOULD be `""` | MUST be null | creator-only (same check) | §5.5, §12.5 |
+| `forward` | **0 or 1** (claimed-origin PK; 0 = anonymous) | re-encoded forwarded text | re-encrypted attachments under target conversation key | none | §12.10. Targets type = **public key**, not signature. Origin claim is unverifiable. |
 
 The following are **deferred** with rationale in §12.6: `forward`, `read_receipt`, `typing`, `vote`/`poll_response`, generic `acknowledge`.
 
@@ -776,7 +786,7 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 
 | Pattern | Check | Currently used by | Notes |
 |---|---|---|---|
-| **No check** | any conversation participant may emit | `reply`, `reaction` | Validator does only structural validation; no authorization step. |
+| **No check** | any conversation participant may emit | `reply`, `reaction`, `forward` | Validator does only structural validation; no authorization step. |
 | **Self-author check** | `envelope.from == lookup(target_signature).from` | `edit`, `redact`, `reaction_remove` | Requires the target message to be in the local cache for the check to succeed. If the target is unknown, action is held in a deferred-validation queue or rejected with a "cannot verify authorship" decoration (client choice). |
 | **Conversation-creator check** | `envelope.from == creation_request.from` | `pin`, `unpin` | The `creation_request` is the decrypted `CreateConversationRequestBean` for this conversation, present in client state as soon as the conversation is set up. Check is deterministic, local, and requires no server query. |
 
@@ -802,6 +812,19 @@ Every new action picks exactly one of three authorization patterns. The spec rec
 | `unpin` arriving before any `pin` | No-op. Slot was already empty; remains empty. |
 | Concurrent `pin` and `unpin` from creator | Latest by `(reception_timestamp, signature)` tuple wins, exactly as §5.5 specifies. |
 | Pin attempt by non-creator | Rejected with decoration `INVALID pin (not conversation creator)`. Slot unchanged. Parent body still renders. |
+| Reply to a forwarded message | Standard reply targeting the forward's signature in the destination conversation. The reply does NOT reach the source conversation; the source author (if claimed) does not receive it via this path. |
+| React to a forwarded message | Standard reaction on the forward. Same scope rule: the reaction stays in the destination conversation. |
+| Edit of a forwarded message | Forwarder may edit their own forward (self-author check on the forward envelope). Does not affect the source. |
+| Redact of a forwarded message | Forwarder may redact their own forward. Does not affect the source. |
+| Pin of a forwarded message | Creator may pin a forward. Renders in the pinned slot with the forward decoration intact. |
+| Forward of a redacted message | The forwarder's local cache determines whether the tombstone or the pre-redaction content is forwarded. Both are protocol-valid. Forwarding pre-redaction content against the original author's intent is a client/user ethics concern, not a protocol-enforceable invariant. |
+| Forward of a forward | Allowed. `targets[0]` on the re-forward is whoever the current forwarder claims is the origin (either the original-claimed origin or the previous forwarder). Clients MAY display a "forwarded multiple times" badge based on detecting that the source they're forwarding is itself an `action="forward"`. |
+| Forward to self (e.g., a personal notes conversation) | Allowed. Trivially handled. |
+| Forward with empty `targets` | Allowed (cardinality 0 path). Renders as anonymous forward without origin attribution. |
+| Forward with `targets[0]` equal to the forwarder's own PK | Allowed. UI renders normally; forwarder is attributing the content to themselves. |
+| Forwarded message decrypts but `targets[0]` PK is unknown to recipient | Not a validation failure. Client renders the forward badge with a truncated PK label or "(unknown user)". |
+| Forwarding a message with `attached_media` containing regular (server-uploaded) attachments | Forwarder MUST re-encrypt and re-upload under the destination conversation's key (§12.10.1). Reusing the original `encrypted_file_hash` is forbidden. |
+| Forwarding a message with `attached_media` containing inline (`isTheObject=true`) content | Forwarder re-encodes the placeholder for the destination message; the bytes travel inside the new encrypted body. `unencrypted_content_hash` MUST be recomputed from the new placeholder's preview. |
 
 ### 12.9 Implementation plan addendum (extends §7)
 
@@ -824,6 +847,69 @@ If the Tier-1 extensions (`reaction_remove`, `edit`, `redact`) ship together wit
 
 **Pin / unpin** (single-slot model, §5.5 / §12.5) ships in 1.5.0 alongside reply / reaction. Creator-only authorization adds zero new wire surface — the check is a PK equality against already-decrypted `creation_request.from`. No `users_to_conversations.conversation_role` consultation; that column is dead data (see §6.6).
 
+**Forward** (§12.10) ships in 1.5.0 alongside the rest. No new wire fields. The forward action graduates from §12.6 (deferred) once the design accepts that the original signature and original encrypted blob are not transmitted — only a re-encoded body under the destination conversation's key, plus an **unverifiable claimed-origin public key** in `targets[0]`.
+
+### 12.10 `forward` — re-encoded content with claimed origin
+
+**Purpose.** Re-share content from one conversation into another (or back into the same conversation) without leaking the source conversation's symmetric key. The forwarded content is re-encoded by the forwarder under the destination conversation's key, signed by the forwarder's identity, and decorated with an **unverifiable claim** about the original author.
+
+**Threat-model framing.** Forward is **structurally equivalent to a screenshot**. The forwarder cryptographically attests "I am forwarding this content and I claim it originally came from public-key X" — but the recipient has no cryptographic path to verify either the content authenticity or the origin claim. This is the only model compatible with cross-conversation E2E. See §6.4 for the full security disclosure.
+
+**Wire shape.**
+- `action = "forward"`
+- `targets` cardinality is **0 or 1**.
+  - `targets.size() == 1` → `targets[0]` is the **claimed-origin public key** of the message being forwarded. Format = Ed25519 public key (Base64URL with `.` padding), regex `^[A-Za-z0-9_-]{43}\.$`.
+  - `targets.size() == 0` (null, empty list, or absent) → **anonymous forward**: no origin attribution. Renders without an attribution name.
+- `text_message` carries the forwarded text. MAY be empty if the forwarded content was attachment-only.
+- `attached_media` MAY carry re-encrypted attachments (§12.10.1).
+
+**Authorization.** None (Pattern 1, §12.7a). Any conversation participant may forward to any conversation they are in.
+
+#### 12.10.1 Attachment handling — normative
+
+**Attachments MUST be re-encrypted and re-uploaded by the forwarder under the destination conversation's encryption parameters.** This rule has no exceptions.
+
+Concretely, when forwarding a message that contains `attached_media`:
+
+1. **Inline attachments** (`isTheObject == true`): the forwarder already has the plaintext bytes in their decrypted message cache. They re-encode the placeholder under the destination message's parameters (the inline body remains inline; just present it again as part of the new message's `attached_media`). The new placeholder's `unencrypted_content_hash` is recomputed (it may equal the original since the plaintext is identical, but it MUST be computed from the new placeholder's `preview` bytes — clients MUST NOT copy the field blindly).
+
+2. **Regular (server-uploaded) attachments** (`isTheObject == false`): the forwarder re-encrypts the plaintext file under a **fresh** `StreamEncryptedDescriptor` (new random salt + IV) using the destination conversation's symmetric key, then uploads the new ciphertext via the standard `submitattachment` endpoint, then references the new `encrypted_file_hash` in the forward message's `attached_media`. The forwarder MUST NOT:
+   - Reference the original `encrypted_file_hash` (the destination's participants do not have the source conversation's key and cannot decrypt the original blob).
+   - Share the source conversation's symmetric key in any form.
+   - Share the original `StreamEncryptedDescriptor` (it binds to the source key).
+
+3. **Cost disclosure.** Forwarding a 1 GB video means uploading 1 GB again. There is no protocol-level deduplication path that preserves zero-knowledge — fresh per-upload IV/salt means even identical plaintexts produce different `encrypted_file_hash` values. Client UIs SHOULD warn the user before forwarding large attachments.
+
+#### 12.10.2 Receiver validation
+
+1. Standard pipeline (§4.2 steps 1–3) with cardinality `0 or 1` and public-key regex for step 3.
+2. Step 4 (same-conversation lookup) is **skipped** for `forward` — the target is a PK, not a signature. Clients SHOULD try to resolve the PK against their local contacts / registered-users cache to render a display name. Resolution failure is normal: the PK may not be in any conversation the recipient is in. Fall back to a truncated PK label (e.g., "Forwarded from `abc...xyz.`") or "(unknown user)".
+3. Step 5 (authorization) is skipped — no check.
+
+A forward whose `targets[0]` is the forwarder's own PK (self-attribution) is permitted; clients render normally.
+
+#### 12.10.3 Lossy semantics — what is NOT carried
+
+By design, a forward **does not preserve**:
+
+- The original signature (the forwarded envelope was signed by the original author; the new envelope is signed by the forwarder).
+- The original encrypted blob or its hash.
+- The source conversation's symmetric key (MUST NOT be transmitted).
+- The original message's `action` / `targets` context. If the source message was a reply, a reaction, or a redact, that semantic does not transfer to the forward. The forwarder is creating a new top-level message with `action="forward"`; any original-action context must be encoded into `text_message` if the forwarder wants to preserve it (purely informational, client-formatted).
+- Chain provenance beyond one hop. If the forwarder is themselves forwarding a forward, `targets[0]` carries whoever the current forwarder claims is the origin — either the original origin (preserving the chain's apparent root) or the previous forwarder (claiming the previous hop). Clients MAY display a "forwarded multiple times" indicator if the source message they're re-forwarding is itself an `action="forward"`, but this is purely a client UX heuristic.
+
+#### 12.10.4 Client UI — normative visual distinction
+
+Clients **MUST** visually distinguish forwarded content from native (signed-by-claimed-author) content. The intent is to prevent users from mistaking a forward for cryptographically-attributed content.
+
+Acceptable visual distinctions include (any one suffices, all client-defined):
+- A "forwarded" badge or icon adjacent to the claimed-origin display name.
+- A distinct envelope, border, or background tint.
+- A header line like `forwarded from <display_name>` above the body.
+- For anonymous forwards (targets empty), the same badge without an attribution name.
+
+What clients **MUST NOT** do: render the forwarded content under the claimed origin's display name with the same visual treatment as a natively-signed message. That would mislead the user about the cryptographic guarantees and is the kind of UI affordance that turns a screenshot-equivalent into apparent attribution.
+
 ---
 
 ## 13. Decisions (resolved 2026-05-27, second round)
@@ -835,5 +921,6 @@ If the Tier-1 extensions (`reaction_remove`, `edit`, `redact`) ship together wit
 | 3 | Pin/unpin shape | **Single-slot model** (§5.5). One pinned message per conversation; `pin` overwrites, `unpin` clears the slot. `unpin` has empty `targets` (cleaner than a `pin_clear` action with sentinel targets). |
 | 4 | Cross-action matrix (§12.8) | Approved as written. |
 | 5 | Edit-chain max depth | 4 levels. |
-| 6 | Forward, polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
-| 7 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
+| 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; visual distinction from native content is mandatory in clients. |
+| 7 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
+| 8 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
