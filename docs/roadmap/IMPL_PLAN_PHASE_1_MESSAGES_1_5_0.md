@@ -138,6 +138,29 @@ Java field is `Boolean` (capital B, nullable wrapper type). On the wire:
 
 Dart equivalent: `bool? reShared`. Same three-state semantics; same serialization rules. `includeIfNull: false` on the Dart bean honors omission.
 
+### 2.11 No seeded RNG — neither in production nor in tests
+
+**Binding architectural decision.** No platform shall introduce a seeded-randomness path into the crypto helpers, not even gated by a "test mode" flag. The reasoning:
+
+- Forcing fixed random values into a crypto algorithm creates code paths that don't exist in production. The test-mode vs prod-mode boundary becomes a maintenance liability.
+- Cross-platform parity is verified by **validation-outcome agreement on a fixed corpus** (the snapshot fixtures in §3.5), NOT by byte-identical regeneration of encrypted content.
+- AES-GCM IV, PBKDF2 salt, and RSA-OAEP padding are correctly random per call in production. Tests do not regenerate these; they validate frozen snapshots.
+
+What IS deterministic and IS verified for byte-equality across platforms:
+- Wallet key derivation from mnemonic (custom 25-word + PBKDF2-HMAC-SHA512)
+- SHA3-256 hashes (deterministic by definition)
+- Canonical JSON (deterministic by `ORDER_MAP_ENTRIES_BY_KEYS` + no whitespace)
+
+What is intentionally random and is NOT verified for byte-equality:
+- AES-GCM IV per encryption (12 bytes)
+- PBKDF2 salt per encryption (16 bytes)
+- RSA-OAEP padding per RSA encryption
+- The Ed25519 signature over the canonical JSON of `BasicMessageSignedContentBean` (signature is itself deterministic per RFC 8032, but its *input* contains the encrypted content with random IV/salt, so the signature varies per encryption call from identical plaintext inputs)
+
+This separation is what makes snapshot fixtures a clean cross-platform contract: each platform produces its own fresh ciphertext, but both must agree on validation outcome when given the same frozen wire-format JSON as input.
+
+**Phase 2 (Dart) must NOT introduce seeded RNG either.** The cross-platform contract is "agree on validation outcomes for a fixed corpus," not "produce identical ciphertexts."
+
 ---
 
 ## 3. Task breakdown
@@ -653,40 +676,145 @@ Code constants on `ChatCryptoConstructionException` (public static final String)
 - Builder-vs-AllArgsConstructor parity test: `BasicMessageEncryptedContentBean.builder().textMessage("x").build()` and `new BasicMessageEncryptedContentBean("x", null, null, null, null, null, null, null)` produce equal beans.
 - Coverage target: 90%+ on `ChatCryptoUtils` (helpers are small and well-tested per-method).
 
-### 3.5 Cross-platform test vectors (commit 5, may be merged with commit 4)
+### 3.5 Cross-platform test vectors — snapshot-based, no seeded RNG (commit 5, may be merged with commit 4)
 
-**New directory:** `src/test/resources/cross-platform-vectors/`
+**Decision recap.** Test vectors are **snapshot fixtures**, generated once on a reference Java run and committed to the repository. Both platforms VALIDATE the snapshots; neither REGENERATES them at test time.
 
-For each action, one or more JSON fixtures with deterministic inputs:
+**No seeded RNG anywhere — not in production, not in tests.** Forcing fixed random values into a crypto algorithm creates code paths that don't exist in production, complicates the test-prod boundary, and turns debugging into archaeology. The crypto code stays pure; tests work with frozen snapshots. This is a deliberate architectural choice, not a corner cut: it keeps the production crypto path unburdened by test concerns and avoids the class of bugs where "test mode" and "prod mode" subtly diverge.
 
-- Bean state (the populated `BasicMessageEncryptedContentBean` before encryption)
-- Canonical JSON of the above (output of `SimpleRequestHelper.getCanonicalJson()`)
-- Signed envelope (`BasicMessageRequestBean` post-encryption + sign)
-- Wire-format JSON
-- Validator expected result
+#### 3.5.1 The two-tier architecture
 
-Fixtures are loaded by a `CrossPlatformVectorTest` in Java that asserts round-trip. They are also intended to be loaded by the future Dart port to verify byte-identical canonical JSON.
+| Tier | What it tests | When it runs |
+|---|---|---|
+| **Static (snapshots)** | Frozen wire-format JSON taken once from a reference Java run. Both platforms must agree on validation outcome (valid → matches expected bean; invalid → throws expected hard-violation exception or returns expected soft-violation decoration). | Every CI run on each platform independently. Regression protection — if a future change breaks compatibility with these snapshots, the test fails. |
+| **Dynamic (live interop)** | Each platform generates fresh wire-format (with its own random IV/salt) using its own helpers; the other platform reads, verifies the signature, decrypts, and asserts the validation outcome matches a Java-platform-agnostic expectation (the plaintext bean state, NOT the byte representation). | Phase 2+ CI when both Java and Dart artifacts are available. Catches interop bugs — situations where Java emits something Dart can't parse, or vice versa. |
 
-Minimum fixture set:
+The two tiers test different properties:
+- Static catches regressions in your own platform's behavior.
+- Dynamic catches platform-divergence bugs that don't manifest as regressions.
 
-1. Plain message (no action)
-2. Reply with text only
-3. Reaction (emoji variant)
-4. Reaction (inline-image variant, exercises both Base64 encodings)
-5. Reaction_remove
-6. Edit with new text + new media
-7. Redact with reason text
-8. Pin with reason
-9. Unpin
-10. Forward, depth 1, attributed
-11. Forward, depth 1, anonymous (empty targets)
-12. Forward, depth 3 (exercises recursive fw_content)
-13. Forward, depth 11 (over cap, expected truncation)
-14. Share_history with first-share (`re_shared=false`)
-15. Share_history with re-share (`re_shared=true`)
-16. Unknown action `__test_unknown_action__` (forward-compat case)
+Both are required.
 
-**Acceptance:** all fixtures load and round-trip in Java without exception. Each fixture's canonical-JSON output is byte-identical to the stored fixture (regression protection).
+#### 3.5.2 Fixture format — directory tree
+
+**Root:** `src/test/resources/cross-platform-vectors/`
+
+**Per-fixture directory:** one directory per test vector, e.g. `fixtures/V03_reply_text_only/`
+
+**Files in each fixture directory:**
+
+| File | Purpose |
+|---|---|
+| `description.md` | Brief human-readable description of what this fixture exercises |
+| `input.json` | Inputs used by the reference generator (wallet mnemonic, key index, conversation hash, conversation symmetric key, helper-specific args). For valid fixtures, the generator is the deterministic Java reference. For invalid fixtures, this file documents the hand-crafted mutation. |
+| `wire_format.json` | The frozen wire-format `BasicMessageRequestBean` JSON. This is the canonical artifact under test. |
+| `expected_inner_plaintext.json` | The decrypted `BasicMessageEncryptedContentBean` plaintext. Used to assert decryption produces the expected result. |
+| `expected_validation.json` | The expected validator outcome: either `{type: "throws", exception: "<ClassName>", code: "<CODE>"}` for hard-violation fixtures, or `{type: "result", overallValid: <bool>, decorations: [...]}` for soft-violation and valid fixtures. |
+
+Both Java and Dart test harnesses load the fixture directory by ID, parse `wire_format.json`, run their full validator pipeline, and assert the outcome matches `expected_validation.json`. For valid fixtures, they additionally decrypt and assert the plaintext matches `expected_inner_plaintext.json`.
+
+#### 3.5.3 Valid fixtures — 19 snapshots from reference Java run
+
+| ID | Description |
+|---|---|
+| V01 | Plain v1.0 legacy (no version field, no v1.1+ fields) |
+| V02 | Plain v1.1 (explicit version, no v1.1+ features) |
+| V03 | Reply (text only) |
+| V04 | Reply (text + inline image — exercises both Base64 encodings) |
+| V05 | Reaction (emoji) |
+| V06 | Reaction (sticker) |
+| V07 | Reaction (inline image — exercises both Base64 encodings) |
+| V08 | Reaction_remove |
+| V09 | Edit (new text, same media) |
+| V10 | Edit (new text, new media) |
+| V11 | Redact (with reason) |
+| V12 | Redact (no reason) |
+| V13 | Pin (with reason) |
+| V14 | Unpin |
+| V15 | Forward, depth 1, attributed |
+| V16 | Forward, depth 1, anonymous (`targets=[]`) |
+| V17 | Forward, depth 3 (exercises recursive `fw_content`) |
+| V18 | Share_history, first-share (`re_shared=false` or absent) |
+| V19 | Share_history, re-share (`re_shared=true`) |
+
+#### 3.5.4 Invalid fixtures — 18 hand-crafted snapshots
+
+| ID | Failure | Expected outcome |
+|---|---|---|
+| I01 | `client_protocol_version: "1.0.0"` (patch level) | throws `MalformedProtocolVersionException` (H1) |
+| I02 | `client_protocol_version: "v1.0"` (prefix) | throws `MalformedProtocolVersionException` (H1) |
+| I03 | `client_protocol_version: "2.0"` (incompatible MAJOR) | throws `IncompatibleMajorVersionException` (H2) |
+| I04 | No version + populated `action` field | throws `MissingVersionWithFeaturesException` (H3) |
+| I05 | `client_protocol_version: "1.0"` + populated `action` field | throws `LegacyVersionWithFeaturesException` (H4) |
+| I06 | `action: "__test_unknown_action__"` | throws `UnknownActionException` (H5) |
+| I07 | Share_history with corrupted inner signature | throws `InnerSignatureFailureException` (H6) |
+| I08 | Reply with `targets.size == 2` | result with decoration `INVALID_REPLY_MALFORMED_TARGETS` (S1, WARN) |
+| I09 | Reply with `targets[0]` not matching signature regex | result with decoration `INVALID_REPLY_BAD_SIGNATURE_FORMAT` (S2, WARN) |
+| I10 | Forward with `targets[0]` not matching PK regex | result with decoration `INVALID_FORWARD_BAD_PUBLIC_KEY_FORMAT` (S3, WARN) |
+| I11 | Reply targeting a signature not in local cache | result with decoration `BROKEN_REFERENCE_REPLY` (S4, INFO) |
+| I12 | Edit signed by non-author | result with decoration `UNAUTHORIZED_EDIT` (S5, WARN) |
+| I13 | Pin signed by non-creator | result with decoration `UNAUTHORIZED_PIN` (S5, WARN) |
+| I14 | Share_history with cross-conversation inner hash | result with decoration `INVALID_SHARE_HISTORY_CROSS_CONVERSATION` (S8, ERROR — `overallValid: false`) |
+| I15 | Nested share_history | result with decoration `INVALID_SHARE_HISTORY_NESTED` (S9, WARN) |
+| I16 | Forward, depth 11 (over cap) | result with decoration `FORWARD_DEPTH_EXCEEDED` (S10, INFO) + truncated content |
+| I17 | Reaction with `image/tiff` MIME | result with decoration `INLINE_MIME_VIOLATION` (S17, WARN) |
+| I18 | Inline content with wrong `unencrypted_content_hash` | result with decoration `INLINE_HASH_MISMATCH` (S13, ERROR — `overallValid: false`) |
+
+#### 3.5.5 Generating invalid fixtures — wire-format vs inner-bean mutation
+
+Invalid fixtures targeting **inner-content** failures (action, targets, fw_content, original_message, re_shared, client_protocol_version, action-linked fields) — that is, I01-I06 and I08-I18 — cannot be produced by simply mutating the wire-format JSON after the fact. The inner content is encrypted with AES-GCM whose authentication tag covers exactly those bytes; mutating the encrypted blob breaks GCM tag verification before our validator is even reached.
+
+Two paths exist:
+
+1. **Re-encrypt the mutated inner content under the same conversation key.** The fixture-generation tool decrypts a valid wire-format, mutates the inner bean, re-encrypts (with a fresh random IV/salt — that's fine; the fixture is then frozen), re-signs the outer envelope, and saves. The fixture's wire-format JSON is the post-re-encryption result. Both platforms decrypt and run their validators on the result.
+
+2. **Skip the wire-format encryption layer entirely.** The fixture stores the already-decrypted inner bean as `wire_format.json`, and the test framework's validator-entry-point accepts a decrypted bean directly. Tests for inner-bean failure modes use this entry point; tests for outer-envelope failure modes (I07 inner-signature, plus future tampered-envelope cases) use the full wire-format entry point.
+
+Path 1 is cleaner — same code path as production validation. Path 2 is simpler tooling. **Recommend path 1**, with the fixture-generation tool living in `src/test/java/` as a manual-run utility (not part of CI) that produces the JSON files. Re-running it overwrites the snapshots when the protocol legitimately changes.
+
+For the OUTER-envelope-only failure (I07 corrupted inner signature), the tool mutates the embedded `original_message` signature directly without re-encrypting — that's a single-byte edit visible at the wire level.
+
+#### 3.5.6 The fixture-generation tool
+
+**File:** `src/test/java/io/takamaka/messages/testtools/FixtureGenerator.java`
+
+A `main`-method utility, NOT a CI test. Run manually when fixtures need regeneration:
+
+```
+mvn -DskipTests=false test -Dtest=FixtureGenerator#regenerateAll
+```
+
+The tool:
+1. Constructs each valid fixture using a fixed wallet mnemonic (committed to the repo as a test constant), fixed conversation key, fixed conversation hash, and fixed action-specific inputs.
+2. Calls the Java reference helpers (`ChatCryptoUtils.get*MessageBean(...)`).
+3. Writes `wire_format.json`, `expected_inner_plaintext.json`, `expected_validation.json` per fixture directory.
+4. For invalid fixtures, applies the documented mutation post-construction.
+5. Commits the snapshots (manual git commit step — the tool only writes files).
+
+**Re-running the generator MUST be a deliberate human act.** A "stale snapshot" failure in CI signals one of two things: a legitimate protocol change (regenerate) or a regression (debug). Auto-regenerating snapshots in CI would defeat the regression-detection purpose.
+
+#### 3.5.7 Phase 1 vs Phase 2 split
+
+**Phase 1 (this branch) deliverable:**
+- Generator tool implemented in `src/test/java/`.
+- All 19 valid + 18 invalid snapshots generated and committed.
+- Java test harness loads each snapshot and asserts the expected outcome.
+- 37 fixture directories under `src/test/resources/cross-platform-vectors/`.
+
+**Phase 2 (rsclient-flutter) deliverable:**
+- Dart test harness loads the same 37 snapshots from a shared `cross-platform-vectors/` directory (mirrored into the Flutter repo or referenced by relative path).
+- Dart asserts identical outcomes.
+- Dynamic interop tests added: CI step where Java emits a fresh wire-format and Dart validates (or vice versa).
+
+The Phase 1 snapshot set IS the cross-platform contract. Anything that breaks the snapshots' validation outcome on either platform is a protocol-level regression and must be explicitly addressed (either fix the divergence or version-bump the protocol).
+
+#### 3.5.8 Acceptance
+
+- 19 valid + 18 invalid fixture directories committed.
+- Java test harness `CrossPlatformVectorTest` loads each fixture, runs the full validator, asserts expected outcome (throws-or-result).
+- Generator tool runs cleanly and reproduces the committed snapshots (manual regeneration test — `assertEquals` on the generated content vs the committed files).
+- 100% of fixtures pass on Java side.
+- 0% of snapshots have been auto-regenerated by CI (the directory is never auto-touched).
 
 ### 3.6 Version bump (commit 6, may be merged with commit 5)
 
@@ -717,17 +845,13 @@ Coverage targets:
 
 ### 4.3 Cross-platform parity (preparation for Phase 2)
 
-The test vectors in §3.5 are the contract between Java and Dart. Phase 2 reads the same fixture files; Dart-side round-trips must produce byte-identical canonical JSON. Phase 1 ships the fixtures as `src/test/resources/cross-platform-vectors/` so the Dart port has a fixed reference.
+The snapshot fixtures in §3.5 are the contract between Java and Dart. Phase 2's Dart implementation loads the same fixture directories and asserts identical validation outcomes (throws-or-result). **Cross-platform parity is verified by validation-outcome agreement on a fixed corpus, not by byte-identical regeneration.** This is the architectural consequence of the no-seeded-RNG decision: each platform's own ciphertext output is random per call (and that's correct production behavior), but both must agree on what is and isn't valid when given the same wire-format input.
+
+Phase 1 deliverable: `src/test/resources/cross-platform-vectors/` populated with the 37 snapshot directories. Phase 2 mirrors this path (or references it) on the Dart side.
 
 ### 4.4 Negative tests
 
-For each action, at least one negative case per failure mode in §4.2 of the spec:
-
-- Bad cardinality (e.g., reply with 2 targets, unpin with 1 target)
-- Bad target format (e.g., reply with a PK in `targets[0]`, forward with a signature)
-- Authorization failure (e.g., edit by non-author, pin by non-creator)
-- Action-specific (e.g., share_history with mismatched inner `conversation_hash_name`)
-- Depth-11 forward → truncation decoration
+All negative cases are exercised by the 18 invalid snapshot fixtures in §3.5.4 (I01-I18). Each fixture targets exactly one failure mode; the assertion is on the validator's structured outcome (`HardProtocolViolationException` subclass for hard violations, `ValidationResult` decoration code for soft violations). No additional ad-hoc negative tests outside the fixture set — that would create two parallel sources of truth.
 
 ---
 
@@ -735,7 +859,7 @@ For each action, at least one negative case per failure mode in §4.2 of the spe
 
 1. `mvn clean install` produces `messages-1.5.0-SNAPSHOT.jar` cleanly.
 2. All new tests pass (target: 80%+ coverage on `MessageActionValidator`, 100% of constants in `MessageAction.KNOWN` plus the registry-completeness test).
-3. All cross-platform test vector fixtures load and round-trip in Java.
+3. All 37 snapshot fixtures (19 valid + 18 invalid, §3.5.3 / §3.5.4) load and assert their expected validation outcome in Java. No seeded RNG anywhere in the codebase (production or test).
 4. `BasicMessageEncryptedContentBean` is annotated with `@JsonInclude(NON_NULL)` and `@JsonIgnoreProperties(ignoreUnknown=true)`.
 5. The Maven artifact has been published to local repo (`mvn install`) and the new artifact resolves cleanly when consumed by a test downstream project.
 6. The branch contains a clean commit chain reviewed by Iris with no open review comments.
