@@ -888,7 +888,7 @@ Concretely, when forwarding a message that contains `attached_media`:
 
 A forward whose `targets[0]` is the forwarder's own PK (self-attribution) is permitted; clients render normally.
 
-#### 12.10.3 Lossy semantics — what is NOT carried
+#### 12.10.3 Lossy semantics — what is NOT carried (intentional, see §12.10.5)
 
 By design, a forward **does not preserve**:
 
@@ -910,6 +910,25 @@ Acceptable visual distinctions include (any one suffices, all client-defined):
 
 What clients **MUST NOT** do: render the forwarded content under the claimed origin's display name with the same visual treatment as a natively-signed message. That would mislead the user about the cryptographic guarantees and is the kind of UI affordance that turns a screenshot-equivalent into apparent attribution.
 
+#### 12.10.5 Design stance — forward is deliberately minimal
+
+The lossy properties in §12.10.3 are **not limitations awaiting future improvements**. They are intentional design choices and the spec records this stance so future revisions resist enrichment pressure.
+
+The protocol's position:
+
+- **`forward` exists because it is sometimes useful and sometimes legitimate** — sharing a news snippet, a code fragment, an instruction, a piece of context from elsewhere. Removing it entirely would be over-correction.
+- **The protocol does not incentivize forwarding over native composition.** A forward is structurally a screenshot, no more. Composing the same content natively in the destination conversation — where the author signs their own envelope and the recipients verify it — is always the cryptographically stronger option, and the spec prefers it.
+- **The protocol's answer to "I want richer forwards" is "take a screenshot."** A screenshot is unverifiable, lossy, and a deliberate user act — exactly the properties forward has. Anything the protocol adds beyond this baseline either misleads recipients about authenticity or pressures the source conversation's zero-knowledge property.
+
+Two design-rule corollaries that future contributors should apply when proposals arrive:
+
+1. **Trust-hygiene corollary.** Any change that makes forwards *look* more authoritative — preserving the original signature, embedding a verifier-side proof, attaching cryptographic provenance, anything that strengthens the apparent attribution — is rejected on the grounds that it misleads users about what the cryptographic guarantees actually cover.
+2. **Cross-conversation E2E corollary.** Any change that requires sharing source-conversation material — the symmetric key, the original `StreamEncryptedDescriptor`, the original `encrypted_file_hash` as a resolvable reference — is rejected because it erodes the zero-knowledge property of the source conversation. The bright-line rule (§12.10.1) "the source's symmetric key MUST NOT travel with the forwarded content" is non-negotiable.
+
+If a use case genuinely needs more than what `forward` provides — verified attribution, preserved reply chains, end-to-end original timestamps — the answer is **not** to extend forward. Compose natively (the participants can author signed messages in the destination conversation) or use an out-of-band mechanism (screenshot, copy/paste, file share, separate conversation).
+
+This stance is recorded so reviewers can reject future "enrichment" proposals with a citation rather than rerunning the design conversation.
+
 ---
 
 ## 13. Decisions (resolved 2026-05-27, second round)
@@ -921,6 +940,6 @@ What clients **MUST NOT** do: render the forwarded content under the claimed ori
 | 3 | Pin/unpin shape | **Single-slot model** (§5.5). One pinned message per conversation; `pin` overwrites, `unpin` clears the slot. `unpin` has empty `targets` (cleaner than a `pin_clear` action with sentinel targets). |
 | 4 | Cross-action matrix (§12.8) | Approved as written. |
 | 5 | Edit-chain max depth | 4 levels. |
-| 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; visual distinction from native content is mandatory in clients. |
+| 6 | `forward` action | **In scope for 1.5.0** (§12.10). Re-encoded body under destination key; `targets[0]` = claimed-origin PK (cardinality 0 or 1); attachments MUST be re-encrypted and re-uploaded; chain provenance is FLAT; visual distinction from native content is mandatory in clients. **Deliberately minimal — see §12.10.5.** Future enrichment proposals are out of scope on principle, not for lack of effort. |
 | 7 | Polls, read receipts, typing, vote, acknowledge | Deferred (§12.6). |
 | 8 | `conversation_role` column | Dead data (§6.6). Cleanup tracked separately, not blocking this branch. |
