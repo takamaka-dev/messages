@@ -3,7 +3,8 @@
 **Date:** 2026-05-27
 **Branch:** `feature/message-actions-reply-reaction`
 **Target version:** `io.takamaka.messages:messages 1.5.0-SNAPSHOT`
-**Status:** Ready to start. Design locked at branch HEAD `0d3e54e`.
+**Protocol version (wire):** `1.1` (see §3.4 of the spec).
+**Status:** Ready to start. Design locked at current branch HEAD (19 commits on the design + plan-refinement path).
 
 This plan describes Phase 1 of the implementation rollout for the message-actions design in `MESSAGE_ACTIONS_REPLY_AND_REACTION_SPEC.md`. Phase 1 stabilizes the **Messages module** (Java protocol library) as the foundation that downstream consumers (`rsclient`, `rschat`, `shell`, `rsclient-flutter`, `tkmChat`) will build against. Subsequent phases are scoped at the end of this document.
 
@@ -13,11 +14,11 @@ This plan describes Phase 1 of the implementation rollout for the message-action
 
 In scope (this branch):
 
-- Bean annotation polish on `BasicMessageEncryptedContentBean`.
-- New `MessageAction` constants class + `MessageActionMeta` registry (no enum — string-typed wire values; see §2.7 and §3.2).
-- New `MessageActionValidator` utility implementing the §4.2 pipeline.
-- New `ChatCryptoUtils` helpers — one canonical-construction method per action.
-- Cross-platform test vectors (fixtures generated from Java, consumed by future Dart port).
+- Bean annotation polish on `BasicMessageEncryptedContentBean` (`@JsonInclude(NON_NULL)`, `@JsonIgnoreProperties(ignoreUnknown=true)`; `@Builder` already pre-applied during plan refinement).
+- New `MessageAction` constants class + `MessageActionMeta` registry + `MessageProtocolVersion` constants class (no enums — string-typed wire values; see §2.7, §2.11, §3.2).
+- New `MessageActionValidator` utility implementing the §4.2 pipeline, with companion `ValidationResult` / `Decoration` records + `DecorationSeverity` and `ValidationDecorationCodes` constants holders + `HardProtocolViolationException` hierarchy (base + 6 subclasses).
+- New `ChatCryptoUtils` helpers — one canonical-construction method per action (10 public methods + ~7 internal predicates) + `SendContext` record + `ChatCryptoConstructionException` hierarchy.
+- Cross-platform **snapshot test vectors** (frozen JSON fixtures, validated by both Java and Dart with agreement on validation outcome — no seeded RNG; see §3.5 and §2.11).
 - Unit and integration tests.
 - Maven version bump to `1.5.0-SNAPSHOT`.
 
@@ -37,10 +38,10 @@ These items affect protocol-level interoperability between the Java reference an
 
 Current state grep:
 
-- Java `BasicMessageEncryptedContentBean.java` — **7 fields**: `text_message`, `attached_media`, `action`, `targets`, `fw_content`, `original_message`, `re_shared`.
-- Dart `basic_message_encrypted_content_bean.dart` — **2 fields**: `text_message`, `attached_media`. Missing: `action`, `targets`, `fw_content`, `original_message`, `re_shared`.
+- Java `BasicMessageEncryptedContentBean.java` — **8 fields**: `text_message`, `attached_media`, `action`, `targets`, `fw_content`, `original_message`, `re_shared`, `client_protocol_version`.
+- Dart `basic_message_encrypted_content_bean.dart` — **2 fields**: `text_message`, `attached_media`. Missing all 6 added in this branch: `action`, `targets`, `fw_content`, `original_message`, `re_shared`, `client_protocol_version`.
 
-**Impact:** any Dart client receiving a Java-emitted message that uses the new fields silently drops the action semantics. Until the Dart bean is updated, reply / reaction / forward / share_history / pin / etc. cannot round-trip Java↔Dart.
+**Impact:** any Dart client receiving a Java-emitted message that uses the new fields silently drops the action semantics — and, critically, a v1.1 message without protocol-version recognition would be parsed as legacy v1.0 by a non-updated Dart client (which is technically the §3.4.3 grandfather behavior — but the Dart client wouldn't even understand its own version checking). Until the Dart bean is updated, reply / reaction / forward / share_history / pin / etc. cannot round-trip Java↔Dart, and the version-gate cannot be enforced.
 
 **Resolution boundary:** Phase 1 owns documenting the new fields and generating canonical-JSON test vectors. Phase 2 (rsclient-flutter) applies the mirror with `build_runner` regeneration. The Phase 2 branch must reference this plan and the spec.
 
@@ -215,14 +216,23 @@ public final class MessageAction {
         PIN, UNPIN, FORWARD, SHARE_HISTORY
     );
 
-    /** Normalize an inbound action string for comparison. Returns null if input is null. */
+    /**
+     * Normalize an inbound action string for comparison. Returns null for
+     * null, empty, or whitespace-only inputs (per §12.7 "null is different
+     * from invalid" — three input forms are equivalent to "no action set":
+     * null, "", and whitespace-only). Otherwise trims and lowercases.
+     */
     public static String normalize(String raw) {
-        return raw == null ? null : raw.toLowerCase(java.util.Locale.ROOT);
+        if (raw == null) return null;
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) return null;
+        return trimmed.toLowerCase(java.util.Locale.ROOT);
     }
 
-    /** Case-insensitive membership check. */
+    /** Case-insensitive membership check on the closed registry. */
     public static boolean isKnown(String raw) {
-        return raw != null && KNOWN.contains(normalize(raw));
+        String n = normalize(raw);
+        return n != null && KNOWN.contains(n);
     }
 
     private MessageAction() {}
@@ -256,11 +266,18 @@ public final class MessageActionMeta {
         MessageAction.SHARE_HISTORY,   new ActionSpec(Cardinality.ZERO,        TargetFormat.NONE,       AuthPattern.NO_CHECK)
     );
 
-    /** Lookup by case-insensitive action string. Returns empty for unknown actions
-     *  (graceful-degrade trigger per spec §12.7). */
+    /**
+     * Lookup by case-insensitive (and whitespace-trimmed) action string.
+     * Returns empty for null, empty, whitespace-only, or unknown action.
+     * Validator's step 1 interprets:
+     *   - normalize(action) == null  →  no action set (plain message; legacy path)
+     *   - normalize(action) != null but Optional.empty()  →  STRICT DROP
+     *     (throws UnknownActionException per spec §12.7).
+     * Callers MUST distinguish these two cases via MessageAction.normalize().
+     */
     public static Optional<ActionSpec> lookup(String action) {
-        if (action == null) return Optional.empty();
-        return Optional.ofNullable(REGISTRY.get(MessageAction.normalize(action)));
+        String n = MessageAction.normalize(action);
+        return n == null ? Optional.empty() : Optional.ofNullable(REGISTRY.get(n));
     }
 
     /** Closed registry view for completeness tests. */
@@ -274,13 +291,70 @@ public final class MessageActionMeta {
 
 The three small enums (`Cardinality`, `TargetFormat`, `AuthPattern`) are **internal-only** — they never appear on the wire and never travel between language ports. Cross-platform interop happens only through the string action value. The internal enums can be replaced with constants or sealed classes per language without protocol consequence.
 
-**Rationale recap (see §2.7):** keeping the wire-level value as `String` avoids enum-mapping divergence between Java, Dart, and any future port. Inbound `action` strings are normalized via `Locale.ROOT.toLowerCase()` so case variants like `"Reply"` are accepted gracefully. Outbound strings are emitted in canonical lowercase.
+**Rationale recap (see §2.7):** keeping the wire-level value as `String` avoids enum-mapping divergence between Java, Dart, and any future port. Inbound `action` strings are normalized via trim + `Locale.ROOT.toLowerCase()` so case variants (`"Reply"`) and whitespace-padded inputs (`"  reply  "`) are accepted gracefully. Outbound strings are emitted in canonical lowercase.
+
+**New file 3:** `src/main/java/io/takamaka/messages/chat/message/MessageProtocolVersion.java`
+
+Companion constants holder for the wire-format protocol version (`client_protocol_version` field; see spec §3.4 and §4.2 step 0). Same string-typed pattern as `MessageAction`.
+
+```java
+public final class MessageProtocolVersion {
+    public static final String V_1_0 = "1.0";   // legacy, also matches null/empty/whitespace
+    public static final String V_1_1 = "1.1";   // current revision
+
+    public static final String CURRENT = V_1_1;
+    public static final int CURRENT_MAJOR = 1;
+    public static final int CURRENT_MINOR = 1;
+
+    private static final Pattern FORMAT = Pattern.compile("^\\d+\\.\\d+$");
+
+    public record Parsed(int major, int minor) {
+        public boolean isCompatibleMajor() { return major == CURRENT_MAJOR; }
+    }
+
+    /**
+     * Parse a version string. Returns Optional.empty() for malformed or
+     * out-of-range. Strict regex, no whitespace inside the version.
+     */
+    public static Optional<Parsed> parse(String raw) {
+        if (raw == null) return Optional.empty();
+        String trimmed = raw.trim();
+        if (!FORMAT.matcher(trimmed).matches()) return Optional.empty();
+        String[] parts = trimmed.split("\\.");
+        try {
+            int major = Integer.parseInt(parts[0]);
+            int minor = Integer.parseInt(parts[1]);
+            if (major < 0 || minor < 0) return Optional.empty();
+            return Optional.of(new Parsed(major, minor));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Quick check: is the input a legitimate "absent version" (null,
+     * empty, or whitespace-only after trim)? Used by the validator's
+     * step 0 to distinguish legacy grandfather from explicit version.
+     */
+    public static boolean isAbsent(String raw) {
+        return raw == null || raw.trim().isEmpty();
+    }
+
+    private MessageProtocolVersion() {}
+}
+```
 
 **Acceptance:**
-- Unit tests assert each `public static final String` exposes the exact canonical lowercase form.
+- Unit tests assert each `public static final String` exposes the exact canonical lowercase form for `MessageAction` and the exact dotted format for `MessageProtocolVersion`.
 - `MessageAction.isKnown("Reply")` returns `true` (case-insensitive).
+- `MessageAction.isKnown("  Reply  ")` returns `true` (trim + case-insensitive).
 - `MessageAction.isKnown("__test_unknown_action__")` returns `false`.
+- `MessageAction.normalize(null)`, `MessageAction.normalize("")`, `MessageAction.normalize("   ")` all return `null`.
 - `MessageActionMeta.lookup("FORWARD")` returns the correct `ActionSpec` (case-insensitive).
+- `MessageActionMeta.lookup(null)`, `MessageActionMeta.lookup("")`, `MessageActionMeta.lookup("nonsense")` all return `Optional.empty()`. Validator distinguishes the first three from the last via `MessageAction.normalize()`.
+- `MessageProtocolVersion.parse("1.1")`, `parse("1.0")`, `parse("100.0")` return populated `Optional<Parsed>`.
+- `MessageProtocolVersion.parse("1")`, `parse("1.0.0")`, `parse("v1.0")`, `parse("1.0 ")` (with trailing space inside the version — note `parse` trims the outer whitespace then matches the strict regex, so trailing internal whitespace fails), `parse(null)` all return `Optional.empty()`.
+- `MessageProtocolVersion.isAbsent(null)`, `isAbsent("")`, `isAbsent("   ")` all return `true`. `isAbsent("1.0")` returns `false`.
 - **Registry-completeness test:** assert `MessageAction.KNOWN.equals(MessageActionMeta.registeredActions())` — guards against forgetting to register metadata for a new action.
 
 ### 3.3 `MessageActionValidator` + hard/soft split (commit 3)
@@ -870,7 +944,7 @@ All negative cases are exercised by the 18 invalid snapshot fixtures in §3.5.4 
 
 | Phase | Module | Scope |
 |---|---|---|
-| **2** | `rsclient-flutter` | Mirror the 5 new bean fields with `@JsonKey`, add `InlineContentLimits` Dart class, regenerate `*.g.dart` via `build_runner`, port `MessageAction` and `MessageActionValidator`, verify cross-platform vectors (§3.5) load byte-identically. |
+| **2** | `rsclient-flutter` | Mirror the 6 new bean fields with `@JsonKey` (`action`, `targets`, `fw_content`, `original_message`, `re_shared`, `client_protocol_version`), add Dart equivalents of `InlineContentLimits` + `MessageAction` + `MessageActionMeta` + `MessageProtocolVersion` + `DecorationSeverity` + `ValidationDecorationCodes` constants classes, port `MessageActionValidator` + the 6 `HardProtocolViolationException` subclasses, regenerate `*.g.dart` via `build_runner`, load the same 37 snapshot fixtures from §3.5 and assert identical validation outcomes. **No seeded RNG** (per §2.11). |
 | **3a** | `rsclient` (Java) | Dep bump to Messages 1.5.0, version bump to 1.5-SNAPSHOT. No API changes expected; existing `CallHelper` / `DefaultCalls` pass through. |
 | **3b** | `rschat` (Java) | Dep bump to Messages 1.5.0, version bump to 0.5.1-SNAPSHOT. Server-side validation is unchanged (server is action-blind). |
 | **3c** | `shell` (Java) | Dep bump to Messages 1.5.0 + rsclient 1.5, version bump to 0.6.0-SNAPSHOT. Migrate `ThumbnailService` to reference `InlineContentLimits` from Messages. Add new commands: `reply`, `react`, `unreact`, `edit`, `redact`, `pin`, `unpin`, `forward`, `share-history`. |
@@ -880,26 +954,38 @@ All negative cases are exercised by the 18 invalid snapshot fixtures in §3.5.4 
 
 Phases 2 and 3 can run in parallel after Phase 1 ships. Phase 4 depends on Phase 2. Phase 5 is doc-only and can start any time after Phase 1.
 
+**Recommended ordering after Phase 1:** start with **Phase 3 (Java-side dep bump chain — rsclient → rschat → shell) first**, then Phase 2 (Dart mirror). Reasoning:
+
+- Phase 3 is mechanical (dep bumps + shell command additions); confirms Java-side end-to-end (shell → rsclient → rschat → rsclient → shell round-trip) before crossing to Dart.
+- Phase 2 is more involved (bean mirroring + `build_runner` + ~12 new Dart files + 37 fixture loaders). Doing it after a confirmed Java baseline reduces the surface area for bugs to "Dart-specific only."
+- Risk balance: a Dart-side parity bug discovered after both phases are running is harder to debug than one discovered against a known-good Java baseline.
+- Phase 5 (doc propagation) and Phase 6 (cleanup) can interleave at any time.
+
+This ordering is a recommendation, not a hard dependency — Phase 2 can run in parallel if priorities require it.
+
 ---
 
 ## 7. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Dart bean diverges from Java in canonical-JSON ordering | Cross-platform test vectors (§3.5) shipped from Phase 1; Phase 2 fails its CI if any vector mismatches |
-| Recursive `fw_content` causes Jackson/Dart parser stack issues | Hard depth cap of 10 enforced at validator layer; vector for depth 9 (OK) and depth 11 (truncated); no client should ever construct deeper |
-| `original_message` embedded-signature verification edge cases (replay of redacted, replay of edit) | Spec §12.11 + §12.8 matrix cover these; validator tests assert decoration codes; client UI behaviour is informative |
-| Unknown actions cause crashes in older clients | `FAIL_ON_UNKNOWN_PROPERTIES=false` is already set globally (ChatUtils:185, SimpleRequestHelper:169); class-level `@JsonIgnoreProperties` adds defense-in-depth; forward-compat test vector covers this |
-| Encoding asymmetry (`preview` Base64-standard vs hashes Base64URL) trips up implementers | Spec §11.5 explicit; inline-image test vector exercises both encoders in one fixture |
-| Bean field count growing (7 currently, likely 8+ after future actions) | Each field documented with action it supports; spec §12.6 deferred-actions list keeps the registry closed for v1.5 |
+| Dart bean diverges from Java in canonical-JSON ordering | 37 snapshot fixtures (§3.5) shipped from Phase 1 as the cross-platform contract. Phase 2 fails its CI if any fixture's validation outcome diverges. Parity is by **outcome agreement on a fixed corpus**, not by byte-identical regeneration (no seeded RNG — see §2.11). |
+| Recursive `fw_content` causes Jackson/Dart parser stack issues | Hard depth cap of 10 enforced at validator layer; snapshot fixtures V16 (depth 3, OK), V17 (depth 9, one-below-cap, OK), I16 (depth 11, truncated); no client should ever construct deeper |
+| `original_message` embedded-signature verification edge cases (replay of redacted, replay of edit) | Spec §12.11 + §12.8 matrix cover these; validator tests assert decoration codes for soft cases; H6 (`InnerSignatureFailureException`) for hard signature failures; client UI behaviour is informative |
+| Unknown actions cause crashes in older clients | `FAIL_ON_UNKNOWN_PROPERTIES=false` is already set globally (ChatUtils:185, SimpleRequestHelper:169); class-level `@JsonIgnoreProperties` adds defense-in-depth. **For new clients (v1.1+):** unknown actions are no longer gracefully degraded — they trigger `UnknownActionException` (H5) and the message is dropped per §12.7 strict-drop. Snapshot fixture I06 covers this. |
+| Encoding asymmetry (`preview` Base64-standard vs hashes Base64URL) trips up implementers | Spec §11.5 explicit; inline-image fixtures V04 + V07 exercise both encoders in one bean |
+| Bean field count growing (8 currently, likely 9+ after future actions) | Each field documented with the action it supports; spec §12.6 deferred-actions list keeps the registry closed for v1.5; protocol version (§3.4) gates future field additions via MINOR bumps |
+| Future contributor adds seeded-RNG path "just for tests" | §2.11 records the binding decision; Phase 1 acceptance §5 item 3 explicitly checks "No seeded RNG anywhere in the codebase (production or test)"; review checklist enforces |
+| Strict-drop for unknown action breaks forward-compat across protocol revisions | This is by design (§12.7 + §3.4 rationale): forward-compat is the responsibility of explicit version negotiation, not silent graceful-degrade. A future v1.6 client emitting unknown actions to a v1.5 receiver is a coordinated-rollout concern, not a graceful-fallback concern |
+| Snapshot regeneration becomes a maintenance burden when protocol legitimately changes | Generator tool (§3.5.6) is a manual-run utility, not part of CI. Auto-regenerating in CI would defeat regression-detection; manual regeneration is a deliberate human act. The cost is small relative to the regression-detection value |
 
 ---
 
 ## 8. Definition of done — single sentence
 
-**Phase 1 is done when an external consumer can pull `io.takamaka.messages:messages:1.5.0-SNAPSHOT` from the local Maven repo, call `ChatCryptoUtils.getReplyMessageBean(...)` (or any other action helper), serialize the result, hand the wire JSON to a future Dart implementation, and have the Dart implementation parse, validate, and round-trip it byte-identically.**
+**Phase 1 is done when an external consumer can pull `io.takamaka.messages:messages:1.5.0-SNAPSHOT` from the local Maven repo, call `ChatCryptoUtils.getReplyMessageBean(...)` (or any other action helper), serialize the result, and observe that (a) the resulting wire-format JSON is well-formed v1.1 protocol; (b) a Java receiver fed any of the 37 snapshot fixtures produces the expected validation outcome (hard violation throws the documented exception, or soft violation returns `ValidationResult` with the documented decoration); and (c) the codebase contains zero seeded-RNG paths anywhere — the protocol contract for cross-platform parity is "agreement on validation outcomes for a fixed corpus," not byte-identical regeneration.**
 
 ---
 
-**Document Status:** Ready for implementation start. References branch HEAD `0d3e54e` (12 commits, design locked).
+**Document Status:** Ready for implementation start. References current branch HEAD (20 commits on the design + plan-refinement path).
 **Path:** `/home/h2tcoin.com/giovanni.antino/NetBeansProjects/Messages/docs/roadmap/IMPL_PLAN_PHASE_1_MESSAGES_1_5_0.md`
