@@ -146,16 +146,17 @@ Dart equivalent: `bool? reShared`. Same three-state semantics; same serializatio
 
 **File:** `src/main/java/io/takamaka/messages/chat/message/BasicMessageEncryptedContentBean.java`
 
-Add class-level annotations:
+The bean already carries `@Data`, `@AllArgsConstructor`, `@NoArgsConstructor`, and (pre-applied during the plan-refinement phase) `@Builder`. This commit completes the class-level annotation set by adding the two Jackson annotations:
 
 ```java
 @Data
+@Builder           // already present
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)        // NEW in commit 1
+@JsonIgnoreProperties(ignoreUnknown = true)        // NEW in commit 1
 public class BasicMessageEncryptedContentBean {
-    // ...existing fields, unchanged...
+    // ...fields unchanged from current branch HEAD...
 }
 ```
 
@@ -483,50 +484,174 @@ public final class MessageActionValidator {
 - **Case-insensitive action normalization:** `"Reply"` and `"REPLY"` and `"reply"` all produce the same validation result.
 - **Coverage target:** 85%+ line coverage on `MessageActionValidator`. 100% of `DecorationSeverity.KNOWN`, 100% of `MessageAction.KNOWN`, all decoration codes in `ValidationDecorationCodes.ALL` exercised at least once.
 
-### 3.4 `ChatCryptoUtils` helpers (commit 4)
+### 3.4 `ChatCryptoUtils` helpers — per-action with shared internal predicates (commit 4)
 
-**File:** `src/main/java/io/takamaka/messages/utils/ChatCryptoUtils.java`
+**Decision recap.** Per-action public methods (Option A — chosen for clarity over compactness; spec mapping visible inline). Internal helpers extracted for genuinely-shared work (regex predicates, the crypto path). No generic switch-on-action helpers (those are the anti-pattern the per-action choice was meant to avoid). Auto-stamp `client_protocol_version` always; `@VisibleForTesting` package-private variants for test-fixture generation.
 
-Add per-action canonical-construction methods. Each wraps the existing `getBasicMessageBean(...)` with action-specific defaults and the new field population. Signatures:
+#### 3.4.1 Files modified / created
+
+| File | Change |
+|---|---|
+| `ChatCryptoUtils.java` | 10 new public methods + ~7 private/package-private helpers |
+| `BasicMessageEncryptedContentBean.java` | (no change — `@lombok.Builder` was pre-applied during the plan-refinement phase; commit 1 §3.1 adds the remaining Jackson annotations) |
+| `SendContext.java` (new) | Common context record passed as first parameter to every helper |
+| `ChatCryptoConstructionException.java` (new) | Base exception for sender-side errors |
+| `ForwardDepthExceededException.java` (new) | Typed subclass for depth-cap violation |
+| `InvalidEmbeddedEnvelopeException.java` (new) | Typed subclass for share_history bad embeds |
+| `InlineContentViolationException.java` (new) | Typed subclass for reaction inline-content limits |
+| `MalformedTargetException.java` (new) | Typed subclass for signature/PK regex failures |
+
+#### 3.4.2 Shared `SendContext` record
+
+```java
+public record SendContext(
+    InstanceWalletKeystoreInterface signingWallet,
+    int keyIndex,
+    String conversationHashName,
+    String conversationEncryptionKey,        // base64url of the AES-256 symmetric key
+    Function<String, byte[]> keyDerivationFn  // nullable; null = default derivation
+) {}
+```
+
+Carries the five recurring infrastructure parameters every helper needs. Each helper takes `SendContext ctx` as its first parameter; action-specific parameters follow.
+
+#### 3.4.3 Internal helpers (shared across the 10 public methods)
+
+| Internal helper | Used by | Responsibility |
+|---|---|---|
+| `validateSendContext(SendContext)` | all 10 | Null-check the record + required fields; throws `ChatCryptoConstructionException` |
+| `validateSignatureFormat(String)` | reply, reaction, reaction_remove, edit, redact, pin | Apply `^[A-Za-z0-9_-]{86}\.\.$`; throws `MalformedTargetException` |
+| `validatePublicKeyFormat(String)` | forward (when claimed origin set) | Apply `^[A-Za-z0-9_-]{43}\.$`; throws `MalformedTargetException` |
+| `validatePinReason(String)` | pin | Length ≤ 200 (SHOULD); doesn't throw, logs WARN on overflow |
+| `validateReactionPayload(ChatMediaPlaceholderBean)` | reaction | Inline limits + reaction MIME whitelist; throws `InlineContentViolationException` |
+| `walkForwardDepth(BasicMessageEncryptedContentBean)` | forward | Returns int depth of `fw_content` chain (0 for leaf); helper uses to enforce ≤ 10 |
+| `buildAndSign(SendContext, BasicMessageEncryptedContentBean, List<String> citedUsers)` | all 10 | Existing encrypt + sign + envelope-wrap path (currently `getBasicMessageBean(...)`); refactored to take the inner bean + cited_users |
+
+Seven helpers total. Each is single-purpose, narrowly scoped, easy to test in isolation. **No `validateActionInputs(action, ...)` umbrella, no `buildSignatureTargetedBean(action, ...)` generic.** Per-action logic stays in the per-action public method, where the spec mapping is visible.
+
+#### 3.4.4 Public method shape — one example
 
 ```java
 public static BasicMessageRequestBean getReplyMessageBean(
-    InstanceWalletKeystoreInterface iwkSign,
-    int index,
-    String conversationHashName,
-    String conversationEncryptionKey,
-    List<String> citedUsers,
-    String replyText,
-    String parentSignature,  // targets[0]
-    Function<String, byte[]> keyDerivationFn
-) throws ...;
-
-public static BasicMessageRequestBean getReactionMessageBean(
-    InstanceWalletKeystoreInterface iwkSign,
-    int index,
-    String conversationHashName,
-    String conversationEncryptionKey,
+    SendContext ctx,
     String parentSignature,
-    ChatMediaPlaceholderBean reactionPayload,  // emoji or sticker or inline image
-    Function<String, byte[]> keyDerivationFn
-) throws ...;
+    String replyText,
+    List<ChatMediaPlaceholderBean> attachedMedia,
+    List<String> citedUsers
+) throws ChatCryptoConstructionException, MalformedTargetException {
+    validateSendContext(ctx);
+    validateSignatureFormat(parentSignature);
 
-// ... and one per other action:
-// getReactionRemoveMessageBean, getEditMessageBean, getRedactMessageBean,
-// getPinMessageBean, getUnpinMessageBean, getForwardMessageBean,
-// getShareHistoryMessageBean
+    BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+        .textMessage(replyText)
+        .attachedMedia(attachedMedia)
+        .action(MessageAction.REPLY)
+        .targets(List.of(parentSignature))
+        .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+        .build();
+
+    return buildAndSign(ctx, inner, citedUsers);
+}
 ```
 
-Each helper:
-- Builds the `BasicMessageEncryptedContentBean` with the right field combination per the action's registry row.
-- Calls the existing encryption + signature wrap.
-- Returns a fully-formed `BasicMessageRequestBean`.
+Reader's flow: validate → construct per spec § registry row → sign and return. The spec mapping is visible inline. The crypto path is delegated. The validation predicates are named.
 
-For `getForwardMessageBean`: accepts the prior `fw_content` to embed (or null for first-hop forwards), plus the claimed-origin PK (or null for anonymous). Enforces the depth-10 cap at construction time (throw if input would exceed).
+#### 3.4.5 Full public method list
 
-For `getShareHistoryMessageBean`: accepts the original `BasicMessageRequestBean` to embed. Validates the embedded inner signature before constructing (refuse to wrap a forgery). Sets `re_shared` based on whether the caller indicates they received the original via a prior share.
+Ten methods. Each follows the same internal structure (validate inputs → build bean via builder → `buildAndSign`):
 
-**Acceptance:** integration test for each action — construct, serialize, parse, validate. Cross-platform vector fixture generated for each.
+```java
+// Plain message (no action; helpers auto-stamp version)
+public static BasicMessageRequestBean getPlainMessageBean(
+    SendContext ctx, String textMessage,
+    List<ChatMediaPlaceholderBean> attachedMedia, List<String> citedUsers
+) throws ChatCryptoConstructionException;
+
+public static BasicMessageRequestBean getReplyMessageBean(
+    SendContext ctx, String parentSignature, String replyText,
+    List<ChatMediaPlaceholderBean> attachedMedia, List<String> citedUsers
+) throws ChatCryptoConstructionException, MalformedTargetException;
+
+public static BasicMessageRequestBean getReactionMessageBean(
+    SendContext ctx, String parentSignature,
+    ChatMediaPlaceholderBean reactionPayload, List<String> citedUsers
+) throws ChatCryptoConstructionException, MalformedTargetException, InlineContentViolationException;
+
+public static BasicMessageRequestBean getReactionRemoveMessageBean(
+    SendContext ctx, String parentSignature
+) throws ChatCryptoConstructionException, MalformedTargetException;
+
+public static BasicMessageRequestBean getEditMessageBean(
+    SendContext ctx, String parentSignature, String newText,
+    List<ChatMediaPlaceholderBean> newAttachedMedia, List<String> citedUsers
+) throws ChatCryptoConstructionException, MalformedTargetException;
+
+public static BasicMessageRequestBean getRedactMessageBean(
+    SendContext ctx, String parentSignature, String optionalReason
+) throws ChatCryptoConstructionException, MalformedTargetException;
+
+public static BasicMessageRequestBean getPinMessageBean(
+    SendContext ctx, String targetMessageSignature, String optionalReason
+) throws ChatCryptoConstructionException, MalformedTargetException;
+
+public static BasicMessageRequestBean getUnpinMessageBean(
+    SendContext ctx
+) throws ChatCryptoConstructionException;
+
+public static BasicMessageRequestBean getForwardMessageBean(
+    SendContext ctx, BasicMessageEncryptedContentBean beanToForward,
+    String forwarderText, String claimedOriginPk
+) throws ChatCryptoConstructionException, ForwardDepthExceededException;
+
+public static BasicMessageRequestBean getShareHistoryMessageBean(
+    SendContext ctx, BasicMessageRequestBean originalEnvelope,
+    String relayerNote, boolean reShared
+) throws ChatCryptoConstructionException, InvalidEmbeddedEnvelopeException;
+```
+
+#### 3.4.6 Auto-stamp version contract
+
+Every helper sets `clientProtocolVersion = MessageProtocolVersion.CURRENT` via the builder's `.clientProtocolVersion(...)` step. **No public override.** Test fixtures requiring legacy / future-version beans use `@VisibleForTesting` package-private variants (e.g. `getReplyMessageBeanWithVersion(...)` in the same package; accessible only from `src/test/java`).
+
+This ensures production callers never accidentally emit unversioned or mis-versioned v1.1+ messages.
+
+#### 3.4.7 Exception hierarchy
+
+```java
+public class ChatCryptoConstructionException extends ChatMessageException {
+    private final String code;
+    public ChatCryptoConstructionException(String code, String message) { ... }
+    public String getCode() { return code; }
+    // Public string-constants for known codes — see below
+}
+
+public class MalformedTargetException extends ChatCryptoConstructionException { ... }
+public class ForwardDepthExceededException extends ChatCryptoConstructionException {
+    private final int actualDepth, maxDepth;
+    // accessors for UI: "current chain is N levels, max is 10"
+}
+public class InvalidEmbeddedEnvelopeException extends ChatCryptoConstructionException { ... }
+public class InlineContentViolationException extends ChatCryptoConstructionException { ... }
+```
+
+Code constants on `ChatCryptoConstructionException` (public static final String):
+- `MISSING_PARENT_SIGNATURE`, `MISSING_ORIGINAL_ENVELOPE`, `MISSING_TARGET_MESSAGE_SIGNATURE`, `MISSING_REACTION_PAYLOAD`
+- `MALFORMED_PARENT_SIGNATURE`, `MALFORMED_CLAIMED_ORIGIN_PK`, `MALFORMED_TARGET_MESSAGE_SIGNATURE`
+- `FORWARD_DEPTH_EXCEEDED`
+- `EMBEDDED_INNER_SIGNATURE_INVALID`, `EMBEDDED_INNER_CONVERSATION_MISMATCH`, `NESTED_SHARE_HISTORY`
+- `INLINE_CONTENT_TOO_LARGE`, `INLINE_CONTENT_DIMENSION_VIOLATION`, `INLINE_DECODE_FAILURE`
+- `REACTION_MIME_NOT_ALLOWED`
+- `PIN_REASON_TOO_LONG` (warning only; not thrown)
+- `INCOHERENT_BEAN_CONSTRUCTION` (catch-all)
+
+#### 3.4.8 Acceptance
+
+- Each public method: happy-path test + at least one bad-input `assertThrows` test per checked exception type it declares.
+- `ForwardDepthExceededException` test asserts the `actualDepth` accessor matches the input.
+- `MessageAction` registry-completeness sibling test: assert every entry in `MessageAction.KNOWN` has a corresponding `get*MessageBean` helper.
+- Auto-stamp test: assert every helper's output bean has `clientProtocolVersion == MessageProtocolVersion.CURRENT`.
+- Builder-vs-AllArgsConstructor parity test: `BasicMessageEncryptedContentBean.builder().textMessage("x").build()` and `new BasicMessageEncryptedContentBean("x", null, null, null, null, null, null, null)` produce equal beans.
+- Coverage target: 90%+ on `ChatCryptoUtils` (helpers are small and well-tested per-method).
 
 ### 3.5 Cross-platform test vectors (commit 5, may be merged with commit 4)
 

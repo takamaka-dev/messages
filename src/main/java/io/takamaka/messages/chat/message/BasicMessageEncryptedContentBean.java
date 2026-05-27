@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
 import java.util.List;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -27,6 +28,7 @@ import lombok.NoArgsConstructor;
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class BasicMessageEncryptedContentBean {
