@@ -35,4 +35,8 @@ public class BasicMessageEncryptedContentBean {
     private String textMessage;
     @JsonProperty("attached_media")
     private List<ChatMediaPlaceholderBean> attachedMedia;
+    @JsonProperty("action")
+    private String action;
+    @JsonProperty("targets")
+    private List<String> targets;
 }
