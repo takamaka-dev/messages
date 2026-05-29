@@ -183,10 +183,10 @@ public class ChatUtilsTest {
                 "placeholder",
                 "testSymmetricKey",
                 new ArrayList<>(),
-                new BasicMessageEncryptedContentBean(
-                        "test message content",
-                        new ArrayList<>()
-                )
+                BasicMessageEncryptedContentBean.builder()
+                        .textMessage("test message content")
+                        .attachedMedia(new ArrayList<>())
+                        .build()
         );
 
         String json = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(original);

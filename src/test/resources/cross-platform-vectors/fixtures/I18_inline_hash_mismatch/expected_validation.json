@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : false,
+  "decorations" : [ {
+    "code" : "INLINE_HASH_MISMATCH",
+    "severity" : "ERROR"
+  } ]
+}

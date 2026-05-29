@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "INVALID_FORWARD_BAD_PUBLIC_KEY_FORMAT",
+    "severity" : "WARN"
+  } ]
+}

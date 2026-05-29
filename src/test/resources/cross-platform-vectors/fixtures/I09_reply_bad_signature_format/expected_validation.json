@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "INVALID_REPLY_BAD_SIGNATURE_FORMAT",
+    "severity" : "WARN"
+  } ]
+}

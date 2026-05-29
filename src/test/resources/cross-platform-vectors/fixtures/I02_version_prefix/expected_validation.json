@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "MalformedProtocolVersionException",
+  "code" : "INVALID_PROTOCOL_VERSION_MALFORMED"
+}

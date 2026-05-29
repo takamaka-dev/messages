@@ -1,0 +1,12 @@
+{
+  "text_message" : "look",
+  "attached_media" : [ {
+    "media_type" : "image/png",
+    "unencrypted_content_hash" : "uA_0jkC-X8fMX-N2HSBQaro9Zbq912WCdyk1zF9zXsA.",
+    "preview" : "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "is_the_object" : true
+  } ],
+  "action" : "reply",
+  "targets" : [ "8otxdmZIe7HY_2ugbRZbAn_lrlxjD_QnCix1w7EpK2DnDaJKgBI98JbGBPR1l7U3jN2ue_dHNLyRUQSFiVRlBg.." ],
+  "client_protocol_version" : "1.1"
+}

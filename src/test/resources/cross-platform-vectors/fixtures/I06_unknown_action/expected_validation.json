@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "UnknownActionException",
+  "code" : "INVALID_ACTION"
+}

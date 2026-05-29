@@ -1,0 +1,9 @@
+{
+  "text_message" : "fyi",
+  "action" : "forward",
+  "targets" : [ "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." ],
+  "fw_content" : {
+    "text_message" : "forwarded body"
+  },
+  "client_protocol_version" : "1.1"
+}

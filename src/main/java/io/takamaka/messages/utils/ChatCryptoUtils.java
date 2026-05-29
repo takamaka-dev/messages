@@ -40,10 +40,20 @@ import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
+import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
+import io.takamaka.messages.chat.attachment.InlineContentLimits;
+import io.takamaka.messages.chat.message.MessageAction;
+import io.takamaka.messages.chat.message.MessageActionValidator;
+import io.takamaka.messages.chat.message.MessageProtocolVersion;
+import io.takamaka.messages.exception.ChatCryptoConstructionException;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.CryptoMessageException;
+import io.takamaka.messages.exception.ForwardDepthExceededException;
+import io.takamaka.messages.exception.InlineContentViolationException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
+import io.takamaka.messages.exception.InvalidEmbeddedEnvelopeException;
 import io.takamaka.messages.exception.InvalidParameterException;
+import io.takamaka.messages.exception.MalformedTargetException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.exception.UnsupportedChatMessageTypeException;
 import io.takamaka.messages.exception.UnsupportedSignatureCypherException;
@@ -62,10 +72,12 @@ import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.RandomStringGenerator;
 
@@ -576,6 +588,351 @@ public class ChatCryptoUtils {
             return basicMessageBeanRequest;
         } catch (MessageException | JsonProcessingException | WalletException ex) {
             throw new ChatMessageException(ex);
+        }
+    }
+
+    // ========================================================================
+    // Phase 1 (Messages 1.5.0) — message-action construction helpers (§3.4).
+    // One canonical-construction method per action; shared internal predicates
+    // for the genuinely-common work. Every helper auto-stamps
+    // client_protocol_version = MessageProtocolVersion.CURRENT.
+    // ========================================================================
+
+    static final Pattern SIGNATURE_TARGET = Pattern.compile("^[A-Za-z0-9_-]{86}\\.\\.$");
+    static final Pattern PUBLIC_KEY_TARGET = Pattern.compile("^[A-Za-z0-9_-]{43}\\.$");
+
+    /** Plain message (no action; helper still auto-stamps the version). */
+    public static BasicMessageRequestBean getPlainMessageBean(
+            SendContext ctx, String textMessage,
+            List<ChatMediaPlaceholderBean> attachedMedia, List<String> citedUsers)
+            throws ChatCryptoConstructionException {
+        validateSendContext(ctx);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(textMessage)
+                .attachedMedia(attachedMedia)
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, citedUsers);
+    }
+
+    public static BasicMessageRequestBean getReplyMessageBean(
+            SendContext ctx, String parentSignature, String replyText,
+            List<ChatMediaPlaceholderBean> attachedMedia, List<String> citedUsers)
+            throws ChatCryptoConstructionException, MalformedTargetException {
+        validateSendContext(ctx);
+        validateSignatureFormat(parentSignature,
+                ChatCryptoConstructionException.MISSING_PARENT_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_PARENT_SIGNATURE);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(replyText)
+                .attachedMedia(attachedMedia)
+                .action(MessageAction.REPLY)
+                .targets(List.of(parentSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, citedUsers);
+    }
+
+    public static BasicMessageRequestBean getReactionMessageBean(
+            SendContext ctx, String parentSignature,
+            ChatMediaPlaceholderBean reactionPayload, List<String> citedUsers)
+            throws ChatCryptoConstructionException, MalformedTargetException, InlineContentViolationException {
+        validateSendContext(ctx);
+        validateSignatureFormat(parentSignature,
+                ChatCryptoConstructionException.MISSING_PARENT_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_PARENT_SIGNATURE);
+        if (reactionPayload == null) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.MISSING_REACTION_PAYLOAD,
+                    "reaction payload is required");
+        }
+        validateReactionPayload(reactionPayload);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .attachedMedia(List.of(reactionPayload))
+                .action(MessageAction.REACTION)
+                .targets(List.of(parentSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, citedUsers);
+    }
+
+    public static BasicMessageRequestBean getReactionRemoveMessageBean(
+            SendContext ctx, String parentSignature)
+            throws ChatCryptoConstructionException, MalformedTargetException {
+        validateSendContext(ctx);
+        validateSignatureFormat(parentSignature,
+                ChatCryptoConstructionException.MISSING_PARENT_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_PARENT_SIGNATURE);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .action(MessageAction.REACTION_REMOVE)
+                .targets(List.of(parentSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    public static BasicMessageRequestBean getEditMessageBean(
+            SendContext ctx, String parentSignature, String newText,
+            List<ChatMediaPlaceholderBean> newAttachedMedia, List<String> citedUsers)
+            throws ChatCryptoConstructionException, MalformedTargetException {
+        validateSendContext(ctx);
+        validateSignatureFormat(parentSignature,
+                ChatCryptoConstructionException.MISSING_PARENT_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_PARENT_SIGNATURE);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(newText)
+                .attachedMedia(newAttachedMedia)
+                .action(MessageAction.EDIT)
+                .targets(List.of(parentSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, citedUsers);
+    }
+
+    public static BasicMessageRequestBean getRedactMessageBean(
+            SendContext ctx, String parentSignature, String optionalReason)
+            throws ChatCryptoConstructionException, MalformedTargetException {
+        validateSendContext(ctx);
+        validateSignatureFormat(parentSignature,
+                ChatCryptoConstructionException.MISSING_PARENT_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_PARENT_SIGNATURE);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(optionalReason)
+                .action(MessageAction.REDACT)
+                .targets(List.of(parentSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    public static BasicMessageRequestBean getPinMessageBean(
+            SendContext ctx, String targetMessageSignature, String optionalReason)
+            throws ChatCryptoConstructionException, MalformedTargetException {
+        validateSendContext(ctx);
+        validateSignatureFormat(targetMessageSignature,
+                ChatCryptoConstructionException.MISSING_TARGET_MESSAGE_SIGNATURE,
+                ChatCryptoConstructionException.MALFORMED_TARGET_MESSAGE_SIGNATURE);
+        validatePinReason(optionalReason);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(optionalReason)
+                .action(MessageAction.PIN)
+                .targets(List.of(targetMessageSignature))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    public static BasicMessageRequestBean getUnpinMessageBean(SendContext ctx)
+            throws ChatCryptoConstructionException {
+        validateSendContext(ctx);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .action(MessageAction.UNPIN)
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    public static BasicMessageRequestBean getForwardMessageBean(
+            SendContext ctx, BasicMessageEncryptedContentBean beanToForward,
+            String forwarderText, String claimedOriginPk)
+            throws ChatCryptoConstructionException, ForwardDepthExceededException {
+        validateSendContext(ctx);
+        if (beanToForward == null) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION,
+                    "beanToForward is required");
+        }
+        validatePublicKeyFormat(claimedOriginPk);
+        int prospectiveDepth = 1 + walkForwardDepth(beanToForward);
+        if (prospectiveDepth > MessageActionValidator.MAX_FORWARD_DEPTH) {
+            throw new ForwardDepthExceededException(prospectiveDepth, MessageActionValidator.MAX_FORWARD_DEPTH);
+        }
+        List<String> targets = (claimedOriginPk == null || claimedOriginPk.isBlank())
+                ? List.of() : List.of(claimedOriginPk);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(forwarderText)
+                .action(MessageAction.FORWARD)
+                .targets(targets)
+                .fwContent(beanToForward)
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    public static BasicMessageRequestBean getShareHistoryMessageBean(
+            SendContext ctx, BasicMessageRequestBean originalEnvelope,
+            String relayerNote, boolean reShared)
+            throws ChatCryptoConstructionException, InvalidEmbeddedEnvelopeException {
+        validateSendContext(ctx);
+        if (originalEnvelope == null) {
+            throw new InvalidEmbeddedEnvelopeException(
+                    ChatCryptoConstructionException.MISSING_ORIGINAL_ENVELOPE,
+                    "original envelope is required");
+        }
+        verifyEmbeddedSignature(originalEnvelope);
+        String innerConversation = originalEnvelope.getBasicMessageSignedContentBean() == null
+                ? null : originalEnvelope.getBasicMessageSignedContentBean().getConversationHashName();
+        if (innerConversation == null || !innerConversation.equals(ctx.conversationHashName())) {
+            throw new InvalidEmbeddedEnvelopeException(
+                    ChatCryptoConstructionException.EMBEDDED_INNER_CONVERSATION_MISMATCH,
+                    "embedded original_message belongs to a different conversation");
+        }
+        rejectNestedShareHistory(ctx, originalEnvelope);
+        BasicMessageEncryptedContentBean inner = BasicMessageEncryptedContentBean.builder()
+                .textMessage(relayerNote)
+                .action(MessageAction.SHARE_HISTORY)
+                .originalMessage(originalEnvelope)
+                .reShared(reShared ? Boolean.TRUE : null)
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT)
+                .build();
+        return buildAndSign(ctx, inner, null);
+    }
+
+    // ---- internal helpers (shared across the public methods) ---------------
+
+    private static BasicMessageRequestBean buildAndSign(SendContext ctx,
+            BasicMessageEncryptedContentBean inner, List<String> citedUsers)
+            throws ChatCryptoConstructionException {
+        try {
+            return getBasicMessageBean(
+                    ctx.signingWallet(), ctx.keyIndex(), ctx.conversationHashName(),
+                    ctx.conversationEncryptionKey(), citedUsers, inner);
+        } catch (ChatMessageException ex) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION,
+                    "failed to encrypt and sign message: " + ex.getMessage(), ex);
+        }
+    }
+
+    private static void validateSendContext(SendContext ctx) throws ChatCryptoConstructionException {
+        if (ctx == null) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION, "SendContext is null");
+        }
+        if (ctx.signingWallet() == null) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION, "signingWallet is null");
+        }
+        if (TkmTextUtils.isNullOrBlank(ctx.conversationHashName())) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION, "conversationHashName is required");
+        }
+        if (TkmTextUtils.isNullOrBlank(ctx.conversationEncryptionKey())) {
+            throw new ChatCryptoConstructionException(
+                    ChatCryptoConstructionException.INCOHERENT_BEAN_CONSTRUCTION, "conversationEncryptionKey is required");
+        }
+    }
+
+    private static void validateSignatureFormat(String signature, String missingCode, String malformedCode)
+            throws MalformedTargetException {
+        if (TkmTextUtils.isNullOrBlank(signature)) {
+            throw new MalformedTargetException(missingCode, "signature target is missing");
+        }
+        if (!SIGNATURE_TARGET.matcher(signature).matches()) {
+            throw new MalformedTargetException(malformedCode, "malformed signature target: " + signature);
+        }
+    }
+
+    private static void validatePublicKeyFormat(String publicKey) throws MalformedTargetException {
+        if (publicKey == null || publicKey.isBlank()) {
+            return; // claimed-origin PK is optional (anonymous forward)
+        }
+        if (!PUBLIC_KEY_TARGET.matcher(publicKey).matches()) {
+            throw new MalformedTargetException(
+                    ChatCryptoConstructionException.MALFORMED_CLAIMED_ORIGIN_PK,
+                    "malformed claimed-origin public key: " + publicKey);
+        }
+    }
+
+    private static void validatePinReason(String reason) {
+        if (reason != null && reason.length() > 200) {
+            log.warn("pin reason exceeds the recommended 200-character limit ({} chars); code {}",
+                    reason.length(), ChatCryptoConstructionException.PIN_REASON_TOO_LONG);
+        }
+    }
+
+    private static void validateReactionPayload(ChatMediaPlaceholderBean payload)
+            throws InlineContentViolationException {
+        if (!Boolean.TRUE.equals(payload.getIsTheObject())) {
+            return; // not inline content; nothing to enforce here
+        }
+        if (!InlineContentLimits.isReactionImageMimeAllowed(payload.getMediaType())) {
+            throw new InlineContentViolationException(
+                    ChatCryptoConstructionException.REACTION_MIME_NOT_ALLOWED,
+                    "reaction inline media type not allowed: " + payload.getMediaType());
+        }
+        String preview = payload.getPreview();
+        if (preview == null) {
+            throw new InlineContentViolationException(
+                    ChatCryptoConstructionException.INLINE_DECODE_FAILURE,
+                    "inline reaction payload has no preview content");
+        }
+        final byte[] decoded;
+        try {
+            decoded = Base64.getDecoder().decode(preview);
+        } catch (IllegalArgumentException ex) {
+            throw new InlineContentViolationException(
+                    ChatCryptoConstructionException.INLINE_DECODE_FAILURE,
+                    "inline reaction payload preview is not valid standard Base64", ex);
+        }
+        if (decoded.length > InlineContentLimits.MAX_INLINE_BYTES) {
+            throw new InlineContentViolationException(
+                    ChatCryptoConstructionException.INLINE_CONTENT_TOO_LARGE,
+                    "inline reaction payload exceeds " + InlineContentLimits.MAX_INLINE_BYTES + " bytes");
+        }
+    }
+
+    /**
+     * Counts the {@code fw_content} chain depth (0 for a leaf, i.e. a bean
+     * with no {@code fw_content}).
+     */
+    static int walkForwardDepth(BasicMessageEncryptedContentBean bean) {
+        int depth = 0;
+        BasicMessageEncryptedContentBean node = bean == null ? null : bean.getFwContent();
+        while (node != null) {
+            depth++;
+            node = node.getFwContent();
+        }
+        return depth;
+    }
+
+    private static void verifyEmbeddedSignature(BasicMessageRequestBean originalEnvelope)
+            throws InvalidEmbeddedEnvelopeException {
+        try {
+            String canonical = SimpleRequestHelper.getCanonicalJson(originalEnvelope.getBasicMessageSignedContentBean());
+            TkmCypherBean verify = TkmCypherProviderBCED25519.verify(
+                    originalEnvelope.getFrom(), originalEnvelope.getSignature(), canonical);
+            if (!verify.isValid()) {
+                throw new InvalidEmbeddedEnvelopeException(
+                        ChatCryptoConstructionException.EMBEDDED_INNER_SIGNATURE_INVALID,
+                        "embedded original_message inner signature is invalid");
+            }
+        } catch (JsonProcessingException ex) {
+            throw new InvalidEmbeddedEnvelopeException(
+                    ChatCryptoConstructionException.EMBEDDED_INNER_SIGNATURE_INVALID,
+                    "embedded original_message could not be canonicalized for signature verification", ex);
+        }
+    }
+
+    private static void rejectNestedShareHistory(SendContext ctx, BasicMessageRequestBean originalEnvelope)
+            throws InvalidEmbeddedEnvelopeException {
+        final BasicMessageEncryptedContentBean innerContent;
+        try {
+            innerContent = decryptBasicMessageEncryptedContentBeanWithScope(
+                    originalEnvelope.getBasicMessageSignedContentBean().getEncryptedContent(),
+                    ctx.conversationEncryptionKey(),
+                    CHAT_MESSAGE_TYPES.TOPIC_MESSAGE);
+        } catch (ChatMessageException ex) {
+            // Cannot decrypt the embed (key mismatch / malformed) — leave the
+            // nested check best-effort; the conversation-hash check above is
+            // the authoritative same-conversation guard.
+            log.warn("share_history nested-check skipped: embedded content not decryptable", ex);
+            return;
+        }
+        if (MessageAction.SHARE_HISTORY.equals(MessageAction.normalize(innerContent.getAction()))) {
+            throw new InvalidEmbeddedEnvelopeException(
+                    ChatCryptoConstructionException.NESTED_SHARE_HISTORY,
+                    "cannot embed a share_history inside another share_history");
         }
     }
 

@@ -1,0 +1,11 @@
+{
+  "attached_media" : [ {
+    "media_type" : "image/png",
+    "unencrypted_content_hash" : "cuXbpolVXiW-tfU0L4luPsT5acuZyrJRkd0oHcus4bI.",
+    "preview" : "aGVsbG8=",
+    "is_the_object" : true
+  } ],
+  "action" : "reaction",
+  "targets" : [ "8otxdmZIe7HY_2ugbRZbAn_lrlxjD_QnCix1w7EpK2DnDaJKgBI98JbGBPR1l7U3jN2ue_dHNLyRUQSFiVRlBg.." ],
+  "client_protocol_version" : "1.1"
+}

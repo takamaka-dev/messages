@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "InnerSignatureFailureException",
+  "code" : "INNER_SIGNATURE_FAILURE"
+}

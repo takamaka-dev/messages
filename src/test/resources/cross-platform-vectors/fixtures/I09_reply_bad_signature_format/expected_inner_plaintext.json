@@ -1,0 +1,6 @@
+{
+  "text_message" : "r",
+  "action" : "reply",
+  "targets" : [ "not-a-signature" ],
+  "client_protocol_version" : "1.1"
+}

@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "BROKEN_REFERENCE_REPLY",
+    "severity" : "INFO"
+  } ]
+}

@@ -15,6 +15,8 @@
  */
 package io.takamaka.messages.chat.message;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
 import java.util.List;
@@ -31,6 +33,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BasicMessageEncryptedContentBean {
 
     @JsonProperty("text_message")

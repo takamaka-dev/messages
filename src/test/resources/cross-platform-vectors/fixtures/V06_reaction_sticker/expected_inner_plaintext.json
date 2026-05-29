@@ -1,0 +1,11 @@
+{
+  "attached_media" : [ {
+    "media_type" : "image/webp",
+    "unencrypted_content_hash" : "ruAMiDKCb8sqvN6BoLc4_B2tawM3SNv-yEMdEbspikI.",
+    "preview" : "c3RpY2tlcg==",
+    "is_the_object" : true
+  } ],
+  "action" : "reaction",
+  "targets" : [ "8otxdmZIe7HY_2ugbRZbAn_lrlxjD_QnCix1w7EpK2DnDaJKgBI98JbGBPR1l7U3jN2ue_dHNLyRUQSFiVRlBg.." ],
+  "client_protocol_version" : "1.1"
+}

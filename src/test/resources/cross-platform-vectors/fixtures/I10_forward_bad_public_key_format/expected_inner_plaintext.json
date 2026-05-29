@@ -1,0 +1,9 @@
+{
+  "text_message" : "f",
+  "action" : "forward",
+  "targets" : [ "not-a-public-key" ],
+  "fw_content" : {
+    "text_message" : "body"
+  },
+  "client_protocol_version" : "1.1"
+}

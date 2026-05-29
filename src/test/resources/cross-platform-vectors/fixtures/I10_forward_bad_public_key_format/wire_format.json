@@ -1,0 +1,20 @@
+{
+  "from" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
+  "signature" : "HbqIPRp3J0MCRIM9OVcDeZ9W88v7iumi01oV-mZmigj0_azOdlsC90w7UPOpUS_wrxm63FOVrKOdbwv1r70xCA..",
+  "message_type" : "TOPIC_MESSAGE",
+  "signature_type" : "Ed25519BC",
+  "basic_message_signed_content_bean" : {
+    "conversation_hash_name" : "a1b2c3d4e5f6789012345678901234567890123456789012345678901234abcd",
+    "cited_users" : null,
+    "encrypted_content" : {
+      "pa" : "PBKDF2WithHmacSHA512",
+      "it" : 20000,
+      "tr" : "AES/CBC/PKCS5Padding",
+      "ka" : "AES",
+      "tv" : "v0_1_a",
+      "kl" : 256,
+      "ec" : "UTF-8",
+      "em" : [ "wx74lOjLB5p1iL6QvFeXBg..", "Pcbii83pvlEsxhDROzQq-jBuS-WZp_0q7W7NI0vG0Oh3CiJkRnYvsbhQ8yXcH6I4f5d8H9xbnns7nxZGqOgUGovWc7g_DNUkjpDClARsadPxX5yT3Zuuvex3Wrx1JLrQohAGHWetUd7N0m9zQ0AFFlmemJi04Ca7N1L5IASL_k82GToZNNTFJ_cPvRh_wuWi" ]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "FORWARD_DEPTH_EXCEEDED",
+    "severity" : "INFO"
+  } ]
+}

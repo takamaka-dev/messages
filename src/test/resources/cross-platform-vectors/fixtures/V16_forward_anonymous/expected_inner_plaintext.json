@@ -1,0 +1,9 @@
+{
+  "text_message" : "fyi",
+  "action" : "forward",
+  "targets" : [ ],
+  "fw_content" : {
+    "text_message" : "forwarded body"
+  },
+  "client_protocol_version" : "1.1"
+}

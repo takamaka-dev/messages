@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "LegacyVersionWithFeaturesException",
+  "code" : "INVALID_PROTOCOL_VERSION_LEGACY_WITH_FEATURES"
+}

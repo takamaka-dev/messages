@@ -1,0 +1,15 @@
+{
+  "text_message" : "fyi",
+  "action" : "forward",
+  "targets" : [ ],
+  "fw_content" : {
+    "text_message" : "n1",
+    "fw_content" : {
+      "text_message" : "n0",
+      "fw_content" : {
+        "text_message" : "leaf"
+      }
+    }
+  },
+  "client_protocol_version" : "1.1"
+}

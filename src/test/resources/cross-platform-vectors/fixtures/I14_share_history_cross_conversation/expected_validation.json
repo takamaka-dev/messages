@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : false,
+  "decorations" : [ {
+    "code" : "INVALID_SHARE_HISTORY_CROSS_CONVERSATION",
+    "severity" : "ERROR"
+  } ]
+}

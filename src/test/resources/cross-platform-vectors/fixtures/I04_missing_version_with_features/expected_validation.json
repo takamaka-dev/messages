@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "MissingVersionWithFeaturesException",
+  "code" : "INVALID_PROTOCOL_VERSION_MISSING_WITH_FEATURES"
+}

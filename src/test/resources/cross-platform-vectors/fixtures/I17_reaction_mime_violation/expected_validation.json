@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "INLINE_MIME_VIOLATION",
+    "severity" : "WARN"
+  } ]
+}

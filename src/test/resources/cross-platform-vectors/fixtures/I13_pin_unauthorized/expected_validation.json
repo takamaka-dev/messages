@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "UNAUTHORIZED_PIN",
+    "severity" : "WARN"
+  } ]
+}

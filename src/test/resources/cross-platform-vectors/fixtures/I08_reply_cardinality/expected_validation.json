@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "INVALID_REPLY_MALFORMED_TARGETS",
+    "severity" : "WARN"
+  } ]
+}

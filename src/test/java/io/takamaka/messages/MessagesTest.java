@@ -223,9 +223,10 @@ public class MessagesTest {
                         "placehoder",
                         "pollo",
                         new ArrayList<>(),
-                        new BasicMessageEncryptedContentBean(
-                                "sti casi",
-                                new ArrayList<>()));
+                        BasicMessageEncryptedContentBean.builder()
+                                .textMessage("sti casi")
+                                .attachedMedia(new ArrayList<>())
+                                .build());
 
         String basicMessageJson = TkmTextUtils.getJacksonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(basicMessageBean);
 

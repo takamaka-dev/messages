@@ -1,0 +1,5 @@
+{
+  "type" : "throws",
+  "exception" : "IncompatibleMajorVersionException",
+  "code" : "INVALID_PROTOCOL_VERSION_INCOMPATIBLE_MAJOR"
+}

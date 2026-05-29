@@ -1,0 +1,39 @@
+{
+  "text_message" : "f",
+  "action" : "forward",
+  "targets" : [ ],
+  "fw_content" : {
+    "text_message" : "n9",
+    "fw_content" : {
+      "text_message" : "n8",
+      "fw_content" : {
+        "text_message" : "n7",
+        "fw_content" : {
+          "text_message" : "n6",
+          "fw_content" : {
+            "text_message" : "n5",
+            "fw_content" : {
+              "text_message" : "n4",
+              "fw_content" : {
+                "text_message" : "n3",
+                "fw_content" : {
+                  "text_message" : "n2",
+                  "fw_content" : {
+                    "text_message" : "n1",
+                    "fw_content" : {
+                      "text_message" : "n0",
+                      "fw_content" : {
+                        "text_message" : "leaf"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "client_protocol_version" : "1.1"
+}

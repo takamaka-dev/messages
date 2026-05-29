@@ -1,0 +1,8 @@
+{
+  "type" : "result",
+  "overallValid" : true,
+  "decorations" : [ {
+    "code" : "INVALID_SHARE_HISTORY_NESTED",
+    "severity" : "WARN"
+  } ]
+}
