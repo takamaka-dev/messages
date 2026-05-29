@@ -6,6 +6,11 @@ This directory contains architectural documentation and API references for the M
 
 ### API References
 
+- **[MESSAGE_ACTIONS_API_1_5_0.md](MESSAGE_ACTIONS_API_1_5_0.md)** - Message-action layer (1.5.0) consumer API
+  - All `ChatCryptoUtils.get*MessageBean` sender helpers + `SendContext`
+  - `MessageActionValidator` / `ValidationContext` / `ValidationResult` receiver API
+  - Inner-plaintext and signed-wire-envelope JSON
+  - **Per-action JSON + edge cases + shell CLI:** see [../message-actions/](../message-actions/)
 - **[MENTION_UTILITIES_API.md](MENTION_UTILITIES_API.md)** - Complete API reference for mention system
   - **MentionParser** - Extract and validate @public/#private mentions
   - **MentionRenderer** - Render mentions with abbreviated keys

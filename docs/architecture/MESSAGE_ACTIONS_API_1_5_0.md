@@ -16,6 +16,12 @@ Downstream consumers (`rsclient`, `rschat`, `shell`, `rsclient-flutter`,
 `tkmChat`) build against this surface; they MUST NOT reimplement the
 construction or validation logic.
 
+> **Per-action deep dives** (one page each, with fixture-anchored JSON, the
+> invalid/edge cases, and the shell CLI form) live in
+> [`../message-actions/`](../message-actions/). This doc is the flat API surface;
+> that subsection is the by-example reference. The normative prose is the
+> [spec](../roadmap/MESSAGE_ACTIONS_REPLY_AND_REACTION_SPEC.md).
+
 ---
 
 ## 0. Regression note — old validation tests still compile
