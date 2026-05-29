@@ -85,4 +85,12 @@ public class ChatServerEndpoints {
      */
     public static final String UNREGISTER_FCM_TOKEN = "unregisterfcmtoken";
 
+    /**
+     * The relative path for the server capabilities endpoint. Public and
+     * unauthenticated (no nonce, no signature): returns the server build
+     * version and the supported wire-protocol range so clients can negotiate
+     * compatibility before signing any request.
+     */
+    public static final String SERVER_INFO = "serverinfo";
+
 }

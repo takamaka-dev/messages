@@ -41,6 +41,14 @@ public final class MessageProtocolVersion {
     public static final int CURRENT_MAJOR = 1;
     public static final int CURRENT_MINOR = 1;
 
+    /**
+     * Oldest MINOR (within {@link #CURRENT_MAJOR}) the server still accepts.
+     * Legacy {@code 1.0} messages with no v1.1 feature fields are grandfathered
+     * (see {@code MessageActionValidator.validateProtocolVersion}), so the
+     * supported range for clients is {@code 1.MIN_MINOR}..{@code 1.CURRENT_MINOR}.
+     */
+    public static final int MIN_MINOR = 0;
+
     private static final Pattern FORMAT = Pattern.compile("^\\d+\\.\\d+$");
 
     public record Parsed(int major, int minor) {
