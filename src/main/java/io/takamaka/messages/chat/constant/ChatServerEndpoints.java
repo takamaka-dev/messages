@@ -93,4 +93,33 @@ public class ChatServerEndpoints {
      */
     public static final String SERVER_INFO = "serverinfo";
 
+    /**
+     * Public, unauthenticated capability manifest of supported user options
+     * (versions, schemas, descriptions, visibility). Mirrors {@link #SERVER_INFO}
+     * in being open (no nonce, no signature). USER_OPTIONS_DESIGN.md D7.
+     */
+    public static final String USER_OPTIONS_MANIFEST = "useroptionsmanifest";
+
+    /**
+     * Write/update a single user option. Signed envelope + server-issued nonce.
+     */
+    public static final String SET_USER_OPTION = "setuseroption";
+
+    /**
+     * Bulk-reset all user options (bumps the per-user reset watermark). Signed
+     * envelope + server-issued nonce.
+     */
+    public static final String RESET_USER_OPTIONS = "resetuseroptions";
+
+    /**
+     * Read this identity's own options. Signed, no nonce (idempotent self-read).
+     */
+    public static final String GET_USER_OPTIONS = "getuseroptions";
+
+    /**
+     * Read another identity's option projection (D10). Signed, no nonce,
+     * rate-limited; subject to the option's visibility tier.
+     */
+    public static final String GET_USER_OPTION_PEER = "getuseroptionpeer";
+
 }

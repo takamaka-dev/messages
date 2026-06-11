@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 AiliA SA.
+ * Copyright 2025 AiliA SA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat.options;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
+ * Response for {@code getuseroptions}: the identity's active options (above the
+ * reset watermark) plus the current watermark.
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum NOTIFICATION_TYPES {
-    CONVERSATION_REQUEST,
-    NEW_MESSAGE,
-    QUOTE_IN_CONVERSATION,
-    /**
-     * Unsigned invalidation tickle: "your user options changed at T, re-fetch".
-     * Carries no value (USER_OPTIONS_DESIGN.md D8). Align this literal with the
-     * Flutter client.
-     */
-    SETTINGS_UPDATE
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserOptionsListResponseBean {
+
+    @JsonProperty("options")
+    private List<ActiveOptionBean> options;
+
+    @JsonProperty("reset_watermark")
+    private Long resetWatermark;
 }

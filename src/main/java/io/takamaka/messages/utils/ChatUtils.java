@@ -46,6 +46,10 @@ import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
+import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
+import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
+import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
+import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.InvalidParameterException;
@@ -177,6 +181,22 @@ public class ChatUtils {
 
     public static final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RetrieveConversationRequestBean.class);
+    }
+
+    public static final SetUserOptionRequestBean fromJsonToSetUserOptionRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SetUserOptionRequestBean.class);
+    }
+
+    public static final ResetUserOptionsRequestBean fromJsonToResetUserOptionsRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ResetUserOptionsRequestBean.class);
+    }
+
+    public static final GetUserOptionsRequestBean fromJsonToGetUserOptionsRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetUserOptionsRequestBean.class);
+    }
+
+    public static final GetUserOptionPeerRequestBean fromJsonToGetUserOptionPeerRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetUserOptionPeerRequestBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {

@@ -38,6 +38,14 @@ import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
+import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
+import io.takamaka.messages.chat.options.GetUserOptionPeerSignedContentBean;
+import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
+import io.takamaka.messages.chat.options.GetUserOptionsSignedContentBean;
+import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
+import io.takamaka.messages.chat.options.ResetUserOptionsSignedContentBean;
+import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
+import io.takamaka.messages.chat.options.SetUserOptionSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
@@ -363,6 +371,113 @@ public class ChatCryptoUtils {
         }
     }
 
+    /**
+     * Build a signed {@code setuseroption} request. The signature covers
+     * {@code canonical(pl)}. The caller supplies a fresh server-issued nonce;
+     * for ordered writes the client must fetch-then-use nonces sequentially
+     * (USER_OPTIONS_DESIGN.md §8).
+     */
+    public static final SetUserOptionRequestBean getSignedSetUserOptionRequest(
+            final NonceResponseBean nonce,
+            final String parameterName,
+            final String version,
+            final String parameterJson,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final SetUserOptionSignedContentBean pl = new SetUserOptionSignedContentBean(
+                    nonce, parameterName, version, parameterJson, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new SetUserOptionRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.SET_USER_OPTION.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code resetuseroptions} request (bulk reset). The nonce's
+     * issue time becomes the per-user reset watermark.
+     */
+    public static final ResetUserOptionsRequestBean getSignedResetUserOptionsRequest(
+            final NonceResponseBean nonce,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final ResetUserOptionsSignedContentBean pl = new ResetUserOptionsSignedContentBean(nonce);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new ResetUserOptionsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.RESET_USER_OPTIONS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getuseroptions} self-read request (no nonce).
+     *
+     * @param parameterName a specific option, or {@code null} for all options
+     */
+    public static final GetUserOptionsRequestBean getSignedGetUserOptionsRequest(
+            final String parameterName,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final GetUserOptionsSignedContentBean pl = new GetUserOptionsSignedContentBean(parameterName, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetUserOptionsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_USER_OPTIONS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getuseroptionpeer} peer-read request (D10, no
+     * nonce). Returns the target's declared projection subject to visibility.
+     */
+    public static final GetUserOptionPeerRequestBean getSignedGetUserOptionPeerRequest(
+            final String targetPublicKey,
+            final String parameterName,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final GetUserOptionPeerSignedContentBean pl = new GetUserOptionPeerSignedContentBean(targetPublicKey, parameterName, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetUserOptionPeerRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_USER_OPTION_PEER.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
     public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
         RegisterUserRequestBean signedRegisteredUserRequests = getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
@@ -531,6 +646,26 @@ public class ChatCryptoUtils {
                     final RetrieveConversationRequestBean fromJsonToRetrieveConversationRequestBean = ChatUtils.fromJsonToRetrieveConversationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveConversationRequestBean.getRetrieveConversationRequestContentBean());
                     returnObj = fromJsonToRetrieveConversationRequestBean;
+                }
+                case "SET_USER_OPTION" -> {
+                    final SetUserOptionRequestBean setUserOptionRequestBean = ChatUtils.fromJsonToSetUserOptionRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(setUserOptionRequestBean.getPl());
+                    returnObj = setUserOptionRequestBean;
+                }
+                case "RESET_USER_OPTIONS" -> {
+                    final ResetUserOptionsRequestBean resetUserOptionsRequestBean = ChatUtils.fromJsonToResetUserOptionsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(resetUserOptionsRequestBean.getPl());
+                    returnObj = resetUserOptionsRequestBean;
+                }
+                case "GET_USER_OPTIONS" -> {
+                    final GetUserOptionsRequestBean getUserOptionsRequestBean = ChatUtils.fromJsonToGetUserOptionsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionsRequestBean.getPl());
+                    returnObj = getUserOptionsRequestBean;
+                }
+                case "GET_USER_OPTION_PEER" -> {
+                    final GetUserOptionPeerRequestBean getUserOptionPeerRequestBean = ChatUtils.fromJsonToGetUserOptionPeerRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionPeerRequestBean.getPl());
+                    returnObj = getUserOptionPeerRequestBean;
                 }
 
                 default ->

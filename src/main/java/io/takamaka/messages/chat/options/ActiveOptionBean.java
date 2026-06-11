@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 AiliA SA.
+ * Copyright 2025 AiliA SA.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.takamaka.messages.utils;
+package io.takamaka.messages.chat.options;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
+ * A single active option row as returned by {@code getuseroptions}.
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
-public enum NOTIFICATION_TYPES {
-    CONVERSATION_REQUEST,
-    NEW_MESSAGE,
-    QUOTE_IN_CONVERSATION,
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ActiveOptionBean {
+
+    @JsonProperty("pn")
+    private String parameterName;
+
+    @JsonProperty("v")
+    private String version;
+
+    @JsonProperty("val")
+    private String parameterJson;
+
     /**
-     * Unsigned invalidation tickle: "your user options changed at T, re-fetch".
-     * Carries no value (USER_OPTIONS_DESIGN.md D8). Align this literal with the
-     * Flutter client.
+     * The authoritative write time (nonce issue time).
      */
-    SETTINGS_UPDATE
+    @JsonProperty("nit")
+    private Long nonceIssueTime;
 }
