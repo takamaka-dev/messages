@@ -135,4 +135,18 @@ public class ChatServerEndpoints {
      */
     public static final String RETRIEVE_READ_RECEIPTS = "retrievereadreceipts";
 
+    /**
+     * Open the transient typing stream (request-stream, signed once). The server
+     * verifies the Ed25519 signature and binds the identity to the connection
+     * (D3). TYPING_INDICATOR_DESIGN.md D2.
+     */
+    public static final String TYPING_SUBSCRIBE = "typingsubscribe";
+
+    /**
+     * Emit a plain fire-and-forget typing frame (carries only the conversation
+     * hash). The sender is attributed from the connection-bound identity, never
+     * the frame (D3).
+     */
+    public static final String TYPING_EMIT = "typingemit";
+
 }

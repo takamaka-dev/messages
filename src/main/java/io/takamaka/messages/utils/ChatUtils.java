@@ -53,6 +53,9 @@ import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptBatchBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptRequestBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeBean;
+import io.takamaka.messages.chat.typing.TypingEmitBean;
+import io.takamaka.messages.chat.typing.TypingSignalBean;
+import io.takamaka.messages.chat.typing.TypingSubscribeBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.InvalidParameterException;
@@ -212,6 +215,18 @@ public class ChatUtils {
 
     public static final ReadReceiptBatchBean fromJsonToReadReceiptBatchBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ReadReceiptBatchBean.class);
+    }
+
+    public static final TypingSubscribeBean fromJsonToTypingSubscribeBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, TypingSubscribeBean.class);
+    }
+
+    public static final TypingEmitBean fromJsonToTypingEmitBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, TypingEmitBean.class);
+    }
+
+    public static final TypingSignalBean fromJsonToTypingSignalBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, TypingSignalBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {

@@ -45,6 +45,8 @@ public enum CHAT_MESSAGE_TYPES {
      */
     READ_RECEIPT,
     /** {@code retrievereadreceipts} signed subscribe message_type (D10). */
-    RETRIEVE_READ_RECEIPTS
+    RETRIEVE_READ_RECEIPTS,
+    /** Signed typing subscribe envelope (the ONLY signed typing call; emits are plain). */
+    TYPING_SUBSCRIBE
 
 }

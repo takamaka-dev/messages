@@ -50,6 +50,8 @@ import io.takamaka.messages.chat.receipt.ReadReceiptRequestBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSignedContentBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeSignedContentBean;
+import io.takamaka.messages.chat.typing.TypingSubscribeBean;
+import io.takamaka.messages.chat.typing.TypingSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
@@ -564,6 +566,31 @@ public class ChatCryptoUtils {
         }
     }
 
+    // ===== Typing indicator — TYPING_INDICATOR_DESIGN.md D2/D3 =====
+
+    /**
+     * Build the one-time signed typing subscribe (the ONLY signed typing call).
+     * Emits afterwards are plain {@code TypingEmitBean} fire-and-forget frames —
+     * no helper needed (just {@code new TypingEmitBean(conv, pv)}).
+     */
+    public static final TypingSubscribeBean getTypingSubscribeBean(
+            final InstanceWalletKeystoreInterface signIwk, final int sigIwkIndex) throws CryptoMessageException {
+        try {
+            final TypingSubscribeSignedContentBean pl = new TypingSubscribeSignedContentBean(
+                    new Date().getTime(), MessageProtocolVersion.V_1_0);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new TypingSubscribeBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.TYPING_SUBSCRIBE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (MessageException | JsonProcessingException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
     public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
         RegisterUserRequestBean signedRegisteredUserRequests = getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
@@ -762,6 +789,11 @@ public class ChatCryptoUtils {
                     final ReadReceiptSubscribeBean readReceiptSubscribeBean = ChatUtils.fromJsonToReadReceiptSubscribeBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(readReceiptSubscribeBean.getPl());
                     returnObj = readReceiptSubscribeBean;
+                }
+                case "TYPING_SUBSCRIBE" -> {
+                    final TypingSubscribeBean typingSubscribeBean = ChatUtils.fromJsonToTypingSubscribeBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(typingSubscribeBean.getPl());
+                    returnObj = typingSubscribeBean;
                 }
 
                 default ->
