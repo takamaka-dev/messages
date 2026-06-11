@@ -46,6 +46,10 @@ import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsSignedContentBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
 import io.takamaka.messages.chat.options.SetUserOptionSignedContentBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptRequestBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptSignedContentBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
@@ -478,6 +482,88 @@ public class ChatCryptoUtils {
         }
     }
 
+    // ===== Read receipts (Deliverable B) — READ_RECEIPT_DESIGN.md §6/§12 =====
+
+    /**
+     * Build a signed read receipt: AES-CBC encrypt the last-read message
+     * signature under the conversation key with scope {@code "READ_RECEIPT"}
+     * (domain-separated from messages, §12.3), then sign {@code canonical(pl)}.
+     * The server learns <em>that</em> the reader read in the conversation, never
+     * <em>which</em> message. {@code ts} is left null (server-set at fan-out).
+     */
+    public static final ReadReceiptRequestBean getReadReceiptBean(
+            final InstanceWalletKeystoreInterface iwkSign, final int index,
+            final String conversationHashName, final String conversationEncryptionKey,
+            final String lastReadMessageSignature) throws CryptoMessageException {
+        try {
+            final EncMessageBean enc = TkmEncryptionUtils.toPasswordEncryptedContent(
+                    conversationEncryptionKey, lastReadMessageSignature,
+                    CHAT_MESSAGE_TYPES.READ_RECEIPT.name(),       // scope = domain-separating salt (== message_type)
+                    EncryptionContext.v0_1_a.name());
+            final ReadReceiptSignedContentBean pl = new ReadReceiptSignedContentBean(
+                    conversationHashName,
+                    enc.getEncryptedMessage()[1],                 // em[1] = ciphertext
+                    enc.getEncryptedMessage()[0],                 // em[0] = iv
+                    MessageProtocolVersion.V_1_0,                 // pv
+                    EncryptionContext.v0_1_a.name());             // v
+            final String signature = SimpleRequestHelper.signChatMessage(
+                    SimpleRequestHelper.getCanonicalJson(pl), iwkSign, index);
+            return new ReadReceiptRequestBean(
+                    pl,
+                    iwkSign.getPublicKeyAtIndexURL64(index),
+                    signature,
+                    CHAT_MESSAGE_TYPES.READ_RECEIPT.name(),
+                    iwkSign.getWalletCypher().name());
+        } catch (MessageException | JsonProcessingException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Decrypt mirror of {@link #getReadReceiptBean}: rebuild the
+     * {@link EncMessageBean} from the pinned {@code pl.v} params + {@code pl.iv}
+     * + {@code pl.enc}, then decrypt to the last-read message signature
+     * (watermark). <b>Verify the envelope signature BEFORE calling this</b>
+     * (verify-then-decrypt, D3).
+     */
+    public static final String decryptReadReceiptWatermark(
+            final ReadReceiptSignedContentBean pl, final String conversationEncryptionKey) throws CryptoMessageException {
+        try {
+            final EncryptionContext ctx = EncryptionContext.valueOf(pl.getCipherVersion());
+            final EncMessageBean emb = new EncMessageBean(
+                    ctx.getPasswordHashAlgorithm(), ctx.getIterations(), ctx.getTransformation(),
+                    ctx.getKeySpecAlgorithm(), ctx.name(), ctx.getOutputKeyLengthBit(), ctx.getEncoding(),
+                    new String[]{pl.getIv(), pl.getEncryptedWatermark()});
+            return TkmEncryptionUtils.fromPasswordEncryptedContent(
+                    conversationEncryptionKey, CHAT_MESSAGE_TYPES.READ_RECEIPT.name(), emb);
+        } catch (WalletException | IllegalArgumentException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code retrievereadreceipts} subscribe carrying a fresh
+     * server-issued nonce (F3 fix, §8). A reconnect/unmute must fetch a fresh
+     * nonce (the prior one is consumed).
+     */
+    public static final ReadReceiptSubscribeBean getReadReceiptSubscribeBean(
+            final NonceResponseBean nonce, final Long notBefore,
+            final InstanceWalletKeystoreInterface iwkSign, final int index) throws CryptoMessageException {
+        try {
+            final ReadReceiptSubscribeSignedContentBean pl = new ReadReceiptSubscribeSignedContentBean(nonce, notBefore);
+            final String signature = SimpleRequestHelper.signChatMessage(
+                    SimpleRequestHelper.getCanonicalJson(pl), iwkSign, index);
+            return new ReadReceiptSubscribeBean(
+                    pl,
+                    iwkSign.getPublicKeyAtIndexURL64(index),
+                    signature,
+                    CHAT_MESSAGE_TYPES.RETRIEVE_READ_RECEIPTS.name(),
+                    iwkSign.getWalletCypher().name());
+        } catch (MessageException | JsonProcessingException | WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
     public static final RegisterUserRequestBean getSignedRegisterUserRequest(NonceResponseBean nonceResponseBean, String rsaPublicKey, String rsaEncryptionType, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
         RegisterUserRequestSignedContentBean registerUserRequestSignedContentBean = new RegisterUserRequestSignedContentBean(nonceResponseBean, rsaPublicKey, rsaEncryptionType);
         RegisterUserRequestBean signedRegisteredUserRequests = getSignedRegisteredUserRequests(signIwk, sigIwkIndex, registerUserRequestSignedContentBean);
@@ -666,6 +752,16 @@ public class ChatCryptoUtils {
                     final GetUserOptionPeerRequestBean getUserOptionPeerRequestBean = ChatUtils.fromJsonToGetUserOptionPeerRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionPeerRequestBean.getPl());
                     returnObj = getUserOptionPeerRequestBean;
+                }
+                case "READ_RECEIPT" -> {
+                    final ReadReceiptRequestBean readReceiptRequestBean = ChatUtils.fromJsonToReadReceiptRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(readReceiptRequestBean.getPl());
+                    returnObj = readReceiptRequestBean;
+                }
+                case "RETRIEVE_READ_RECEIPTS" -> {
+                    final ReadReceiptSubscribeBean readReceiptSubscribeBean = ChatUtils.fromJsonToReadReceiptSubscribeBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(readReceiptSubscribeBean.getPl());
+                    returnObj = readReceiptSubscribeBean;
                 }
 
                 default ->

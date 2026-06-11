@@ -37,6 +37,14 @@ public enum CHAT_MESSAGE_TYPES {
     SET_USER_OPTION,
     RESET_USER_OPTIONS,
     GET_USER_OPTIONS,
-    GET_USER_OPTION_PEER
+    GET_USER_OPTION_PEER,
+    /**
+     * Read receipt envelope message_type. The SAME literal also serves as the
+     * PBKDF2 scope / domain-separating salt for the encrypted watermark
+     * (READ_RECEIPT_DESIGN.md §12.3) — one constant, two coinciding roles.
+     */
+    READ_RECEIPT,
+    /** {@code retrievereadreceipts} signed subscribe message_type (D10). */
+    RETRIEVE_READ_RECEIPTS
 
 }

@@ -50,6 +50,9 @@ import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptBatchBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptRequestBean;
+import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeBean;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.InvalidChatMessageSignatureException;
 import io.takamaka.messages.exception.InvalidParameterException;
@@ -197,6 +200,18 @@ public class ChatUtils {
 
     public static final GetUserOptionPeerRequestBean fromJsonToGetUserOptionPeerRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetUserOptionPeerRequestBean.class);
+    }
+
+    public static final ReadReceiptRequestBean fromJsonToReadReceiptRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ReadReceiptRequestBean.class);
+    }
+
+    public static final ReadReceiptSubscribeBean fromJsonToReadReceiptSubscribeBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ReadReceiptSubscribeBean.class);
+    }
+
+    public static final ReadReceiptBatchBean fromJsonToReadReceiptBatchBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ReadReceiptBatchBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {

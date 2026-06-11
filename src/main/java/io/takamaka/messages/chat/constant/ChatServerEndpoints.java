@@ -122,4 +122,17 @@ public class ChatServerEndpoints {
      */
     public static final String GET_USER_OPTION_PEER = "getuseroptionpeer";
 
+    /**
+     * Submit a read receipt (request-response, signed). Server verifies, stores
+     * best-effort, and queues for the coalesced fan-out. READ_RECEIPT_DESIGN.md D10.
+     */
+    public static final String SUBMIT_READ_RECEIPT = "submitreadreceipt";
+
+    /**
+     * Subscribe to the dedicated read-receipt stream (request-stream, signed +
+     * server-issued nonce). The nonce closes the F3 subscription-replay residual
+     * (§8). Emits a catch-up snapshot then live coalesced batches.
+     */
+    public static final String RETRIEVE_READ_RECEIPTS = "retrievereadreceipts";
+
 }
