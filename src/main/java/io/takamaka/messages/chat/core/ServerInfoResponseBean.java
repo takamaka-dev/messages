@@ -32,6 +32,23 @@ import lombok.NoArgsConstructor;
  * <p>The response is intentionally static (no timestamp): server time is already
  * provided by the {@code nonce} endpoint via {@link NonceResponseBean}.</p>
  *
+ * <h3>Transport characteristics (manifest v1.1)</h3>
+ * <p>Since manifest {@code 1.1} the probe also advertises the server's
+ * <b>transport limits</b> — {@link #maxFramePayloadLength} and
+ * {@link #maxAttachmentSizeBytes} — so a client can size its upload chunk and
+ * reject oversized files <em>before</em> a transfer silently tears down on the
+ * frame codec. These are <b>advisory hints on an UNSIGNED probe</b>: a client
+ * MUST validate them against its own sane bounds and clamp to its own decoder
+ * limit, never adopt them blindly (see the client {@code resolve()} policy).
+ * A client reading an older server that omits them (value {@code 0} / absent
+ * {@link #manifestVersion}) MUST fall back to conservative defaults.</p>
+ *
+ * <p>This manifest carries its <b>own</b> {@link #manifestVersion}, deliberately
+ * decoupled from {@code MessageProtocolVersion} (the signed-message wire
+ * protocol): growing the capability probe must NOT perturb message signing or
+ * the client/server compatibility gate. Bump {@link #MANIFEST_VERSION_CURRENT}
+ * when fields are added here; keep it additive and backward-compatible.</p>
+ *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  * @since 1.5.0
  */
@@ -39,6 +56,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ServerInfoResponseBean {
+
+    /**
+     * Current capability-manifest schema version. Bump on additive field
+     * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
+     * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
+     */
+    public static final String MANIFEST_VERSION_CURRENT = "1.1";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -50,5 +74,25 @@ public class ServerInfoResponseBean {
     private int protocolMinMinor;
     /** Newest accepted MINOR within {@link #protocolMajor} (current). */
     private int protocolMaxMinor;
+
+    /**
+     * Capability-manifest schema version (see {@link #MANIFEST_VERSION_CURRENT}).
+     * Its own axis, NOT the message wire protocol. Absent/empty ⇒ treat as
+     * {@code "1.0"} (a server that predates the transport-characteristics fields).
+     */
+    private String manifestVersion;
+    /**
+     * Effective RSocket-over-WebSocket max frame payload the server accepts, in
+     * BYTES, sourced from the same {@code spring.rsocket.server.spec.max-frame-payload-length}
+     * property that configures the codec (single source of truth). {@code 0} ⇒
+     * not advertised (older server) — client assumes a conservative default.
+     */
+    private long maxFramePayloadLength;
+    /**
+     * Max single-attachment size the server accepts, in BYTES
+     * ({@code rschat.file-upload.max-attachment-size-bytes}). {@code 0} ⇒ not
+     * advertised (older server). Advisory: clients may pre-reject oversized files.
+     */
+    private long maxAttachmentSizeBytes;
 
 }
