@@ -47,6 +47,13 @@ public enum CHAT_MESSAGE_TYPES {
     /** {@code retrievereadreceipts} signed subscribe message_type (D10). */
     RETRIEVE_READ_RECEIPTS,
     /** Signed typing subscribe envelope (the ONLY signed typing call; emits are plain). */
-    TYPING_SUBSCRIBE
+    TYPING_SUBSCRIBE,
+    /**
+     * FCM push-notification token registration envelope. The SAME literal is
+     * used for both {@code registerfcmtoken} and {@code unregisterfcmtoken}
+     * (the client sends this type for both). Must match the Flutter client
+     * constant {@code ChatServerEndpoints.fcmTokenRegistration}.
+     */
+    FCM_TOKEN_REGISTRATION
 
 }
