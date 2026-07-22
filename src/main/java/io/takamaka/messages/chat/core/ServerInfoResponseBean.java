@@ -43,6 +43,16 @@ import lombok.NoArgsConstructor;
  * A client reading an older server that omits them (value {@code 0} / absent
  * {@link #manifestVersion}) MUST fall back to conservative defaults.</p>
  *
+ * <h3>Rate-limit hints (manifest v1.2)</h3>
+ * <p>Since manifest {@code 1.2} the probe also advertises the per-user
+ * <b>message-send rate-limit budget</b> — {@link #messageBurst} (instantaneous
+ * burst capacity) and {@link #messagePerMinute} (sustained rate) — so a client
+ * can render a submission-burst meter and self-throttle before the server
+ * rejects. Like the transport hints these are <b>advisory on an UNSIGNED
+ * probe</b>: informational only (they gate nothing on the client), and a client
+ * reading an older server that omits them (value {@code 0}) simply shows no
+ * meter. The server may still reject regardless of these hints.</p>
+ *
  * <p>This manifest carries its <b>own</b> {@link #manifestVersion}, deliberately
  * decoupled from {@code MessageProtocolVersion} (the signed-message wire
  * protocol): growing the capability probe must NOT perturb message signing or
@@ -62,7 +72,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.1";
+    public static final String MANIFEST_VERSION_CURRENT = "1.2";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -94,5 +104,19 @@ public class ServerInfoResponseBean {
      * advertised (older server). Advisory: clients may pre-reject oversized files.
      */
     private long maxAttachmentSizeBytes;
+
+    /**
+     * Per-user message-send rate-limit BURST (bucket capacity) for the {@code messages}
+     * endpoint — the max instantaneous run of sends before throttling. Manifest {@code 1.2+}.
+     * {@code 0} ⇒ not advertised (older server); the client shows no submission meter.
+     * Advisory only — informational, gates nothing client-side.
+     */
+    private int messageBurst;
+    /**
+     * Per-user message-send SUSTAINED rate for the {@code messages} endpoint, in sends per
+     * minute (the greedy token refill). Manifest {@code 1.2+}. {@code 0} ⇒ not advertised.
+     * Advisory only.
+     */
+    private int messagePerMinute;
 
 }
