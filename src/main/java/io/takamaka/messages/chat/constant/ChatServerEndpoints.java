@@ -33,6 +33,13 @@ public class ChatServerEndpoints {
     public static final String NONCE = "nonce";
 
     /**
+     * The relative path for the signed "delete for everyone" command (DR-025).
+     * Request-response, signed envelope: tombstones the target message + purges
+     * the owner-listed attachment blobs + fans out the delete.
+     */
+    public static final String DELETE_MESSAGE = "deletemessage";
+
+    /**
      * The relative path for the user encryption/decryption keys registration
      * endpoint.
      */

@@ -47,6 +47,12 @@ public enum CHAT_MESSAGE_TYPES {
     /** {@code retrievereadreceipts} signed subscribe message_type (D10). */
     RETRIEVE_READ_RECEIPTS,
     /** Signed typing subscribe envelope (the ONLY signed typing call; emits are plain). */
-    TYPING_SUBSCRIBE
+    TYPING_SUBSCRIBE,
+    /**
+     * Signed server-side "delete for everyone" command (DR-025). Tombstones the
+     * target message + purges its owner-listed attachment blobs; the envelope is
+     * stored verbatim as the deletion-log tombstone (client-re-verifiable).
+     */
+    DELETE_MESSAGE
 
 }

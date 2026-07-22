@@ -34,6 +34,8 @@ import io.takamaka.messages.chat.conversation.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.message.RetrieveMessageSignedRequestBean;
+import io.takamaka.messages.chat.message.DeleteMessageRequestBean;
+import io.takamaka.messages.chat.message.DeleteMessageSignedContentBean;
 import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
@@ -373,6 +375,44 @@ public class ChatCryptoUtils {
                     signIwk.getWalletCypher().name()
             );
         } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code DELETE_MESSAGE} ("delete for everyone") command
+     * (DR-025). The signature covers {@code canonical(pl)}. The owner's client
+     * supplies {@code targetEncryptedFileHashes} (the efh list read from the
+     * decrypted message body) so the server can purge the attachment blobs it
+     * cannot otherwise locate; pass {@code null}/empty for a text-only message.
+     * {@code clientTimestamp} is advisory only — the server enforces the window
+     * against its own clock and the server-assigned target timestamp.
+     */
+    public static final DeleteMessageRequestBean getSignedDeleteMessageRequest(
+            final String conversationHashName,
+            final String targetMessageSignature,
+            final List<String> targetEncryptedFileHashes,
+            final Long clientTimestamp,
+            final String reason,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int signIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final DeleteMessageSignedContentBean pl = new DeleteMessageSignedContentBean(
+                    conversationHashName,
+                    targetMessageSignature,
+                    targetEncryptedFileHashes,
+                    clientTimestamp,
+                    reason);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, signIwkIndex);
+            return new DeleteMessageRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.DELETE_MESSAGE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (MessageException | WalletException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
         }
     }
@@ -794,6 +834,11 @@ public class ChatCryptoUtils {
                     final TypingSubscribeBean typingSubscribeBean = ChatUtils.fromJsonToTypingSubscribeBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(typingSubscribeBean.getPl());
                     returnObj = typingSubscribeBean;
+                }
+                case "DELETE_MESSAGE" -> {
+                    final DeleteMessageRequestBean deleteMessageRequestBean = ChatUtils.fromJsonToDeleteMessageRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(deleteMessageRequestBean.getPl());
+                    returnObj = deleteMessageRequestBean;
                 }
 
                 default ->
