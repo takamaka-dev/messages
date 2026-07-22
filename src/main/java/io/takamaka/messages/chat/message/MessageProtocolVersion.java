@@ -34,12 +34,20 @@ public final class MessageProtocolVersion {
 
     /** Legacy revision; also matches null / empty / whitespace-only. */
     public static final String V_1_0 = "1.0";
-    /** Current revision. */
+    /** Introduced the v1.1 message-action feature fields (reply/reaction/edit/redact/pin). */
     public static final String V_1_1 = "1.1";
+    /**
+     * Additive: introduced the signed {@code DELETE_MESSAGE} ("delete for
+     * everyone") command + owner-signed tombstone + attachment blob purge
+     * (DR-025). Backward-compatible — 1.0/1.1 messages are still accepted
+     * ({@link #MIN_MINOR} unchanged); a client seeing serverinfo protocol range
+     * up to {@code 1.2} knows the server understands {@code DELETE_MESSAGE}.
+     */
+    public static final String V_1_2 = "1.2";
 
-    public static final String CURRENT = V_1_1;
+    public static final String CURRENT = V_1_2;
     public static final int CURRENT_MAJOR = 1;
-    public static final int CURRENT_MINOR = 1;
+    public static final int CURRENT_MINOR = 2;
 
     /**
      * Oldest MINOR (within {@link #CURRENT_MAJOR}) the server still accepts.
