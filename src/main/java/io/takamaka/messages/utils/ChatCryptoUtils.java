@@ -55,6 +55,8 @@ import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeSignedContentBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
+import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
+import io.takamaka.messages.chat.fcm.FcmTokenRegistrationSignedContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
 import io.takamaka.messages.chat.attachment.InlineContentLimits;
@@ -683,6 +685,26 @@ public class ChatCryptoUtils {
         //return signedRegisteredUserRequests;
     }
 
+    public static final FcmTokenRegistrationRequestBean getSignedFcmTokenRegistrationRequest(NonceResponseBean nonceResponseBean, String fcmToken, String platform, String deviceId, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            FcmTokenRegistrationSignedContentBean fcmTokenRegistrationSignedContentBean = new FcmTokenRegistrationSignedContentBean(nonceResponseBean, fcmToken, platform, deviceId);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(fcmTokenRegistrationSignedContentBean), signIwk, sigIwkIndex);
+            FcmTokenRegistrationRequestBean fcmTokenRegistrationRequestBean = new FcmTokenRegistrationRequestBean(
+                    fcmTokenRegistrationSignedContentBean,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.FCM_TOKEN_REGISTRATION.name(),
+                    signIwk.getWalletCypher().name());
+            return fcmTokenRegistrationRequestBean;
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
     public static final TopicKeyDistributionItemBean getInviteForUser(RegisterUserRequestBean registerUserRequestBean, String topicSymmetricKey) throws CryptoMessageException {
         try {
             String encryptionPublicKey = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKey();
@@ -839,6 +861,11 @@ public class ChatCryptoUtils {
                     final DeleteMessageRequestBean deleteMessageRequestBean = ChatUtils.fromJsonToDeleteMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(deleteMessageRequestBean.getPl());
                     returnObj = deleteMessageRequestBean;
+                }
+                case "FCM_TOKEN_REGISTRATION" -> {
+                    final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean = ChatUtils.fromJsonToFcmTokenRegistrationRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToFcmTokenRegistrationRequestBean.getFcmTokenRegistrationSignedContentBean());
+                    returnObj = fromJsonToFcmTokenRegistrationRequestBean;
                 }
 
                 default ->

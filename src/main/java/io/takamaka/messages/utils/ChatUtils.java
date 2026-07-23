@@ -47,6 +47,7 @@ import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
+import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
@@ -160,6 +161,10 @@ public class ChatUtils {
 
     public static final UserNotificationRequestBean fromJsonToUserNotificationRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, UserNotificationRequestBean.class);
+    }
+
+    public static final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, FcmTokenRegistrationRequestBean.class);
     }
 
     public static final RetrieveAllConversationsRequestBean fromJsonToRetrieveAllConversationsRequestBean(String jsonMessage) throws JsonProcessingException {

@@ -53,6 +53,13 @@ public enum CHAT_MESSAGE_TYPES {
      * target message + purges its owner-listed attachment blobs; the envelope is
      * stored verbatim as the deletion-log tombstone (client-re-verifiable).
      */
-    DELETE_MESSAGE
+    DELETE_MESSAGE,
+    /**
+     * FCM push-notification token registration envelope. The SAME literal is
+     * used for both {@code registerfcmtoken} and {@code unregisterfcmtoken}
+     * (the client sends this type for both). Must match the Flutter client
+     * constant {@code ChatServerEndpoints.fcmTokenRegistration}.
+     */
+    FCM_TOKEN_REGISTRATION
 
 }
