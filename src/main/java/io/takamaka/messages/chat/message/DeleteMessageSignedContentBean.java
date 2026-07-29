@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.extra.beans.EncMessageBean;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -79,7 +80,28 @@ public class DeleteMessageSignedContentBean {
     @JsonProperty("client_ts")
     private Long clientTimestamp;
 
-    /** Optional free-text reason (audit / deletion-log). */
+    /**
+     * Optional reason, ENCRYPTED under the conversation symmetric key.
+     *
+     * <p><b>Why this is not a String.</b> Every other field in this bean is a protocol identifier the server
+     * MUST read to authorize and execute the purge, which is why they are cleartext. The reason never was:
+     * {@code MessageDeleteService} does not read it, it exists purely so members can see why something was
+     * removed. It was a plaintext String until 2026-07-29, which put user-authored text on a
+     * zero-knowledge relay — a direct breach of "E2E encryption is always on: no plaintext data transmitted
+     * to server", and a field's home (a cleartext payload) had silently decided its confidentiality.</p>
+     *
+     * <p>The leak also inverted the feature it belonged to: a deletion reason tends to DESCRIBE the message
+     * being deleted ("wrong chat, that had the address"), so delete purged the ciphertext while leaving a
+     * plaintext description of what was purged, outliving the content it described.</p>
+     *
+     * <p>This follows the precedent the protocol already set for the same field elsewhere:
+     * {@code getRedactMessageBean} carries its reason inside the encrypted body, and even
+     * {@code SignedContentTopicBean.topicDescription} is an {@link EncMessageBean} rather than a String.</p>
+     *
+     * <p>Encrypted with scope {@code DELETE_MESSAGE} (domain separation — a delete-reason ciphertext must not
+     * be interchangeable with a message body) and {@code EncryptionContext.v0_1_a}. Members decrypt with the
+     * conversation key; the relay sees an opaque blob it has no use for.</p>
+     */
     @JsonProperty("reason")
-    private String reason;
+    private EncMessageBean reason;
 }
