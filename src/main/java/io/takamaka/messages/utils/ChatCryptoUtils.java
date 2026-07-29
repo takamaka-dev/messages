@@ -35,6 +35,8 @@ import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContent
 import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.message.RetrieveMessageSignedRequestBean;
 import io.takamaka.messages.chat.message.DeleteMessageRequestBean;
+import io.takamaka.messages.chat.message.RetrieveDeletionsRequestBean;
+import io.takamaka.messages.chat.message.RetrieveDeletionsSignedContentBean;
 import io.takamaka.messages.chat.message.DeleteMessageSignedContentBean;
 import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
@@ -413,6 +415,37 @@ public class ChatCryptoUtils {
                     signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
                     signature,
                     CHAT_MESSAGE_TYPES.DELETE_MESSAGE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (MessageException | WalletException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code retrievedeletions} request (DR-025 catch-up). The signature covers
+     * {@code canonical(pl)}; the server verifies it, checks conversation membership, and streams back the
+     * owner-signed delete envelopes recorded after {@code since}.
+     *
+     * @param conversationHashName the conversation whose deletions to replay
+     * @param since replay deletions with a SERVER delete-time strictly greater than this; {@code null} = all
+     *              the server still holds (bounded by the deletion-log retention window)
+     */
+    public static final RetrieveDeletionsRequestBean getSignedRetrieveDeletionsRequest(
+            final String conversationHashName,
+            final Long since,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int signIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final RetrieveDeletionsSignedContentBean pl = new RetrieveDeletionsSignedContentBean(
+                    conversationHashName, since, new Date().getTime());
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, signIwkIndex);
+            return new RetrieveDeletionsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.RETRIEVE_DELETIONS.name(),
                     signIwk.getWalletCypher().name());
         } catch (MessageException | WalletException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
@@ -861,6 +894,11 @@ public class ChatCryptoUtils {
                     final DeleteMessageRequestBean deleteMessageRequestBean = ChatUtils.fromJsonToDeleteMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(deleteMessageRequestBean.getPl());
                     returnObj = deleteMessageRequestBean;
+                }
+                case "RETRIEVE_DELETIONS" -> {
+                    final RetrieveDeletionsRequestBean retrieveDeletionsRequestBean = ChatUtils.fromJsonToRetrieveDeletionsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(retrieveDeletionsRequestBean.getPl());
+                    returnObj = retrieveDeletionsRequestBean;
                 }
                 case "FCM_TOKEN_REGISTRATION" -> {
                     final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean = ChatUtils.fromJsonToFcmTokenRegistrationRequestBean(messageJson);

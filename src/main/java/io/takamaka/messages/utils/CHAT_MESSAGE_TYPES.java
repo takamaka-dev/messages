@@ -54,6 +54,7 @@ public enum CHAT_MESSAGE_TYPES {
      * stored verbatim as the deletion-log tombstone (client-re-verifiable).
      */
     DELETE_MESSAGE,
+    RETRIEVE_DELETIONS,
     /**
      * FCM push-notification token registration envelope. The SAME literal is
      * used for both {@code registerfcmtoken} and {@code unregisterfcmtoken}

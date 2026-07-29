@@ -43,6 +43,7 @@ import io.takamaka.messages.chat.conversation.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.message.DeleteMessageRequestBean;
+import io.takamaka.messages.chat.message.RetrieveDeletionsRequestBean;
 import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
@@ -173,6 +174,10 @@ public class ChatUtils {
 
     public static final DeleteMessageRequestBean fromJsonToDeleteMessageRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, DeleteMessageRequestBean.class);
+    }
+
+    public static final RetrieveDeletionsRequestBean fromJsonToRetrieveDeletionsRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, RetrieveDeletionsRequestBean.class);
     }
 
     public static final RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean(String jsonMessage) throws JsonProcessingException {
