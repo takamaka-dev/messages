@@ -72,7 +72,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.2";
+    public static final String MANIFEST_VERSION_CURRENT = "1.3";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -118,5 +118,23 @@ public class ServerInfoResponseBean {
      * Advisory only.
      */
     private int messagePerMinute;
+
+    /**
+     * DR-025: how long after a message was sent its OWNER may still "delete for everyone", in
+     * MILLISECONDS ({@code rschat.message.edit-delete-window-ms}, default 48h). Manifest {@code 1.3+}.
+     * {@code 0} ⇒ not advertised (older server).
+     *
+     * <p><b>Why the client needs it.</b> The window is operator-configurable, so a client that hardcodes
+     * "2 days" silently drifts the moment it is retuned — offering a delete that can only be rejected, or
+     * hiding one that would have worked. With the real value a client can stop offering
+     * "delete for everyone" on a message that is already too old and point the user at a local delete
+     * instead, which is the action still available to them.</p>
+     *
+     * <p><b>Advisory, never enforcement.</b> The server checks its OWN clock against the server-assigned
+     * {@code messages.message_timestamp}; a client gate is a courtesy that avoids a doomed round trip. Near
+     * the boundary the two can disagree, so a client must still handle {@code window_expired} gracefully
+     * rather than treating this value as authoritative.</p>
+     */
+    private long editDeleteWindowMs;
 
 }
