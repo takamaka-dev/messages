@@ -33,6 +33,19 @@ public class ChatServerEndpoints {
     public static final String NONCE = "nonce";
 
     /**
+     * The relative path for the signed "delete for everyone" command (DR-025).
+     * Request-response, signed envelope: tombstones the target message + purges
+     * the owner-listed attachment blobs + fans out the delete.
+     */
+    public static final String DELETE_MESSAGE = "deletemessage";
+
+    /**
+     * DR-025 catch-up: replay the owner-signed delete envelopes recorded for a conversation since a cursor,
+     * so a member who was offline during the live fan-out can verify and apply the deletes it missed.
+     */
+    public static final String RETRIEVE_DELETIONS = "retrievedeletions";
+
+    /**
      * The relative path for the user encryption/decryption keys registration
      * endpoint.
      */

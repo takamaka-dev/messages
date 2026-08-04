@@ -62,6 +62,17 @@ import lombok.NoArgsConstructor;
  * @author Giovanni Antino giovanni.antino@takamaka.io
  * @since 1.5.0
  */
+/*
+ * Unknown fields are IGNORED, and that is load-bearing rather than defensive tidiness.
+ *
+ * The manifest's entire premise is that it grows additively: a server may advertise a field this client
+ * has never heard of, and the client must still read the fields it DOES know. Without this, adding any
+ * field here breaks every older client whose decoder happens to be strict — and the decoder is not ours to
+ * assume: rsclient deserialises through RSocket's codec (DefaultCalls.retrieveMono), not through the
+ * lenient ChatUtils mapper. Putting the guarantee on the BEAN makes it a property of the contract instead
+ * of something every consumer must remember to configure.
+ */
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -72,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.2";
+    public static final String MANIFEST_VERSION_CURRENT = "1.4";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -118,5 +129,48 @@ public class ServerInfoResponseBean {
      * Advisory only.
      */
     private int messagePerMinute;
+
+    /**
+     * DR-025: how long after a message was sent its OWNER may still "delete for everyone", in
+     * MILLISECONDS ({@code rschat.message.edit-delete-window-ms}, default 48h). Manifest {@code 1.3+}.
+     * {@code 0} ⇒ not advertised (older server).
+     *
+     * <p><b>Why the client needs it.</b> The window is operator-configurable, so a client that hardcodes
+     * "2 days" silently drifts the moment it is retuned — offering a delete that can only be rejected, or
+     * hiding one that would have worked. With the real value a client can stop offering
+     * "delete for everyone" on a message that is already too old and point the user at a local delete
+     * instead, which is the action still available to them.</p>
+     *
+     * <p><b>Advisory, never enforcement.</b> The server checks its OWN clock against the server-assigned
+     * {@code messages.message_timestamp}; a client gate is a courtesy that avoids a doomed round trip. Near
+     * the boundary the two can disagree, so a client must still handle {@code window_expired} gracefully
+     * rather than treating this value as authoritative.</p>
+     */
+    private long editDeleteWindowMs;
+
+    /**
+     * Manifest {@code 1.4+}: the chat routes this build actually serves — the {@code @MessageMapping}
+     * values verbatim, e.g. {@code "retrievedeletions"}. Absent/empty ⇒ a server that predates this field;
+     * a client MUST then fall back to trying the call, never to assuming the route is missing.
+     *
+     * <p><b>Why a route SET and not another version bump.</b> A monotonic version can only say
+     * "everything up to N", which assumes deployments are clean cumulative points on a line. They are not.
+     * On 2026-07-30 the test VM served {@code deletemessage} but NOT {@code retrievedeletions}, while its
+     * schema was fully migrated — a mid-branch build that no single version number can describe honestly:
+     * it would have to under-report (disabling features that work) or over-report (lying). Three distinct
+     * jars all reporting {@code 0.8.2-SNAPSHOT} existed simultaneously. A set states what is true.</p>
+     *
+     * <p><b>What it is FOR.</b> Distinguishing "this server cannot do X" from "X failed this time".
+     * {@code retrievedeletions} is the case that motivated it: a client whose deletion catch-up quietly
+     * swallows the error believes it is caught up when it never was, so a peer's honoured delete is
+     * silently not applied — a correctness and privacy consequence, not a cosmetic one. It also turns a
+     * whole class of false-pass test runs into visible skips.</p>
+     *
+     * <p><b>Advisory, like every other field here (DR-023): UNSIGNED.</b> A relay can add or remove
+     * entries. So a client may use it to explain and to skip, never to decide something is safe — the
+     * route must still be handled as absent at runtime, and a route listed here can still fail. Treat it
+     * as a hint that upgrades a SILENT degrade into an informed one, not as a capability guarantee.</p>
+     */
+    private java.util.Set<String> supportedRoutes;
 
 }

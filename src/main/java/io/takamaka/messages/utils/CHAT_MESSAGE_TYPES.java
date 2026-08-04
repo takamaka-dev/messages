@@ -49,6 +49,13 @@ public enum CHAT_MESSAGE_TYPES {
     /** Signed typing subscribe envelope (the ONLY signed typing call; emits are plain). */
     TYPING_SUBSCRIBE,
     /**
+     * Signed server-side "delete for everyone" command (DR-025). Tombstones the
+     * target message + purges its owner-listed attachment blobs; the envelope is
+     * stored verbatim as the deletion-log tombstone (client-re-verifiable).
+     */
+    DELETE_MESSAGE,
+    RETRIEVE_DELETIONS,
+    /**
      * FCM push-notification token registration envelope. The SAME literal is
      * used for both {@code registerfcmtoken} and {@code unregisterfcmtoken}
      * (the client sends this type for both). Must match the Flutter client

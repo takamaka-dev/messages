@@ -34,6 +34,10 @@ import io.takamaka.messages.chat.conversation.RetrieveConversationRequestBean;
 import io.takamaka.messages.chat.conversation.RetrieveConversationRequestContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessageRequestBean;
 import io.takamaka.messages.chat.message.RetrieveMessageSignedRequestBean;
+import io.takamaka.messages.chat.message.DeleteMessageRequestBean;
+import io.takamaka.messages.chat.message.RetrieveDeletionsRequestBean;
+import io.takamaka.messages.chat.message.RetrieveDeletionsSignedContentBean;
+import io.takamaka.messages.chat.message.DeleteMessageSignedContentBean;
 import io.takamaka.messages.chat.attachment.SignedDownloadRequestBean;
 import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
@@ -375,6 +379,129 @@ public class ChatCryptoUtils {
                     signIwk.getWalletCypher().name()
             );
         } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code DELETE_MESSAGE} ("delete for everyone") command
+     * (DR-025). The signature covers {@code canonical(pl)}. The owner's client
+     * supplies {@code targetEncryptedFileHashes} (the efh list read from the
+     * decrypted message body) so the server can purge the attachment blobs it
+     * cannot otherwise locate; pass {@code null}/empty for a text-only message.
+     * {@code clientTimestamp} is advisory only — the server enforces the window
+     * against its own clock and the server-assigned target timestamp.
+     */
+    public static final DeleteMessageRequestBean getSignedDeleteMessageRequest(
+            final String conversationHashName,
+            final String targetMessageSignature,
+            final List<String> targetEncryptedFileHashes,
+            final Long clientTimestamp,
+            final EncMessageBean reason,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int signIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final DeleteMessageSignedContentBean pl = new DeleteMessageSignedContentBean(
+                    conversationHashName,
+                    targetMessageSignature,
+                    targetEncryptedFileHashes,
+                    clientTimestamp,
+                    reason);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, signIwkIndex);
+            return new DeleteMessageRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.DELETE_MESSAGE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (MessageException | WalletException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Encrypt a delete reason for transport inside {@code DeleteMessageSignedContentBean.reason}.
+     *
+     * <p>The reason is the ONE field of that bean the server has no use for — it is there so MEMBERS can see
+     * why a message was removed. It must therefore travel encrypted like any other user-authored text; a
+     * plaintext reason on a zero-knowledge relay breaches "E2E encryption is always on", and tends to
+     * describe the very message being deleted.</p>
+     *
+     * <p>Scope {@code DELETE_MESSAGE} gives domain separation: a delete-reason ciphertext is not
+     * interchangeable with a message body, so neither can be replayed as the other.</p>
+     *
+     * @param reason the plaintext reason; {@code null}/blank returns {@code null} so the field stays absent
+     *               from {@code canonical(pl)} under {@code NON_EMPTY}
+     * @param symmetricConversationKey the conversation key every member already holds
+     */
+    public static final EncMessageBean encryptDeleteReason(final String reason,
+            final String symmetricConversationKey) throws CryptoMessageException {
+        if (reason == null || reason.isBlank()) {
+            return null;
+        }
+        try {
+            return TkmEncryptionUtils.toPasswordEncryptedContent(
+                    symmetricConversationKey,
+                    reason,
+                    CHAT_MESSAGE_TYPES.DELETE_MESSAGE.name(),
+                    EncryptionContext.v0_1_a.name());
+        } catch (WalletException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Decrypt a delete reason. Returns {@code null} for an absent reason, so a caller can render "no reason
+     * given" and an undecryptable one identically rather than surfacing crypto errors in a tombstone.
+     *
+     * @param reason the encrypted reason from a VERIFIED delete envelope
+     * @param symmetricConversationKey the conversation key
+     */
+    public static final String decryptDeleteReason(final EncMessageBean reason,
+            final String symmetricConversationKey) throws CryptoMessageException {
+        if (reason == null) {
+            return null;
+        }
+        try {
+            return TkmEncryptionUtils.fromPasswordEncryptedContent(
+                    symmetricConversationKey,
+                    CHAT_MESSAGE_TYPES.DELETE_MESSAGE.name(),
+                    reason);
+        } catch (WalletException ex) {
+            // InvalidCypherException extends WalletException — one catch covers a wrong key and a corrupt blob alike
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code retrievedeletions} request (DR-025 catch-up). The signature covers
+     * {@code canonical(pl)}; the server verifies it, checks conversation membership, and streams back the
+     * owner-signed delete envelopes recorded after {@code since}.
+     *
+     * @param conversationHashName the conversation whose deletions to replay
+     * @param since replay deletions with a SERVER delete-time strictly greater than this; {@code null} = all
+     *              the server still holds (bounded by the deletion-log retention window)
+     */
+    public static final RetrieveDeletionsRequestBean getSignedRetrieveDeletionsRequest(
+            final String conversationHashName,
+            final Long since,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int signIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final RetrieveDeletionsSignedContentBean pl = new RetrieveDeletionsSignedContentBean(
+                    conversationHashName, since, new Date().getTime());
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, signIwkIndex);
+            return new RetrieveDeletionsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(signIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.RETRIEVE_DELETIONS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (MessageException | WalletException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
         }
     }
@@ -816,6 +943,16 @@ public class ChatCryptoUtils {
                     final TypingSubscribeBean typingSubscribeBean = ChatUtils.fromJsonToTypingSubscribeBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(typingSubscribeBean.getPl());
                     returnObj = typingSubscribeBean;
+                }
+                case "DELETE_MESSAGE" -> {
+                    final DeleteMessageRequestBean deleteMessageRequestBean = ChatUtils.fromJsonToDeleteMessageRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(deleteMessageRequestBean.getPl());
+                    returnObj = deleteMessageRequestBean;
+                }
+                case "RETRIEVE_DELETIONS" -> {
+                    final RetrieveDeletionsRequestBean retrieveDeletionsRequestBean = ChatUtils.fromJsonToRetrieveDeletionsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(retrieveDeletionsRequestBean.getPl());
+                    returnObj = retrieveDeletionsRequestBean;
                 }
                 case "FCM_TOKEN_REGISTRATION" -> {
                     final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean = ChatUtils.fromJsonToFcmTokenRegistrationRequestBean(messageJson);

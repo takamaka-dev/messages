@@ -28,5 +28,13 @@ public enum NOTIFICATION_TYPES {
      * Carries no value (USER_OPTIONS_DESIGN.md D8). Align this literal with the
      * Flutter client.
      */
-    SETTINGS_UPDATE
+    SETTINGS_UPDATE,
+    /**
+     * DR-025 "delete for everyone" fan-out to OFFLINE recipients: "a message in
+     * this conversation was deleted — re-sync". Its purpose is to WAKE an offline
+     * device to sync the tombstone (deleted=true in history), NOT to render a
+     * "new message". Never pushed to the deleter (NotificationService no-self-push).
+     * The Flutter client should treat it as a sync trigger, not a display banner.
+     */
+    MESSAGE_DELETED
 }

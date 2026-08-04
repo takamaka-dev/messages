@@ -126,10 +126,22 @@ public class MessageActionConstantsTest {
         assertFalse(MessageProtocolVersion.isAbsent("1.1"));
     }
 
+    /**
+     * The wire version is pinned by LITERALS on purpose: bumping it is a protocol event that must be a
+     * deliberate two-place edit, not something a refactor can slide through. It last moved 1.1 -> 1.2 for
+     * the additive DELETE_MESSAGE command (DR-025); MIN_MINOR stayed 0, so 1.0/1.1 peers still interoperate.
+     */
     @Test
     public void protocolVersion_currentConstants() {
-        assertEquals("1.1", MessageProtocolVersion.CURRENT);
+        assertEquals("1.2", MessageProtocolVersion.CURRENT);
         assertEquals(1, MessageProtocolVersion.CURRENT_MAJOR);
-        assertEquals(1, MessageProtocolVersion.CURRENT_MINOR);
+        assertEquals(2, MessageProtocolVersion.CURRENT_MINOR);
+
+        // the string and the numbers are three separate constants — a half-done bump is the realistic
+        // failure, and it would let a peer advertise a version it does not actually range-check
+        assertEquals(MessageProtocolVersion.CURRENT_MAJOR + "." + MessageProtocolVersion.CURRENT_MINOR,
+                MessageProtocolVersion.CURRENT, "CURRENT must agree with CURRENT_MAJOR/CURRENT_MINOR");
+        assertTrue(MessageProtocolVersion.MIN_MINOR <= MessageProtocolVersion.CURRENT_MINOR,
+                "the accepted range must not be empty");
     }
 }
