@@ -796,10 +796,31 @@ public class ChatCryptoUtils {
         try {
             String encryptionPublicKey = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKey();
             String encryptionPublicKeyType = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKeyType();
-            String encryptedKey = switch (encryptionPublicKeyType) {
+            String providerEncoded = switch (encryptionPublicKeyType) {
                 case "RSA_4096_ECB_OAEP_SHA256" -> TkmCypherProviderBCRSA4096ENC256.encrypt(encryptionPublicKey, topicSymmetricKey);
                 default -> TkmCypherProviderBCRSA4096ENC.encrypt(encryptionPublicKey, topicSymmetricKey);
             };
+            // THE ENCODING DECISION LIVES HERE, at the protocol layer — not inside the crypto provider.
+            //
+            // The providers return STANDARD base64 (BouncyCastle `Base64.toBase64String`). That was never a
+            // protocol decision; it is simply what the library returns, and letting it reach the wire made
+            // `enc_key` the lone standard-base64 field in an otherwise URL-safe envelope — sitting in the
+            // same JSON object as `enc_key_hash`, which is URL-safe. A client that faithfully implemented
+            // the documented convention produced conversations no Java client could open (F11).
+            //
+            // Re-encode to Base64URL with '.' padding: the same form as signatures, hashes and addresses,
+            // and the form the field-tested wallet app already emits.
+            //
+            // ⚠️ Do NOT "simplify" this by changing the providers instead. TkmCypherProviderBCRSA4096ENC*
+            // are published public API of wallet-core and also feed CombinedRSAAESBean in takamaka-extra,
+            // which is serialisable and reachable by consumers outside this estate. Converting here keeps
+            // the blast radius to the one field that has a protocol contract.
+            //
+            // Readers must accept BOTH forms permanently (TkmSignUtils.fromAnyB64ToByteArray): existing
+            // conversations carry the standard form inside a signed, permanently-stored envelope and can
+            // never be re-encoded. See rschat-docs/security/BASE64_ENCODING_CONTRACT.md §0.1.
+            String encryptedKey = TkmSignUtils.fromByteArrayToB64URL(
+                    TkmSignUtils.fromAnyB64ToByteArray(providerEncoded));
             TopicKeyDistributionItemBean invite = new TopicKeyDistributionItemBean(
                     TkmSignUtils.Hash256B64URL(encryptionPublicKey),
                     encryptedKey);
