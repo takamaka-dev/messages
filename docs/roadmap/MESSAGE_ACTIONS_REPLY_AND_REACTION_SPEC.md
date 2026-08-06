@@ -741,7 +741,17 @@ This is **not** the reaction whitelist. Reactions are deliberately narrower so t
 
 ### 11.5 Encoding asymmetry (footgun documentation)
 
-The `preview` field uses **standard Base64** (with `+`, `/`, `=`). Every other base64-encoded protocol field uses **Base64URL with `.` padding**. This asymmetry is historical (`javax.imageio` → `Base64.getEncoder()` was the path of least resistance for shell) and must be preserved for compatibility with existing inline content that Flutter and shell already produce.
+The `preview` field uses **standard Base64** (with `+`, `/`, `=`). This asymmetry is historical
+(`javax.imageio` → `Base64.getEncoder()` was the path of least resistance for shell) and must be preserved
+for compatibility with existing inline content that Flutter and shell already produce.
+
+⚠️ **This section used to close with "every other base64-encoded protocol field uses Base64URL with `.`
+padding". That sentence was FALSE and it caused an outage (F11).** `enc_key` was standard base64 until
+2026-08-06, and the attachment wire body still is — CRLF-chunked at 76 chars, no less. An external client
+implemented this closure faithfully and produced conversations no Java client could open.
+
+**Do not restate a global encoding rule here or anywhere else.** Encoding is per field, and the registry is
+`rschat-docs/security/BASE64_ENCODING_CONTRACT.md` §2. Several fields are hex, not base64 at all.
 
 **Consequence:** clients MUST NOT base64url-decode `preview`. The validator MUST use the standard base64 decoder. Cross-platform test vectors should pin this.
 
