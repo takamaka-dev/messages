@@ -107,6 +107,11 @@ import org.apache.commons.text.RandomStringGenerator;
  */
 @Slf4j
 public class ChatCryptoUtils {
+    /** VB-29: CSPRNG for every RandomStringGenerator in this class. commons-text falls back to
+     *  ThreadLocalRandom when no provider is supplied — a 64-bit clock-seeded root shared by the whole
+     *  JVM. See rschat-docs/security/PRNG_ENTROPY_AUDIT.md. */
+    private static final java.security.SecureRandom TKM_CSPRNG = new java.security.SecureRandom();
+
 
     /**
      *
@@ -130,6 +135,7 @@ public class ChatCryptoUtils {
         RandomStringGenerator generator = new RandomStringGenerator.Builder()
                 .withinRange('0', 'z')
                 .filteredBy(Character::isLetterOrDigit)
+                    .usingRandom(TKM_CSPRNG::nextInt)
                 .get();
         String secretKey = generator.generate(keyLenght);
         return secretKey;
