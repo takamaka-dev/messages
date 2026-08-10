@@ -130,6 +130,11 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.1.2</version>
                 <configuration>
+                    <!-- VB-29: ChatCryptoUtilsCsprngRegressionTest save/restores
+                         Thread.threadLocalRandomSeed to prove the conversation-key generator is not
+                         reproducible from ThreadLocalRandom state. Removing this opens makes that test
+                         FAIL (by design — it never skips). See rschat-docs/security/PRNG_ENTROPY_AUDIT.md -->
+                    <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
                     <includes>
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
