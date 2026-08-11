@@ -1,0 +1,37 @@
+{
+  "generator": "tkmChat test/cross_platform/generate_dart_attachment_envelope_vector_test.dart",
+  "purpose": "F15 — a DART-produced message envelope carrying an attachment placeholder, for a JAVA test to parse. Closes the one-way street in which no Java test ever consumed a Dart-produced artefact, which is why F15 (and F11 before it) shipped unnoticed.",
+  "note_plaintext": "This is the DECRYPTED content bean — the layer F15 lives in. Encrypting it would add a random IV and test nothing F15 is about.",
+  "note_deterministic": "No random input: a changed fixture means a changed producer. Unlike the churning vectors, this one SHOULD be reviewed if it moves.",
+  "expected_text": "F15 vector — a Dart-produced envelope carrying an attachment",
+  "expected_media_count": 1,
+  "envelope_plaintext": {
+    "text_message": "F15 vector — a Dart-produced envelope carrying an attachment",
+    "attached_media": [
+      {
+        "media_type": "image/jpeg",
+        "size": 57692,
+        "unencrypted_content_hash": "88f94d338a224f2bbded1092ae0c65f05b3911369a2fee5b9eb957ce60b1cf87",
+        "encrypted_file_hash": "46e23060000000000000000000000000000000000000000000000000000106c0",
+        "sed": {
+          "pa": "PBKDF2WithHmacSHA512",
+          "it": 20000,
+          "tr": "AES/GCM/NoPadding",
+          "ka": "AES",
+          "tv": "v0_2_a_stream_gcm",
+          "kl": 256,
+          "ec": "UTF-8",
+          "iv": "a1b2c3d4e5f60718293a4b5c",
+          "iv_length_byte": 12,
+          "tag_length_bit": 128,
+          "encrypted_content_hash": "46e23060000000000000000000000000000000000000000000000000000106c0",
+          "salt": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+          "digest_hash_function": "SHA3-256"
+        },
+        "is_the_object": false,
+        "file_name": "image_hot.jpg",
+        "original_size": 43253
+      }
+    ]
+  }
+}
