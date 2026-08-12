@@ -99,6 +99,35 @@ public class ChatServerEndpoints {
     public static final String UNREGISTER_FCM_TOKEN = "unregisterfcmtoken";
 
     /**
+     * The relative path for permanently deleting this device's FCM token.
+     *
+     * <p>Unlike {@link #UNREGISTER_FCM_TOKEN}, which only flips {@code is_active}
+     * and leaves the row in place until the stale-token sweep collects it, this
+     * removes the row. Because the token hash is the table's sole primary key, a
+     * lingering deactivated row blocks any later registration of the same device
+     * token under a different identity — so a client that cycles identities on
+     * one device should delete, not unregister.</p>
+     *
+     * <p>Signed envelope (message type {@code FCM_TOKEN_REGISTRATION}, same signed
+     * content as registration) plus a server-issued nonce, which this route
+     * consumes: each delete envelope is single-use.</p>
+     */
+    public static final String DELETE_FCM_TOKEN = "deletefcmtoken";
+
+    /**
+     * The relative path for permanently deleting every FCM token registered by
+     * the signing identity — "stop pushing to all my devices".
+     *
+     * <p>Scoped to the envelope's {@code from} key, so an identity can only ever
+     * clear its own rows. The signed content is the registration content bean;
+     * its {@code fcm_token} is not used to select rows and may be blank, since a
+     * caller wanting to log out everywhere need not hold a live device token.</p>
+     *
+     * <p>Signed envelope plus a server-issued nonce, which this route consumes.</p>
+     */
+    public static final String DELETE_ALL_FCM_TOKENS = "deleteallfcmtokens";
+
+    /**
      * The relative path for the server capabilities endpoint. Public and
      * unauthenticated (no nonce, no signature): returns the server build
      * version and the supported wire-protocol range so clients can negotiate
