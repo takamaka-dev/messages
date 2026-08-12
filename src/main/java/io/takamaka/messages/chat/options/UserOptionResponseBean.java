@@ -40,6 +40,13 @@ public class UserOptionResponseBean {
     public static final String ERR_OFF_SCHEMA = "off_schema";
     public static final String ERR_INVALID_SIGNATURE = "invalid_signature";
     public static final String ERR_RATE_LIMITED = "rate_limited";
+    /**
+     * The signing identity is not registered on this server, so the option
+     * tables have no user row to reference. Register the identity first, then
+     * retry with a FRESH nonce — the rejected write already consumed the old
+     * one.
+     */
+    public static final String ERR_USER_NOT_REGISTERED = "user_not_registered";
     public static final String ERR_INTERNAL = "internal_error";
 
     /**
