@@ -1008,8 +1008,66 @@ public class ChatCryptoUtils {
         }
     }
 
+
+    /**
+     * Enforce the inline byte rule on the way out.
+     *
+     * <p>Producers MUST NOT emit an inline placeholder whose DECODED payload
+     * exceeds {@link InlineContentLimits#MAX_INLINE_BYTES}. Oversized content
+     * belongs on the regular attachment path, where it is uploaded once and
+     * fetched on demand — inline content is copied into every encrypted message
+     * body, every notification fan-out and every history fetch.
+     *
+     * <p>An inline placeholder whose {@code preview} cannot be decoded is also
+     * refused: it carries no retrievable content, so sending it would produce a
+     * message that no receiver can render.
+     *
+     * @throws ChatMessageException naming the offending file and its actual size
+     */
+    private static void rejectOversizedInlineContent(BasicMessageEncryptedContentBean content)
+            throws ChatMessageException {
+        if (content == null || content.getAttachedMedia() == null) {
+            return;
+        }
+        for (ChatMediaPlaceholderBean media : content.getAttachedMedia()) {
+            if (media == null || !Boolean.TRUE.equals(media.getIsTheObject())) {
+                continue; // blob placeholders are unconstrained by this rule
+            }
+            InlineContentLimits.InlineVerdict verdict
+                    = InlineContentLimits.checkInlinePayload(media.getPreview());
+            if (verdict == InlineContentLimits.InlineVerdict.TOO_LARGE) {
+                int actual = InlineContentLimits.decodedLengthOrMinusOne(media.getPreview());
+                throw new ChatMessageException(
+                        "inline content too large: '" + media.getFileName() + "' is "
+                        + (actual < 0 ? "over" : actual + " bytes, over") + " the "
+                        + InlineContentLimits.MAX_INLINE_BYTES + "-byte inline limit. "
+                        + "Send it as a regular attachment instead.");
+            }
+            if (verdict == InlineContentLimits.InlineVerdict.UNDECODABLE) {
+                throw new ChatMessageException(
+                        "inline content for '" + media.getFileName()
+                        + "' is missing or not valid base64: nothing to deliver.");
+            }
+        }
+    }
+
     public static final BasicMessageRequestBean getBasicMessageBean(InstanceWalletKeystoreInterface iwkSign, int index, String conversationHashName, String conversationEncryptionKey, List<String> citedUsers, BasicMessageEncryptedContentBean basicMessageEncryptedContentBean) throws ChatMessageException {
         try {
+            // ⭐ PRODUCER GUARD (normative, 2026-08-12): an inline payload over
+            // InlineContentLimits.MAX_INLINE_BYTES MUST NOT be sent.
+            //
+            // Placed here, at the single choke point every Java producer passes
+            // through — plain messages, attachments, reactions, forwards — rather
+            // than in a bean factory, because ChatMediaPlaceholderBean has a public
+            // Lombok builder and a constructor-level check would be bypassable.
+            //
+            // One-directional by ruling: sending a SMALL file through the regular
+            // blob path is NOT a violation, so nothing is ever forced inline. That
+            // is what lets forward / share-history pass a placeholder through
+            // untouched — re-inlining would mean re-encoding and would change its
+            // efh/uch identity.
+            rejectOversizedInlineContent(basicMessageEncryptedContentBean);
+
             //encrypt content
             EncMessageBean encContent
                     = ChatCryptoUtils

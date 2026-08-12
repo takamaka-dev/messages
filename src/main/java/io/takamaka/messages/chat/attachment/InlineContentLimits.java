@@ -101,19 +101,25 @@ public final class InlineContentLimits {
      */
     public static final int MAX_INLINE_BYTES = 50 * 1024; // 51_200
 
-    /**
-     * Maximum pixel dimension (width <strong>and</strong> height) for an
-     * inline image. An image qualifies for inline delivery only if
-     * both {@code width <= MAX_THUMBNAIL_DIMENSION_PX} and
-     * {@code height <= MAX_THUMBNAIL_DIMENSION_PX}.
+    /*
+     * MAX_THUMBNAIL_DIMENSION_PX (256) was REMOVED on 2026-08-12.
      *
-     * <p>Value: {@value} pixels.</p>
+     * It required decoding untrusted image data in every client just to
+     * validate a placeholder — a decompression-bomb surface accepted in
+     * exchange for a cosmetic constraint. It also did not generalise (inline
+     * content need not be an image) and did not serve this class's own stated
+     * rationale, which is about BYTES bloating message bodies, notification
+     * fan-out and history fetches. Pixels bloat nothing; MAX_INLINE_BYTES
+     * already bounds the harm.
      *
-     * <p>Rationale: 256×256 is a common sticker / reaction canvas size
-     * and aligns with the 256×256 WebP thumbnail format already
-     * produced by the shell and Flutter thumbnail pipelines.</p>
+     * Nothing enforced it: an audit on 2026-08-12 found zero receiver-side
+     * checks of either limit, and the one producer that read this class
+     * (chat-web-gui) checked only the byte limit — and consequently inlined an
+     * 800x450 image, which the pixel rule forbade.
+     *
+     * ⚠️ Renderers must therefore NOT assume an inline image is small in
+     * PIXELS. A 50 KiB image can be 4000x3000. Scale defensively.
      */
-    public static final int MAX_THUMBNAIL_DIMENSION_PX = 256;
 
     /**
      * Top-level MIME family allowed for inline content carrying image
@@ -138,8 +144,7 @@ public final class InlineContentLimits {
      * {@code text_message} is still rendered.</p>
      *
      * <p>Animated variants of {@code image/gif} and {@code image/webp}
-     * are permitted iff they also satisfy {@link #MAX_INLINE_BYTES}
-     * and {@link #MAX_THUMBNAIL_DIMENSION_PX}.</p>
+     * are permitted iff they also satisfy {@link #MAX_INLINE_BYTES}.</p>
      *
      * <p>Excluded by design: {@code image/bmp} and {@code image/tiff}
      * (uncompressed / archival formats — disproportionate size for
@@ -170,6 +175,126 @@ public final class InlineContentLimits {
     public static boolean isReactionImageMimeAllowed(String mediaType) {
         return mediaType != null
                 && REACTION_ALLOWED_IMAGE_MIMES.contains(mediaType.toLowerCase());
+    }
+
+
+    /**
+     * Maximum length of the BASE64 STRING that can decode to
+     * {@link #MAX_INLINE_BYTES}, used as a cheap pre-check.
+     *
+     * <p>Standard base64 emits 4 characters per 3 input bytes, so 51 200 bytes
+     * encodes to 68 268 characters (padding included). Anything longer cannot
+     * decode to a legal payload, and rejecting on the STRING avoids allocating
+     * a hostile payload just to measure it.</p>
+     */
+    public static final int MAX_INLINE_PREVIEW_B64_CHARS = ((MAX_INLINE_BYTES + 2) / 3) * 4;
+
+    /**
+     * The verdict of {@link #checkInlinePayload(String)} — three states,
+     * because "not checked" must never read as "within limits".
+     */
+    public enum InlineVerdict {
+        /** Decoded payload is within {@link #MAX_INLINE_BYTES}. */
+        OK,
+        /** Decoded payload exceeds {@link #MAX_INLINE_BYTES}. MUST be rejected. */
+        TOO_LARGE,
+        /** {@code preview} is absent or not valid base64 — nothing to measure. */
+        UNDECODABLE
+    }
+
+    /**
+     * Size-check an inline {@code preview} payload. The single definition of
+     * the inline byte rule, shared by producers (which MUST refuse to send)
+     * and receivers (which MUST reject on arrival).
+     *
+     * <p>Measured on the DECODED bytes, never on the base64 text — the two
+     * differ by ~1.33x, and checking the string would let a payload ~33% over
+     * the limit through.</p>
+     *
+     * <p>A cheap length pre-check runs first so an oversized payload is
+     * rejected without being decoded into memory.</p>
+     *
+     * @param previewB64 the placeholder's {@code preview}, standard base64
+     * @return the verdict; never {@code null}
+     */
+    public static InlineVerdict checkInlinePayload(String previewB64) {
+        if (previewB64 == null || previewB64.isEmpty()) {
+            return InlineVerdict.UNDECODABLE;
+        }
+        // Cheap first: too long to POSSIBLY be legal ⇒ reject without decoding.
+        if (previewB64.length() > MAX_INLINE_PREVIEW_B64_CHARS) {
+            return InlineVerdict.TOO_LARGE;
+        }
+        try {
+            return java.util.Base64.getDecoder().decode(previewB64).length > MAX_INLINE_BYTES
+                    ? InlineVerdict.TOO_LARGE
+                    : InlineVerdict.OK;
+        } catch (IllegalArgumentException ex) {
+            return InlineVerdict.UNDECODABLE;
+        }
+    }
+
+    /**
+     * The decoded byte length of an inline payload, for reporting a rejection
+     * to a human. Returns -1 when the payload cannot be decoded, and does not
+     * decode anything larger than the pre-check allows.
+     */
+    public static int decodedLengthOrMinusOne(String previewB64) {
+        if (previewB64 == null || previewB64.isEmpty()) {
+            return -1;
+        }
+        try {
+            return java.util.Base64.getDecoder().decode(previewB64).length;
+        } catch (IllegalArgumentException ex) {
+            return -1;
+        }
+    }
+
+
+    /**
+     * Receiver-side gate: is this inline placeholder safe to RENDER?
+     *
+     * <p>Receivers MUST reject an inline placeholder that violates the byte
+     * rule, and the rejection MUST be surfaced to the user with a reason —
+     * silently dropping it would make a protocol violation indistinguishable
+     * from a failed image load.
+     *
+     * <p><b>Rejection is at the INLINE-CONTENT level only.</b> The parent
+     * message's {@code text_message} MUST still be rendered. Rejecting the whole
+     * message would hand any sender a censorship primitive: attach an oversized
+     * inline payload and the accompanying text disappears.
+     *
+     * @param media the placeholder; blob placeholders always pass (the rule is
+     *              about inline delivery, not about file size)
+     * @return {@link InlineVerdict#OK} when it may be rendered
+     */
+    public static InlineVerdict checkReceivedInline(
+            io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean media) {
+        if (media == null || !Boolean.TRUE.equals(media.getIsTheObject())) {
+            return InlineVerdict.OK;
+        }
+        return checkInlinePayload(media.getPreview());
+    }
+
+    /**
+     * A human-readable reason for a rejected inline payload, for the decoration
+     * a client shows the user. Names the limit and the actual size, because
+     * "attachment blocked" without a number is not actionable.
+     */
+    public static String rejectionReason(InlineVerdict verdict, String previewB64, String fileName) {
+        String who = (fileName == null || fileName.isBlank()) ? "inline content" : "'" + fileName + "'";
+        switch (verdict) {
+            case TOO_LARGE:
+                int actual = decodedLengthOrMinusOne(previewB64);
+                return who + " was blocked: inline content is limited to "
+                        + MAX_INLINE_BYTES + " bytes"
+                        + (actual < 0 ? "" : " and this is " + actual)
+                        + ". The sender should have sent it as a regular attachment.";
+            case UNDECODABLE:
+                return who + " was blocked: its inline content is missing or not valid base64.";
+            default:
+                return "";
+        }
     }
 
     private InlineContentLimits() {
