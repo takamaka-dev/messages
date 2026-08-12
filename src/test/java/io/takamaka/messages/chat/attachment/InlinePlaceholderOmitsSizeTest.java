@@ -43,7 +43,10 @@ class InlinePlaceholderOmitsSizeTest {
                 .mediaType("image/webp")
                 .isTheObject(true)
                 .preview("aW5saW5lLXJlYWN0aW9uLWNvbnRlbnQ=")
-                .unencryptedContentHash("Ki1hHfHrJ0mSPmC5wIrgMoY2Y4hV9YQ0kUEJ1kx3aQI.")
+                // hex SHA3-256 of the DECODED bytes — the single protocol definition of
+                // unencrypted_content_hash (was Base64URL of a hash over the base64 TEXT,
+                // corrected 2026-08-12; see ATTACHMENT_PROTOCOL §4.4)
+                .unencryptedContentHash("28ae1a5e5b1a5c1b1e2f3a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f")
                 .build();
     }
 
