@@ -61,7 +61,26 @@ import lombok.NoArgsConstructor;
 public class ChatMediaPlaceholderBean {
 
     /**
-     * MIME type of the encoded b64 object.
+     * MIME type of the <strong>ORIGINAL OBJECT</strong> — never of the {@link #preview}.
+     *
+     * <p>This field always describes the thing the placeholder refers to. Whether it also happens
+     * to describe the bytes in {@code preview} depends on {@link #isTheObject}:</p>
+     * <ul>
+     *   <li>{@code isTheObject=true} — the object IS the preview bytes, so this describes them too;</li>
+     *   <li>{@code isTheObject=false} — this describes the separately-transferred blob and says
+     *       <strong>nothing</strong> about the preview, which is an independently generated
+     *       thumbnail and is routinely a different format (a JPEG preview of an
+     *       {@code image/heic} object, for example).</li>
+     * </ul>
+     *
+     * <p><strong>A consumer MUST NOT use this field to decode the preview.</strong> Identify the
+     * preview by magic bytes ({@code FFD8} JPEG, {@code 89504E47} PNG, {@code GIF8} GIF,
+     * {@code RIFF….WEBP} WebP). There is no field that declares the preview's own type, by design —
+     * previews are decoded by content, and that mismatch is a feature: a preview lets a client
+     * render something for an object whose format it cannot decode at all.</p>
+     *
+     * <p>The previous wording here — "MIME type of the encoded b64 object" — read most naturally as
+     * the base64 payload carried in this bean, i.e. the preview. It meant the opposite.</p>
      *
      * @see
      * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types/Common_types">MDN
@@ -101,8 +120,44 @@ public class ChatMediaPlaceholderBean {
     // ============================================================
 
     /**
-     * Base64-encoded preview thumbnail (256x256 WebP).
-     * When {@code isTheObject=true}, this contains the full content.
+     * Standard-Base64 payload. What it holds depends on {@link #isTheObject}.
+     *
+     * <p><strong>{@code isTheObject=true} — this IS the object.</strong> The content fitted within
+     * {@link InlineContentLimits#MAX_INLINE_BYTES} and travels in the message envelope, so there is
+     * no blob and <strong>no preview is generated</strong>: a preview of content you already hold
+     * would be pure overhead. {@link #unencryptedContentHash} is the hash of these bytes.</p>
+     *
+     * <p><strong>{@code isTheObject=false} — this is a generated thumbnail of a separately
+     * transferred blob.</strong> Rules:</p>
+     * <ul>
+     *   <li>images only;</li>
+     *   <li>if {@code max(width,height) > 256}, scale so the longest edge is 256 —
+     *       <strong>never upscale</strong> a smaller source;</li>
+     *   <li>EXIF orientation is <strong>baked into the pixels</strong> (JPEG sources only), because
+     *       a re-encoded preview cannot carry the tag. Unreadable or absent orientation is treated
+     *       as 1 — a preview must never fail because peer-supplied EXIF was malformed;</li>
+     *   <li>permitted types: JPEG, PNG, GIF, WebP. <strong>This implementation emits JPEG (opaque)
+     *       or PNG (alpha) only</strong> — WebP is permitted for future producers but MUST NOT be
+     *       emitted until every client can decode it (as of 2026-08-13 stock {@code javax.imageio}
+     *       can neither read nor write it);</li>
+     *   <li>{@link InlineContentLimits#MAX_INLINE_BYTES} is an <strong>upper limit, not a
+     *       target</strong>. Compressing far below it is an implementation-side optimisation and is
+     *       encouraged: the reference 256px JPEG measures ~6 KB against a 51 200 B ceiling.
+     *       <em>Known and accepted downside:</em> at the boundary — an object just over the inline
+     *       threshold — a conformant but lazy producer may spend nearly the inline budget on a
+     *       preview AND still send a blob;</li>
+     *   <li>the preview is <strong>unhashed</strong>. {@link #unencryptedContentHash} refers to the
+     *       ORIGINAL object, never to this transformed thumbnail — so a preview MUST NOT be stored
+     *       in a content-addressed cache keyed by that hash: it is not the bytes that hash to it.</li>
+     * </ul>
+     *
+     * <p>Cross-platform contract is <strong>policy parity, not byte parity</strong>. Encoders differ
+     * between platforms, so two clients will not produce identical thumbnail bytes from identical
+     * input, and nothing requires them to — no interop path compares preview bytes across
+     * platforms. Never pin a cross-platform thumbnail vector; assert the properties instead.</p>
+     *
+     * <p>The previous wording here specified "256x256 WebP", a format no client has ever emitted
+     * and which stock ImageIO cannot even read.</p>
      */
     @JsonProperty("preview")
     private String preview;
