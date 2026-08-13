@@ -1,6 +1,6 @@
 {
   "from" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
-  "signature" : "3oTz0KB-h7dwO0uN6T0riw2VZl6fe8_fA0EjJUtNnmOQ6MyqswW0olyRDTqU4nGJsDlTOjF7VpLy20zLUN4ADQ..",
+  "signature" : "uheMZLnaao9Xdph1FKaqPHSRhIRZgGSWVtfYotoSPvCL4F5oYQ_VH9yLm1rV_UVgfMi47INo449ORbZYLF3nDg..",
   "message_type" : "TOPIC_MESSAGE",
   "signature_type" : "Ed25519BC",
   "basic_message_signed_content_bean" : {
@@ -14,7 +14,7 @@
       "tv" : "v0_1_a",
       "kl" : 256,
       "ec" : "UTF-8",
-      "em" : [ "3yIkU10S87DdNvywVI_n7g..", "kvwCd2vBV6IomMwb_auSSJTurvxJA2w7F048Mt0Q8ovhy7Tx_98gP_MvPzqO2CKLQ9Wep8wRSovItwXWWz97mXXk-1jS43VzHrymwXHTowKLm20V_impJEgfc9mY2SkLWz_s-cEw6I2uGsbXAM5cXCjvJGdhsuCx10TKFT3a111G_QV56n5gQy9Llz17sNe-OX_NHGO2eiPl-yWL7Ux0UPHzmQnFKF33n1UXzxD-JTM." ]
+      "em" : [ "9qwyz695VVbgF6FxoVMkVA..", "yjJACnAv7ubywdxEcKpW5BQjc15RerNT484FJsBEmixOLQbCpW2OwJd9ykwvpGIdn-wvXDkl-Q8FOoeD7fn48K4-q0fKSkvl6rZ-Ds9ZNKRpAOZ8y6MJw43rsFpXj_N2xxYoIHpmw7Uj2XFbj-sxjsoSeFpg6uxCMdqQ61AxSC-CnISWIY5RWULvOmxVexOo5PEG7toeEfgk7WaNNdUMVPOb3nxvaKXcZbEfArdK7Cc." ]
     }
   }
 }

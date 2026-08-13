@@ -3,7 +3,7 @@
   "action" : "share_history",
   "original_message" : {
     "from" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
-    "signature" : "UMk4qQI4F8Lkeiiu-WkIufjwmV1F-A6NwS9aoCcqmm7ZgWk7_FRJJMMivlXxeroWfyHlB72JQQHOhf-BFugmDQ..",
+    "signature" : "z4xzgdivZCHViWgBw7BK0aPJhdeDcTCsR2W727fyQHyfO4WW88c_-LLfzTBM16nZv0VxqWZAo0dao8LCGX4OAQ..",
     "message_type" : "TOPIC_MESSAGE",
     "signature_type" : "Ed25519BC",
     "basic_message_signed_content_bean" : {
@@ -17,10 +17,10 @@
         "tv" : "v0_1_a",
         "kl" : 256,
         "ec" : "UTF-8",
-        "em" : [ "Tz3-cxblHTEuC0c_JDdy1w..", "wpvcLCoADdfHvaiE70TGE439dxw4WtjaV1c0iIk9rdsXdJVa9aywgFHByR-eT-RggWrKRTqd-jiEYRYWt1ICioULDZu4ARGxEdE0M-fhYrI." ]
+        "em" : [ "WypmvCtNAZH8pHY5JTbcaQ..", "Mj5lbffwjB4MYqSil7qfkc7HdjIADVMmueGYHSCABJqMpmNBZe8smnj9YM-1RXZ3CA--D6aDPmxxmw-40ZmUNOsyp6D7m7-6V_pUCpDEcFo." ]
       }
     }
   },
   "re_shared" : true,
-  "client_protocol_version" : "1.1"
+  "client_protocol_version" : "1.2"
 }

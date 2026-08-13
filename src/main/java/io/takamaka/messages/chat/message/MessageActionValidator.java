@@ -29,6 +29,7 @@ import io.takamaka.messages.exception.UnknownActionException;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;
 import io.takamaka.wallet.beans.TkmCypherBean;
+import io.takamaka.wallet.utils.FixedParameters;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -92,7 +93,22 @@ public final class MessageActionValidator {
         // Step 1: action recognition (may throw H5)
         String action = validateActionRecognition(bean, outerConversationHash, senderPk);
         if (action == null) {
-            return ValidationResult.empty();
+            // A PLAIN message — no action — can still carry inline media, and returning empty here
+            // meant the commonest case of all, a plain message with an inline attachment, was
+            // never integrity-checked: the inline path appeared to perform "no check of any kind"
+            // (N-29) because the only caller of validateInlineContent sat behind this gate.
+            // Everything below this point is action-specific and correctly skipped; the inline
+            // check is not.
+            // action == null is the correct argument here: it is used ONLY to select the
+            // reaction-specific MIME allowlist, which must not apply to a plain attachment.
+            final List<Decoration> plain = new ArrayList<>();
+            validateInlineContent(null, bean, plain);
+            if (plain.isEmpty()) {
+                return ValidationResult.empty();
+            }
+            boolean plainValid = plain.stream()
+                    .noneMatch(d -> DecorationSeverity.ERROR.equals(d.severity()));
+            return new ValidationResult(plainValid, List.copyOf(plain));
         }
 
         final ActionSpec spec = MessageActionMeta.lookup(action).orElseThrow();
@@ -453,15 +469,31 @@ public final class MessageActionValidator {
     }
 
     /**
-     * Inline-content hash contract (Phase 1): SHA3-256 of the Base64 preview
-     * string, Base64URL-encoded. Identical on the fixture generator and the
-     * validator so the snapshot corpus agrees across platforms.
+     * Inline-content hash contract: <strong>SHA3-256 of the decoded content BYTES, as hex</strong>
+     * (64 chars) — the form every producer emits and the one
+     * {@code BASE64_ENCODING_CONTRACT} §2 documents.
      *
-     * @return the hash, or {@code null} if hashing failed
+     * <p><strong>Corrected 2026-08-13.</strong> This returned {@code Hash256B64URL(preview)} — SHA3
+     * of the Base64 <em>text</em>, Base64URL, 44 chars — while the producers moved to hex-of-bytes
+     * on 2026-08-12 (shell {@code ChatCommandMessages}, chat-web-gui {@code AttachmentServiceImpl},
+     * and the whole attachment path all along). One field name, two quantities: the consequence was
+     * that <em>every conformant inline reaction/reply/edit</em> was decorated
+     * {@code INLINE_HASH_MISMATCH} at ERROR and marked {@code overallValid=false}, in both Java
+     * clients. The pinned fixture was corrected then; this function was missed.</p>
+     *
+     * <p>Hashing an encoded form rather than the bytes it carries is the F14 mistake in a second
+     * field — padding or line-wrapping changes the hash of identical content — and it broke
+     * {@code uch}'s actual job as the cross-conversation dedup key, so the same image sent as a
+     * reaction and as an attachment had two different identities.</p>
+     *
+     * @param preview standard-Base64 inline content
+     * @return the hash, or {@code null} if the preview is not decodable or hashing failed
      */
     static String inlineContentHash(String preview) {
         try {
-            return TkmSignUtils.Hash256B64URL(preview);
+            final byte[] decoded = java.util.Base64.getDecoder().decode(preview);
+            return TkmSignUtils.fromByteArrayToHexString(
+                    TkmSignUtils.Hash256Byte(decoded, FixedParameters.HASH_256_ALGORITHM));
         } catch (Exception ex) {
             log.warn("inline content hashing failed", ex);
             return null;

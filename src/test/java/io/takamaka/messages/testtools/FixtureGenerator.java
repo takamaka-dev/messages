@@ -25,7 +25,9 @@ import io.takamaka.messages.utils.CHAT_MESSAGE_TYPES;
 import io.takamaka.messages.utils.ChatCryptoUtils;
 import io.takamaka.wallet.InstanceWalletKeyStoreBCED25519;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
+import io.takamaka.wallet.utils.FixedParameters;
 import io.takamaka.wallet.utils.TkmSignUtils;
+import java.util.Base64;
 import io.takamaka.wallet.utils.TkmTextUtils;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -360,7 +362,12 @@ public class FixtureGenerator {
     private ChatMediaPlaceholderBean inlineImage(String mime, String previewB64) throws Exception {
         return ChatMediaPlaceholderBean.builder()
                 .mediaType(mime).isTheObject(true).preview(previewB64)
-                .unencryptedContentHash(TkmSignUtils.Hash256B64URL(previewB64))
+                // Hex SHA3-256 of the DECODED bytes — the form every producer emits. This read
+                // Hash256B64URL(previewB64) (SHA3 of the base64 TEXT) and so minted a corpus that
+                // agreed with the equally-stale validator and with nothing else in the ecosystem.
+                .unencryptedContentHash(TkmSignUtils.fromByteArrayToHexString(
+                        TkmSignUtils.Hash256Byte(Base64.getDecoder().decode(previewB64),
+                                FixedParameters.HASH_256_ALGORITHM)))
                 .build();
     }
 

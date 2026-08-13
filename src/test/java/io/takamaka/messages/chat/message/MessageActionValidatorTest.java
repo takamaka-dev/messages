@@ -335,10 +335,26 @@ public class MessageActionValidatorTest {
         assertFalse(r.overallValid());
     }
 
+    /**
+     * SHA3-256 of the bytes {@code "hello"}, hex — i.e. of the DECODED content of the preview
+     * {@code "aGVsbG8="}, which is the form every producer emits.
+     *
+     * <p>Computed independently of this codebase ({@code printf 'hello' | openssl dgst -sha3-256}),
+     * deliberately: an expectation derived from the implementation cannot contradict it.</p>
+     */
+    private static final String HELLO_SHA3_256_HEX =
+            "3338be694f50c5f338814986cdf0686453a888b84f424d792af4b9202398f392";
+
     @Test
     public void validInlineReactionPasses() throws Exception {
         String preview = "aGVsbG8="; // "hello"
-        String correctHash = TkmSignUtils.Hash256B64URL(preview);
+        // LITERAL, not a re-call of the function under test. This assertion previously read
+        // `TkmSignUtils.Hash256B64URL(preview)` — the same expression the validator used — so it
+        // agreed with the implementation by construction and kept passing while the producers moved
+        // to hex-of-decoded-bytes and every real inline reaction was being rejected. A test that
+        // computes its expectation the way the code does cannot detect the code being wrong.
+        // This is SHA3-256 of the DECODED bytes ("hello"), hex — the producers' form.
+        String correctHash = HELLO_SHA3_256_HEX;
         ChatMediaPlaceholderBean png = ChatMediaPlaceholderBean.builder()
                 .mediaType("image/png").isTheObject(true).preview(preview)
                 .unencryptedContentHash(correctHash).build();
@@ -368,6 +384,70 @@ public class MessageActionValidatorTest {
     }
 
     // ---- helpers --------------------------------------------------------
+
+    // ---- N-29: a PLAIN message carrying inline media is checked too ------------------------
+    //
+    // validate() returned ValidationResult.empty() as soon as the action was null, and the only
+    // caller of validateInlineContent sat behind that gate. So the commonest case of all — a plain
+    // message with an inline attachment — was never integrity-checked, which is why the inline path
+    // appeared to perform "no check of any kind" while the machinery existed and worked.
+
+    private static BasicMessageEncryptedContentBean plainWithInline(String preview, String uch) {
+        ChatMediaPlaceholderBean png = ChatMediaPlaceholderBean.builder()
+                .mediaType("image/png").isTheObject(true).preview(preview)
+                .unencryptedContentHash(uch).build();
+        return BasicMessageEncryptedContentBean.builder()      // NOTE: no .action(...)
+                .attachedMedia(List.of(png))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT).build();
+    }
+
+    @Test
+    public void plainMessageWithBadInlineHashIsRejected() throws Exception {
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithInline("aGVsbG8=", "0000000000000000000000000000000000000000000000000000000000000000"),
+                outer(senderPk), ctx);
+
+        assertSingle(r, ValidationDecorationCodes.INLINE_HASH_MISMATCH, DecorationSeverity.ERROR);
+        assertFalse(r.overallValid());
+    }
+
+    @Test
+    public void plainMessageWithGoodInlineHashPasses() throws Exception {
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithInline("aGVsbG8=", HELLO_SHA3_256_HEX), outer(senderPk), ctx);
+
+        assertTrue(r.overallValid());
+        assertTrue(r.decorations().isEmpty(), "a conformant plain attachment must not be decorated");
+    }
+
+    @Test
+    public void plainMessageWithoutInlineMediaStaysEmpty() throws Exception {
+        // The no-action early return must still be a fast path for ordinary text — this fix must
+        // not start decorating messages that carry nothing to check.
+        BasicMessageEncryptedContentBean text = BasicMessageEncryptedContentBean.builder()
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT).build();
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(text, outer(senderPk), ctx);
+
+        assertTrue(r.overallValid());
+        assertTrue(r.decorations().isEmpty());
+    }
+
+    @Test
+    public void inlineHashIsHexOfDecodedBytesNotOfTheBase64Text() throws Exception {
+        // The regression itself, pinned directly: the old contract was
+        // Hash256B64URL(preview) — SHA3 of the base64 TEXT, 44 chars, Base64URL. The producers emit
+        // hex of the DECODED bytes, 64 chars. Both forms are "a hash of the content", which is why
+        // the mismatch survived review.
+        String actual = MessageActionValidator.inlineContentHash("aGVsbG8=");
+
+        assertEquals(HELLO_SHA3_256_HEX, actual);
+        assertEquals(64, actual.length(), "hex SHA3-256 is 64 chars; the old Base64URL form was 44");
+        assertNotEquals(TkmSignUtils.Hash256B64URL("aGVsbG8="), actual,
+                "must not have silently reverted to hashing the base64 text");
+    }
 
     private static void assertSingle(ValidationResult r, String code, String severity) {
         assertEquals(1, r.decorations().size(),

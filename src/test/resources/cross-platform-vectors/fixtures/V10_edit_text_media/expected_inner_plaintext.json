@@ -2,11 +2,11 @@
   "text_message" : "edited",
   "attached_media" : [ {
     "media_type" : "image/png",
-    "unencrypted_content_hash" : "cuXbpolVXiW-tfU0L4luPsT5acuZyrJRkd0oHcus4bI.",
+    "unencrypted_content_hash" : "3338be694f50c5f338814986cdf0686453a888b84f424d792af4b9202398f392",
     "preview" : "aGVsbG8=",
     "is_the_object" : true
   } ],
   "action" : "edit",
-  "targets" : [ "8otxdmZIe7HY_2ugbRZbAn_lrlxjD_QnCix1w7EpK2DnDaJKgBI98JbGBPR1l7U3jN2ue_dHNLyRUQSFiVRlBg.." ],
-  "client_protocol_version" : "1.1"
+  "targets" : [ "s67GJ0q4xh2TP_kBIv2Pdhpw9atA_PbA5n9_QsMbXCvqWtjk0rxKAk5RTMYGFe6nrX_DfPe9laE_wxsjL_vXBg.." ],
+  "client_protocol_version" : "1.2"
 }
