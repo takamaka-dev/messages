@@ -122,6 +122,17 @@ public class ChatMediaPlaceholderBean {
     /**
      * Standard-Base64 payload. What it holds depends on {@link #isTheObject}.
      *
+     * <p>⚠️ <strong>CONFORMANCE STATUS (2026-08-13): the rules below are NORMATIVE but NOT YET
+     * IMPLEMENTED by any client.</strong> shell and tkmChat both PNG-re-encode, both upscale small
+     * images, neither honours EXIF orientation, and neither treats the inline threshold as a reason
+     * to skip preview generation; chat-web-gui generates no previews at all. Conformance work is
+     * tracked as <em>§PREVIEW-CONFORMANCE</em> in {@code rschat-docs/HANDOFF.md}.</p>
+     *
+     * <p>This notice is deliberate. The wording this replaced ("256x256 WebP") described a format no
+     * client had ever emitted, and was believed for months precisely because a specification that
+     * states behaviour without stating its implementation status reads as a description of what the
+     * code does. Delete this paragraph when — and only when — the clients conform.</p>
+     *
      * <p><strong>{@code isTheObject=true} — this IS the object.</strong> The content fitted within
      * {@link InlineContentLimits#MAX_INLINE_BYTES} and travels in the message envelope, so there is
      * no blob and <strong>no preview is generated</strong>: a preview of content you already hold

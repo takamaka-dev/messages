@@ -177,6 +177,66 @@ public final class InlineContentLimits {
                 && REACTION_ALLOWED_IMAGE_MIMES.contains(mediaType.toLowerCase());
     }
 
+    /**
+     * Types a generated PREVIEW may be encoded in ({@code is_object=false}).
+     *
+     * <p>Deliberately a distinct constant from {@link #REACTION_ALLOWED_IMAGE_MIMES} even though the
+     * members coincide today: that set governs what a REACTION may carry as its inline payload,
+     * this one governs what a generated thumbnail of a separately-transferred blob may be encoded
+     * in. They answer different questions and will diverge the moment either side changes.</p>
+     *
+     * <p><strong>{@code image/webp} is PERMITTED but MUST NOT be produced yet.</strong> A producer
+     * must not emit a type some consumer cannot decode, and as of 2026-08-13 stock
+     * {@code javax.imageio} can neither read nor write WebP (verified on JDK 21), so a Java CLI
+     * consumer could not render it. It stays in the set so that adopting it later is additive
+     * rather than a protocol change — see {@link #isPreviewMimeProducible}.</p>
+     *
+     * @since 1.9.0
+     */
+    public static final Set<String> PREVIEW_ALLOWED_MIMES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp"
+    );
+
+    /**
+     * Types a producer may currently EMIT as a preview — the producible subset of
+     * {@link #PREVIEW_ALLOWED_MIMES}.
+     *
+     * <p>Consumers accept the full permitted set; producers are held to this narrower one. The gap
+     * between the two sets IS the gate: a type is added here only once every client can decode it.</p>
+     *
+     * @since 1.9.0
+     */
+    public static final Set<String> PREVIEW_PRODUCIBLE_MIMES = Set.of(
+            "image/jpeg",
+            "image/png"
+    );
+
+    /**
+     * Whether a preview MAY be carried by this protocol (consumer side).
+     *
+     * @param mediaType the preview's own type, determined by MAGIC BYTES — not by the placeholder's
+     *                  {@code media_type}, which describes the ORIGINAL OBJECT
+     * @return {@code true} iff non-null and permitted
+     * @since 1.9.0
+     */
+    public static boolean isPreviewMimeAllowed(String mediaType) {
+        return mediaType != null && PREVIEW_ALLOWED_MIMES.contains(mediaType.toLowerCase());
+    }
+
+    /**
+     * Whether a producer may currently EMIT a preview in this type.
+     *
+     * @param mediaType candidate encoding for a generated preview
+     * @return {@code true} iff non-null and currently producible
+     * @since 1.9.0
+     */
+    public static boolean isPreviewMimeProducible(String mediaType) {
+        return mediaType != null && PREVIEW_PRODUCIBLE_MIMES.contains(mediaType.toLowerCase());
+    }
+
 
     /**
      * Maximum length of the BASE64 STRING that can decode to
