@@ -1379,19 +1379,25 @@ public class ChatCryptoUtils {
                     ChatCryptoConstructionException.INLINE_DECODE_FAILURE,
                     "inline reaction payload has no preview content");
         }
-        final byte[] decoded;
         try {
-            decoded = Base64.getDecoder().decode(preview);
+            Base64.getDecoder().decode(preview);
         } catch (IllegalArgumentException ex) {
             throw new InlineContentViolationException(
                     ChatCryptoConstructionException.INLINE_DECODE_FAILURE,
                     "inline reaction payload preview is not valid standard Base64", ex);
         }
-        if (decoded.length > InlineContentLimits.MAX_INLINE_BYTES) {
-            throw new InlineContentViolationException(
-                    ChatCryptoConstructionException.INLINE_CONTENT_TOO_LARGE,
-                    "inline reaction payload exceeds " + InlineContentLimits.MAX_INLINE_BYTES + " bytes");
-        }
+        // N-13: the SIZE check deliberately does not live here.
+        //
+        // It used to, and it won purely by ordering — validateReactionPayload runs seven lines
+        // before buildAndSign, so its terse "inline reaction payload exceeds 51200 bytes" (no file,
+        // no actual size, no remedy) pre-empted the good message that rejectOversizedInlineContent
+        // already produces from getBasicMessageBean, which names the file, the real byte count and
+        // what to do instead. Two enforcement points for one limit, and the worse one spoke first.
+        //
+        // Deleting it is safe rather than merely tidy: the reaction path DOES reach the choke point
+        // (getReactionMessageBean -> buildAndSign -> getBasicMessageBean -> rejectOversizedInlineContent),
+        // so the limit is still enforced — by the site that can explain it. ReactionPayloadSizeTest
+        // pins that the message a caller sees still carries size and remedy.
     }
 
     /**
