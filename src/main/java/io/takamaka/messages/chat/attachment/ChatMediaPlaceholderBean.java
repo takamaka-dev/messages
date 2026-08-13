@@ -122,16 +122,32 @@ public class ChatMediaPlaceholderBean {
     /**
      * Standard-Base64 payload. What it holds depends on {@link #isTheObject}.
      *
-     * <p>⚠️ <strong>CONFORMANCE STATUS (2026-08-13): the rules below are NORMATIVE but NOT YET
-     * IMPLEMENTED by any client.</strong> shell and tkmChat both PNG-re-encode, both upscale small
-     * images, neither honours EXIF orientation, and neither treats the inline threshold as a reason
-     * to skip preview generation; chat-web-gui generates no previews at all. Conformance work is
-     * tracked as <em>§PREVIEW-CONFORMANCE</em> in {@code rschat-docs/HANDOFF.md}.</p>
+     * <p>✅ <strong>CONFORMANCE STATUS (2026-08-13, updated): the rules below are NORMATIVE and now
+     * IMPLEMENTED by every client.</strong> One shared engine per platform —
+     * {@code io.takamaka.extra.imaging.ThumbnailHelper} (Java, consumed by shell and chat-web-gui)
+     * and its mirror {@code wallet-extra-flutter/lib/src/imaging/thumbnail_helper.dart} (Dart,
+     * consumed by tkmChat). Per-rule status:</p>
+     * <ul>
+     *   <li>inline threshold — honoured; a source within {@link InlineContentLimits#MAX_INLINE_BYTES}
+     *       generates no preview. <em>Exception, deliberate:</em> a producer that has already
+     *       committed to the blob transport calls {@code generatePreviewForBlob}, because the rule's
+     *       premise (the receiver holds the object instead) does not hold for it. The shell is such a
+     *       producer; making it choose the transport is N-23, not this work;</li>
+     *   <li>256px longest edge, never upscaling — honoured on both platforms;</li>
+     *   <li>EXIF orientation baked into the pixels, failing open to 1 — honoured on both, landed
+     *       together as the coordination rule required;</li>
+     *   <li>JPEG for opaque / PNG for real transparency — honoured; "real" means a scan for a
+     *       non-opaque pixel, so a fully-opaque alpha channel does not force PNG;</li>
+     *   <li>byte ceiling checked AFTER encoding, preview dropped and logged if exceeded — honoured;</li>
+     *   <li>the ceiling now actually applies to blob previews, on both the producer guard and the
+     *       receiver check — it never had before (§PREVIEW-CONFORMANCE W1).</li>
+     * </ul>
      *
-     * <p>This notice is deliberate. The wording this replaced ("256x256 WebP") described a format no
-     * client had ever emitted, and was believed for months precisely because a specification that
-     * states behaviour without stating its implementation status reads as a description of what the
-     * code does. Delete this paragraph when — and only when — the clients conform.</p>
+     * <p>The notice this replaced said the opposite, and said it deliberately: the wording before
+     * THAT ("256x256 WebP") described a format no client had ever emitted, and was believed for
+     * months precisely because a specification that states behaviour without stating its
+     * implementation status reads as a description of what the code does. Keep stating the status
+     * here, whichever way it points.</p>
      *
      * <p><strong>{@code isTheObject=true} — this IS the object.</strong> The content fitted within
      * {@link InlineContentLimits#MAX_INLINE_BYTES} and travels in the message envelope, so there is

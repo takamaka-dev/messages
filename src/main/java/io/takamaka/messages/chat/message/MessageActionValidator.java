@@ -408,14 +408,39 @@ public final class MessageActionValidator {
             return;
         }
         boolean isReaction = MessageAction.REACTION.equals(action);
+
+        if (media.size() > InlineContentLimits.MAX_ATTACHED_MEDIA) {
+            out.add(new Decoration(
+                    ValidationDecorationCodes.ATTACHED_MEDIA_COUNT_VIOLATION,
+                    "attached_media carries " + media.size() + " placeholders, over the "
+                    + InlineContentLimits.MAX_ATTACHED_MEDIA + " limit",
+                    DecorationSeverity.WARN,
+                    "attached_media"));
+        }
+
+        long totalPreviewBytes = 0L;
         for (int i = 0; i < media.size(); i++) {
             ChatMediaPlaceholderBean m = media.get(i);
-            if (m == null || !Boolean.TRUE.equals(m.getIsTheObject())) {
-                continue; // not inline content
+            if (m == null) {
+                continue;
             }
-            String fieldPrefix = "attached_media[" + i + "]";
+            // §PREVIEW-CONFORMANCE W1 — this loop used to `continue` on every
+            // isTheObject == false placeholder, which is why MAX_INLINE_BYTES had
+            // never once applied to a BLOB's preview. The two arms below are NOT
+            // symmetric, so the skip is now per-arm rather than per-placeholder:
+            //
+            //   size arm — applies to BOTH. The bytes bloat the envelope
+            //              identically whichever kind of payload they are.
+            //   hash arm — applies to INLINE ONLY. unencrypted_content_hash
+            //              describes the ORIGINAL OBJECT; for a blob the preview
+            //              is a re-encoded thumbnail that deliberately does NOT
+            //              hash to it. Running the comparison here would decorate
+            //              every conformant preview as INLINE_HASH_MISMATCH.
+            final boolean isInline = Boolean.TRUE.equals(m.getIsTheObject());
+            final String fieldPrefix = "attached_media[" + i + "]";
 
-            if (isReaction && !InlineContentLimits.isReactionImageMimeAllowed(m.getMediaType())) {
+            if (isInline && isReaction
+                    && !InlineContentLimits.isReactionImageMimeAllowed(m.getMediaType())) {
                 out.add(new Decoration(
                         ValidationDecorationCodes.INLINE_MIME_VIOLATION,
                         "reaction inline media type '" + m.getMediaType() + "' is not allowed",
@@ -425,12 +450,15 @@ public final class MessageActionValidator {
             }
 
             String preview = m.getPreview();
-            if (preview == null) {
-                out.add(new Decoration(
-                        ValidationDecorationCodes.INLINE_FIELD_VIOLATION,
-                        "inline content is missing its preview payload",
-                        DecorationSeverity.WARN,
-                        fieldPrefix + ".preview"));
+            if (preview == null || preview.isEmpty()) {
+                if (isInline) {
+                    out.add(new Decoration(
+                            ValidationDecorationCodes.INLINE_FIELD_VIOLATION,
+                            "inline content is missing its preview payload",
+                            DecorationSeverity.WARN,
+                            fieldPrefix + ".preview"));
+                }
+                // A blob need not carry a preview: absent is legal, not a defect.
                 continue;
             }
 
@@ -440,18 +468,26 @@ public final class MessageActionValidator {
             } catch (IllegalArgumentException ex) {
                 out.add(new Decoration(
                         ValidationDecorationCodes.INLINE_DECODE_ERROR,
-                        "inline content preview is not valid standard Base64",
+                        (isInline ? "inline content" : "preview")
+                        + " is not valid standard Base64",
                         DecorationSeverity.WARN,
                         fieldPrefix + ".preview"));
                 continue;
             }
 
+            totalPreviewBytes += decoded.length;
+
             if (decoded.length > InlineContentLimits.MAX_INLINE_BYTES) {
                 out.add(new Decoration(
                         ValidationDecorationCodes.INLINE_SIZE_VIOLATION,
-                        "inline content exceeds " + InlineContentLimits.MAX_INLINE_BYTES + " bytes",
+                        (isInline ? "inline content" : "preview") + " is " + decoded.length
+                        + " bytes, over the " + InlineContentLimits.MAX_INLINE_BYTES + "-byte limit",
                         DecorationSeverity.WARN,
                         fieldPrefix + ".preview"));
+            }
+
+            if (!isInline) {
+                continue; // hash arm is inline-only — see the note above
             }
 
             String expectedHash = m.getUnencryptedContentHash();
@@ -465,6 +501,16 @@ public final class MessageActionValidator {
                             fieldPrefix + ".unencrypted_content_hash"));
                 }
             }
+        }
+
+        if (totalPreviewBytes > InlineContentLimits.MAX_TOTAL_PREVIEW_BYTES) {
+            out.add(new Decoration(
+                    ValidationDecorationCodes.ATTACHED_MEDIA_BUDGET_VIOLATION,
+                    "attached_media carries " + totalPreviewBytes
+                    + " bytes of preview/inline payload in total, over the "
+                    + InlineContentLimits.MAX_TOTAL_PREVIEW_BYTES + "-byte aggregate limit",
+                    DecorationSeverity.WARN,
+                    "attached_media"));
         }
     }
 

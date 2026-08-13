@@ -83,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.4";
+    public static final String MANIFEST_VERSION_CURRENT = "1.5";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -172,5 +172,29 @@ public class ServerInfoResponseBean {
      * as a hint that upgrades a SILENT degrade into an informed one, not as a capability guarantee.</p>
      */
     private java.util.Set<String> supportedRoutes;
+
+    /**
+     * Manifest {@code 1.5+}: the server's hard cap on one message's ENCRYPTED content, in BYTES
+     * ({@code rschat.validation.max-encrypted-message-content-size-bytes}, default 1 048 576).
+     * {@code 0} ⇒ not advertised (older server).
+     *
+     * <p><b>Why the client needs it.</b> Until §PREVIEW-CONFORMANCE W5 this number appeared in no
+     * manifest and in no client: greps across all four Java clients returned zero. So the one limit
+     * that actually rejects an oversized message was invisible to every producer, and the only way
+     * to discover it was to send a message and have the server refuse it — after the attachment had
+     * been encrypted and uploaded. A client that knows the figure can refuse before that work.</p>
+     *
+     * <p><b>What it bounds.</b> The serialized JSON of the encrypted {@code EncMessageBean}, i.e.
+     * AFTER encryption and base64 — roughly 1.8x the decoded payload it carries. That factor is
+     * what {@link io.takamaka.messages.chat.attachment.InlineContentLimits#MAX_TOTAL_PREVIEW_BYTES}
+     * is derived from; a client that reads this field should re-derive rather than compare against
+     * it directly.</p>
+     *
+     * <p><b>Advisory, like every other field here (DR-023): UNSIGNED.</b> A relay can lie. Use it
+     * to pre-reject and to explain, never to conclude that a message will be accepted — the server
+     * still checks, and a client must handle its refusal. Where this value and a compiled-in
+     * constant disagree, the SMALLER is the safe one to enforce locally.</p>
+     */
+    private long maxEncryptedContentSizeBytes;
 
 }

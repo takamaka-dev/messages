@@ -1010,17 +1010,30 @@ public class ChatCryptoUtils {
 
 
     /**
-     * Enforce the inline byte rule on the way out.
+     * Enforce the inline byte rule on the way out — for BOTH kinds of payload
+     * carried in {@code preview}.
      *
-     * <p>Producers MUST NOT emit an inline placeholder whose DECODED payload
+     * <p>Producers MUST NOT emit a placeholder whose DECODED {@code preview}
      * exceeds {@link InlineContentLimits#MAX_INLINE_BYTES}. Oversized content
      * belongs on the regular attachment path, where it is uploaded once and
-     * fetched on demand — inline content is copied into every encrypted message
-     * body, every notification fan-out and every history fetch.
+     * fetched on demand — a {@code preview} is copied into every encrypted
+     * message body, every notification fan-out and every history fetch.
      *
-     * <p>An inline placeholder whose {@code preview} cannot be decoded is also
-     * refused: it carries no retrievable content, so sending it would produce a
-     * message that no receiver can render.
+     * <p>⚠️ <strong>This used to skip {@code isTheObject == false} entirely</strong>
+     * (§PREVIEW-CONFORMANCE W1), so a BLOB's generated thumbnail was bounded by
+     * nothing, anywhere: measured previews of ~110 000 base64 chars — 1.9x the
+     * file they previewed. The field is the same field and the bloat is the same
+     * bloat, so the byte rule applies to both; what differs is only what an
+     * ABSENT preview means:
+     *
+     * <ul>
+     *   <li>{@code isTheObject == true} — the preview IS the content. Absent or
+     *       undecodable means nothing to deliver: refuse.</li>
+     *   <li>{@code isTheObject == false} — the preview is an optional generated
+     *       thumbnail of a separately-transferred blob. Absent is legal and
+     *       common (non-image blobs, or a thumbnail that did not fit); present
+     *       but undecodable is a producer bug: refuse.</li>
+     * </ul>
      *
      * @throws ChatMessageException naming the offending file and its actual size
      */
@@ -1029,25 +1042,58 @@ public class ChatCryptoUtils {
         if (content == null || content.getAttachedMedia() == null) {
             return;
         }
+        rejectOversizedMediaList(content.getAttachedMedia());
+        long totalPreviewBytes = 0L;
         for (ChatMediaPlaceholderBean media : content.getAttachedMedia()) {
-            if (media == null || !Boolean.TRUE.equals(media.getIsTheObject())) {
-                continue; // blob placeholders are unconstrained by this rule
+            if (media == null) {
+                continue;
             }
+            final boolean isInline = Boolean.TRUE.equals(media.getIsTheObject());
+            final String preview = media.getPreview();
+            if (!isInline && (preview == null || preview.isEmpty())) {
+                continue; // a blob need not carry a preview at all
+            }
+            final String what = isInline ? "inline content" : "preview";
             InlineContentLimits.InlineVerdict verdict
-                    = InlineContentLimits.checkInlinePayload(media.getPreview());
+                    = InlineContentLimits.checkInlinePayload(preview);
             if (verdict == InlineContentLimits.InlineVerdict.TOO_LARGE) {
-                int actual = InlineContentLimits.decodedLengthOrMinusOne(media.getPreview());
+                int actual = InlineContentLimits.decodedLengthOrMinusOne(preview);
                 throw new ChatMessageException(
-                        "inline content too large: '" + media.getFileName() + "' is "
+                        what + " too large: '" + media.getFileName() + "' is "
                         + (actual < 0 ? "over" : actual + " bytes, over") + " the "
-                        + InlineContentLimits.MAX_INLINE_BYTES + "-byte inline limit. "
-                        + "Send it as a regular attachment instead.");
+                        + InlineContentLimits.MAX_INLINE_BYTES + "-byte limit. "
+                        + (isInline
+                                ? "Send it as a regular attachment instead."
+                                : "Generate a smaller thumbnail, or send no preview at all."));
             }
             if (verdict == InlineContentLimits.InlineVerdict.UNDECODABLE) {
                 throw new ChatMessageException(
-                        "inline content for '" + media.getFileName()
+                        what + " for '" + media.getFileName()
                         + "' is missing or not valid base64: nothing to deliver.");
             }
+            totalPreviewBytes += InlineContentLimits.decodedLengthOrMinusOne(preview);
+        }
+        if (totalPreviewBytes > InlineContentLimits.MAX_TOTAL_PREVIEW_BYTES) {
+            throw new ChatMessageException(
+                    "attached_media carries " + totalPreviewBytes
+                    + " bytes of preview/inline payload in total, over the "
+                    + InlineContentLimits.MAX_TOTAL_PREVIEW_BYTES + "-byte aggregate limit. "
+                    + "A per-placeholder limit bounds nothing when the list is unbounded.");
+        }
+    }
+
+    /**
+     * Bound the LENGTH of {@code attached_media}. A per-placeholder byte limit is
+     * an unbounded total when the list itself is unbounded — see
+     * {@link InlineContentLimits#MAX_ATTACHED_MEDIA}.
+     */
+    private static void rejectOversizedMediaList(List<ChatMediaPlaceholderBean> media)
+            throws ChatMessageException {
+        if (media.size() > InlineContentLimits.MAX_ATTACHED_MEDIA) {
+            throw new ChatMessageException(
+                    "attached_media carries " + media.size() + " placeholders, over the "
+                    + InlineContentLimits.MAX_ATTACHED_MEDIA + " limit. "
+                    + "Split them across several messages.");
         }
     }
 

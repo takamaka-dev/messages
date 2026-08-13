@@ -83,6 +83,13 @@ public final class ValidationDecorationCodes {
     public static final String INLINE_FIELD_VIOLATION = "INLINE_FIELD_VIOLATION";
     public static final String INLINE_MIME_VIOLATION = "INLINE_MIME_VIOLATION";
 
+    // attached_media as a whole (§PREVIEW-CONFORMANCE W1): a per-placeholder byte
+    // rule bounds nothing while the LIST is unbounded.
+    /** {@code attached_media} carries more than {@code MAX_ATTACHED_MEDIA} placeholders. */
+    public static final String ATTACHED_MEDIA_COUNT_VIOLATION = "ATTACHED_MEDIA_COUNT_VIOLATION";
+    /** Summed {@code preview} bytes exceed {@code MAX_TOTAL_PREVIEW_BYTES}. */
+    public static final String ATTACHED_MEDIA_BUDGET_VIOLATION = "ATTACHED_MEDIA_BUDGET_VIOLATION";
+
     // Reaction SHOULD-rules
     public static final String REACTION_TEXT_NOT_EMPTY = "REACTION_TEXT_NOT_EMPTY";
 
@@ -123,6 +130,8 @@ public final class ValidationDecorationCodes {
             INLINE_SIZE_MISMATCH,
             INLINE_FIELD_VIOLATION,
             INLINE_MIME_VIOLATION,
+            ATTACHED_MEDIA_COUNT_VIOLATION,
+            ATTACHED_MEDIA_BUDGET_VIOLATION,
             REACTION_TEXT_NOT_EMPTY
     );
 

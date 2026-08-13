@@ -22,6 +22,7 @@ import io.takamaka.messages.exception.MalformedProtocolVersionException;
 import io.takamaka.messages.exception.MissingVersionWithFeaturesException;
 import io.takamaka.messages.exception.UnknownActionException;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
+import io.takamaka.messages.chat.attachment.InlineContentLimits;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.exception.MessageException;
 import io.takamaka.messages.utils.ChatCryptoUtils;
@@ -366,6 +367,97 @@ public class MessageActionValidatorTest {
         ValidationResult r = MessageActionValidator.validate(bean, outer(senderPk), ctx);
         assertTrue(r.overallValid());
         assertTrue(r.decorations().isEmpty());
+    }
+
+    // ---- §PREVIEW-CONFORMANCE W1: the receiver check is ASYMMETRIC ------------------------
+    //
+    // validateInlineContent() used to `continue` on every isTheObject == false placeholder, so a
+    // blob's preview was checked by nothing. Removing that skip wholesale would have been WORSE
+    // than leaving it: the loop body also compares unencrypted_content_hash against hash(preview),
+    // and for a blob that hash describes the ORIGINAL OBJECT, which the thumbnail deliberately does
+    // not hash to. A naive fix therefore decorates every CONFORMANT preview as INLINE_HASH_MISMATCH
+    // at ERROR severity. The two tests below pin the two halves of that split.
+
+    private static BasicMessageEncryptedContentBean plainWithBlobPreview(String preview, String uch) {
+        ChatMediaPlaceholderBean blob = ChatMediaPlaceholderBean.builder()
+                .mediaType("image/jpeg").isTheObject(false)
+                .encryptedFileHash("aa4529146d71")
+                .preview(preview)
+                .unencryptedContentHash(uch).build();
+        return BasicMessageEncryptedContentBean.builder()
+                .attachedMedia(List.of(blob))
+                .clientProtocolVersion(MessageProtocolVersion.CURRENT).build();
+    }
+
+    @Test
+    public void blobPreviewIsNotHashCheckedAgainstTheObjectHash() throws Exception {
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        // A CONFORMANT blob: uch is the hash of the 4 MB original, the preview is a small
+        // re-encoded thumbnail. These MUST NOT match, and that mismatch is not a defect.
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithBlobPreview("aGVsbG8=",
+                        "0000000000000000000000000000000000000000000000000000000000000000"),
+                outer(senderPk), ctx);
+
+        assertTrue(r.decorations().isEmpty(),
+                "a conformant blob preview must not be decorated: " + r.decorations());
+        assertTrue(r.overallValid());
+    }
+
+    @Test
+    public void inlineHashCheckStillFiresWithTheSameFixture() throws Exception {
+        // Positive control for the test above: identical preview, identical wrong uch, the ONLY
+        // difference being is_the_object. If this did not fire, the assertion above would pass
+        // vacuously — it would be proving that the check is dead, not that it is correctly gated.
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithInline("aGVsbG8=",
+                        "0000000000000000000000000000000000000000000000000000000000000000"),
+                outer(senderPk), ctx);
+
+        assertSingle(r, ValidationDecorationCodes.INLINE_HASH_MISMATCH, DecorationSeverity.ERROR);
+    }
+
+    @Test
+    public void oversizedBlobPreviewIsDecorated() throws Exception {
+        // The SIZE arm, by contrast, applies to both kinds: the bytes bloat the envelope
+        // identically whichever kind of payload they are.
+        byte[] tooBig = new byte[InlineContentLimits.MAX_INLINE_BYTES + 1];
+        String preview = java.util.Base64.getEncoder().encodeToString(tooBig);
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithBlobPreview(preview, null), outer(senderPk), ctx);
+
+        assertSingle(r, ValidationDecorationCodes.INLINE_SIZE_VIOLATION, DecorationSeverity.WARN);
+    }
+
+    @Test
+    public void blobWithNoPreviewIsNotDecorated() throws Exception {
+        // Absent is legal for a blob (non-image object, or a thumbnail that did not fit) — and
+        // must NOT produce the INLINE_FIELD_VIOLATION that an absent INLINE payload produces.
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                plainWithBlobPreview(null, null), outer(senderPk), ctx);
+
+        assertTrue(r.decorations().isEmpty(), r.decorations().toString());
+    }
+
+    @Test
+    public void oversizedMediaListIsDecorated() throws Exception {
+        List<ChatMediaPlaceholderBean> many = new java.util.ArrayList<>();
+        for (int i = 0; i <= InlineContentLimits.MAX_ATTACHED_MEDIA; i++) {
+            many.add(ChatMediaPlaceholderBean.builder()
+                    .mediaType("image/jpeg").isTheObject(false)
+                    .encryptedFileHash("aa4529146d7" + i).build());
+        }
+        ValidationContext ctx = new ValidationContext(null, sig -> senderPk, null);
+        ValidationResult r = MessageActionValidator.validate(
+                BasicMessageEncryptedContentBean.builder().attachedMedia(many)
+                        .clientProtocolVersion(MessageProtocolVersion.CURRENT).build(),
+                outer(senderPk), ctx);
+
+        assertSingle(r, ValidationDecorationCodes.ATTACHED_MEDIA_COUNT_VIOLATION,
+                DecorationSeverity.WARN);
     }
 
     @Test

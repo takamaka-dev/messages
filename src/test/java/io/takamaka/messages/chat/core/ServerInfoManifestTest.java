@@ -26,8 +26,36 @@ class ServerInfoManifestTest {
 
     @Test
     void manifestVersionIsCurrent() {
-        assertEquals("1.4", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
+        // 1.5 adds maxEncryptedContentSizeBytes (§PREVIEW-CONFORMANCE W5).
+        assertEquals("1.5", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
                 "bump this when a field is ADDED — clients gate optional fields on it");
+    }
+
+    @Test
+    void encryptedContentCapRoundTripsUnderItsWireName() throws Exception {
+        ServerInfoResponseBean bean = new ServerInfoResponseBean();
+        bean.setMaxEncryptedContentSizeBytes(1_048_576L);
+
+        String json = mapper.writeValueAsString(bean);
+        assertTrue(json.contains("maxEncryptedContentSizeBytes"),
+                "the field must appear on the wire — a client cannot pre-check what is not sent: " + json);
+
+        ServerInfoResponseBean back = mapper.readValue(json, ServerInfoResponseBean.class);
+        assertEquals(1_048_576L, back.getMaxEncryptedContentSizeBytes());
+    }
+
+    @Test
+    void olderServerWithoutTheContentCap_parsesAsNotAdvertised() throws Exception {
+        // Every client shipped before 2026-08-13 will talk to servers that omit this, and every
+        // server shipped before it will talk to clients that expect it. Absent must read as
+        // "not advertised", never as an error and never as "the cap is zero".
+        String legacy = "{\"serverVersion\":\"0.8.3-SNAPSHOT\",\"manifestVersion\":\"1.4\"}";
+
+        ServerInfoResponseBean bean = mapper.readValue(legacy, ServerInfoResponseBean.class);
+
+        assertEquals(0L, bean.getMaxEncryptedContentSizeBytes(),
+                "absent must read as 0 = not advertised");
+        assertEquals("1.4", bean.getManifestVersion());
     }
 
     @Test

@@ -76,22 +76,114 @@ class ProducerInlineGuardTest {
                 withInline(InlineContentLimits.MAX_INLINE_BYTES)));
     }
 
+    /**
+     * Build a blob placeholder — an arbitrarily large OBJECT living on the server —
+     * carrying {@code previewBytes} of decoded preview, or none when negative.
+     */
+    private static BasicMessageEncryptedContentBean withBlob(int previewBytes) {
+        var b = ChatMediaPlaceholderBean.builder()
+                .mediaType("image/jpeg").isTheObject(false)
+                .encryptedFileHash("aa4529146d71")
+                .size(4L * 1024 * 1024 * 1024) // a 4 GB object: the OBJECT is unconstrained
+                .fileName("huge.jpg");
+        if (previewBytes >= 0) {
+            b.preview(b64Of(previewBytes));
+        }
+        return BasicMessageEncryptedContentBean.builder()
+                .textMessage("a file")
+                .attachedMedia(List.of(b.build()))
+                .build();
+    }
+
     @Test
-    @DisplayName("⭐ a BLOB placeholder of any size builds — small-via-blob is legal")
-    void blobPathIsNeverConstrained() throws Exception {
+    @DisplayName("⭐ a blob's OBJECT is unconstrained — nothing is ever forced inline")
+    void blobObjectSizeIsNeverConstrained() throws Exception {
         // The rule is one-directional by ruling: nothing is ever forced inline,
         // which is what lets forward / share-history pass placeholders through.
-        BasicMessageEncryptedContentBean blob = BasicMessageEncryptedContentBean.builder()
-                .textMessage("a file")
-                .attachedMedia(List.of(ChatMediaPlaceholderBean.builder()
-                        .mediaType("image/jpeg").isTheObject(false)
-                        .encryptedFileHash("aa4529146d71")
-                        .preview(b64Of(InlineContentLimits.MAX_INLINE_BYTES * 2))
-                        .fileName("huge.jpg").build()))
-                .build();
-
+        // A 4 GB object with a conformant 6 KB preview must build.
         assertDoesNotThrow(() -> ChatCryptoUtils.getBasicMessageBean(
-                wallet(), 0, CONV, KEY, List.of(), blob));
+                wallet(), 0, CONV, KEY, List.of(), withBlob(6337)));
+    }
+
+    @Test
+    @DisplayName("a blob may carry NO preview at all — absent is legal, not a defect")
+    void blobWithoutPreviewIsAccepted() throws Exception {
+        assertDoesNotThrow(() -> ChatCryptoUtils.getBasicMessageBean(
+                wallet(), 0, CONV, KEY, List.of(), withBlob(-1)));
+    }
+
+    @Test
+    @DisplayName("⭐ W1: a blob's PREVIEW is bounded by the same byte rule as inline content")
+    void oversizedBlobPreviewIsRefused() throws Exception {
+        // This assertion is the whole of §PREVIEW-CONFORMANCE W1. Until 2026-08-13
+        // rejectOversizedInlineContent `continue`d on every isTheObject == false
+        // placeholder, so MAX_INLINE_BYTES had never once applied to a blob's
+        // preview — measured previews ran to 1.9x the file they previewed.
+        //
+        // The object may be 4 GB (asserted above). The THUMBNAIL may not, because
+        // it rides inside every envelope, fan-out and history fetch.
+        ChatMessageException ex = assertThrows(ChatMessageException.class, ()
+                -> ChatCryptoUtils.getBasicMessageBean(wallet(), 0, CONV, KEY, List.of(),
+                        withBlob(InlineContentLimits.MAX_INLINE_BYTES + 1)));
+
+        assertTrue(ex.getMessage().contains("huge.jpg"), ex.getMessage());
+        assertTrue(ex.getMessage().contains(String.valueOf(InlineContentLimits.MAX_INLINE_BYTES)),
+                ex.getMessage());
+        // The remedy differs from the inline one: an oversized THUMBNAIL is not
+        // fixed by "send it as an attachment" — it already IS an attachment.
+        assertTrue(ex.getMessage().toLowerCase().contains("smaller thumbnail"),
+                "it must point at the remedy that applies to a preview: " + ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("a blob preview at exactly the limit builds — boundary is inclusive")
+    void blobPreviewAtLimitIsAccepted() throws Exception {
+        assertDoesNotThrow(() -> ChatCryptoUtils.getBasicMessageBean(
+                wallet(), 0, CONV, KEY, List.of(),
+                withBlob(InlineContentLimits.MAX_INLINE_BYTES)));
+    }
+
+    @Test
+    @DisplayName("⭐ W1: attached_media length is capped — a per-item rule bounds nothing otherwise")
+    void oversizedMediaListIsRefused() throws Exception {
+        List<ChatMediaPlaceholderBean> many = new java.util.ArrayList<>();
+        for (int i = 0; i <= InlineContentLimits.MAX_ATTACHED_MEDIA; i++) {
+            many.add(ChatMediaPlaceholderBean.builder()
+                    .mediaType("image/jpeg").isTheObject(false)
+                    .encryptedFileHash("aa4529146d7" + i)
+                    .fileName("f" + i + ".jpg").build());
+        }
+        ChatMessageException ex = assertThrows(ChatMessageException.class, ()
+                -> ChatCryptoUtils.getBasicMessageBean(wallet(), 0, CONV, KEY, List.of(),
+                        BasicMessageEncryptedContentBean.builder().attachedMedia(many).build()));
+        assertTrue(ex.getMessage().contains(String.valueOf(InlineContentLimits.MAX_ATTACHED_MEDIA)),
+                ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("⭐ W1: the AGGREGATE preview budget binds before the count cap does")
+    void aggregatePreviewBudgetIsEnforced() throws Exception {
+        // Positive control that this is not the count cap firing: the list is
+        // deliberately SHORT enough to pass MAX_ATTACHED_MEDIA, and every single
+        // placeholder is individually legal (exactly MAX_INLINE_BYTES). Only the
+        // sum is illegal — which is the case a per-item limit cannot catch.
+        int perItem = InlineContentLimits.MAX_INLINE_BYTES;
+        int count = (InlineContentLimits.MAX_TOTAL_PREVIEW_BYTES / perItem) + 1;
+        assertTrue(count <= InlineContentLimits.MAX_ATTACHED_MEDIA,
+                "fixture must not trip the count cap instead: " + count);
+
+        List<ChatMediaPlaceholderBean> many = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            many.add(ChatMediaPlaceholderBean.builder()
+                    .mediaType("image/jpeg").isTheObject(false)
+                    .encryptedFileHash("aa4529146d7" + i)
+                    .preview(b64Of(perItem))
+                    .fileName("f" + i + ".jpg").build());
+        }
+        ChatMessageException ex = assertThrows(ChatMessageException.class, ()
+                -> ChatCryptoUtils.getBasicMessageBean(wallet(), 0, CONV, KEY, List.of(),
+                        BasicMessageEncryptedContentBean.builder().attachedMedia(many).build()));
+        assertTrue(ex.getMessage().contains("aggregate"), ex.getMessage());
     }
 
     @Test

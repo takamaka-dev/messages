@@ -122,6 +122,43 @@ public final class InlineContentLimits {
      */
 
     /**
+     * Maximum number of placeholders in one message's {@code attached_media}.
+     *
+     * <p>A per-placeholder byte limit bounds nothing while the LIST is unbounded:
+     * {@link #MAX_INLINE_BYTES} times infinity is infinity. This is the cheap
+     * structural cap — it rejects an absurd list before anything is decoded.
+     * {@link #MAX_TOTAL_PREVIEW_BYTES} is the one that actually binds.</p>
+     *
+     * <p>Value: {@value}. Above any real composer's multi-select, far below the
+     * ~20 max-size previews that would breach the server's content cap.</p>
+     *
+     * @since 1.9.0
+     */
+    public static final int MAX_ATTACHED_MEDIA = 16;
+
+    /**
+     * Maximum SUM of decoded {@code preview} bytes across one message's
+     * {@code attached_media}, counting inline payloads and blob thumbnails alike.
+     *
+     * <p>Derived from the server's hard cap, not invented: rschat rejects an
+     * encrypted content bean whose serialized JSON exceeds <strong>1 048 576
+     * bytes</strong> ({@code validation.max-encrypted-message-content-size-bytes}
+     * → {@code ValidationUtils.validateEncryptedContentSize}). Working backwards:
+     * decoded preview bytes are carried as base64 inside the plaintext JSON
+     * (x1.34), which is then encrypted and base64-encoded again (x1.34), so
+     * <em>d</em> decoded bytes cost about <em>1.8 d</em> on the wire the server
+     * measures. {@value} bytes ⇒ ~700 KB, leaving comfortable room for the text
+     * message, the {@code sed} descriptors and envelope overhead.</p>
+     *
+     * <p>⚠️ Clients cannot see the server's cap — it is not in the
+     * {@code serverinfo} manifest — so this constant is the only pre-send
+     * defence against a rejection the user would otherwise meet at the server.</p>
+     *
+     * @since 1.9.0
+     */
+    public static final int MAX_TOTAL_PREVIEW_BYTES = 384 * 1024; // 393_216
+
+    /**
      * Top-level MIME family allowed for inline content carrying image
      * data. Inline placeholders carrying {@code mediaType} starting
      * with this prefix MUST additionally match the receiver's
