@@ -42,7 +42,15 @@ public class UploadRequestBean {
     @JsonProperty("upload_content_id_hash")
     private String uploadContentIdentifingHash;
     /**
-     * upper bound, in bytes, of the content size
+     * Upper bound, in bytes, of the content size — of the <strong>ENCODED body as it will arrive</strong>,
+     * i.e. the same quantity as {@code ChatMediaPlaceholderBean.size} ({@code ATTACHMENT_PROTOCOL.md} §4.2).
+     *
+     * <p>The server enforces this against the bytes it actually receives, with a configured tolerance
+     * ({@code rschat.file-upload.encryption-tolerance-bytes}, 1 MB by default), and errors hard on the
+     * first chunk past it. Declaring the <em>ciphertext</em> byte count instead therefore under-declares
+     * by ~33% and cuts off any upload whose base64 overhead exceeds the tolerance — everything above
+     * roughly 3 MB. Do not "correct" this field to a decoded size; it is measured on the wire because
+     * that is where it is checked.</p>
      */
     private Long size;
     private StreamEncryptedDescriptor sed;
