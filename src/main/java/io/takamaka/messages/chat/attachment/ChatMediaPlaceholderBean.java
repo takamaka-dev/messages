@@ -46,8 +46,8 @@ import lombok.NoArgsConstructor;
  *   <li>{@code encryptedFileHash} MUST be populated</li>
  *   <li>{@code sed} MUST be populated</li>
  *   <li>{@code preview} is optional (256x256 WebP thumbnail)</li>
- *   <li>{@code size} = the <strong>ciphertext byte count</strong> (DR-030 — never the length of
- *       the base64 that carries it; see the field's own javadoc)</li>
+ *   <li>{@code size} = the encoded length of the encrypted data, as emitted — the TRANSFER
+ *       quantity, ~1.33× the file (`ATTACHMENT_PROTOCOL.md` §4.2; see the field's own javadoc)</li>
  *   <li>{@code originalSize} = plaintext file size in bytes</li>
  * </ul>
  *
@@ -92,22 +92,38 @@ public class ChatMediaPlaceholderBean {
     private String mediaType;
 
     /**
-     * Size of the media in BYTES — never a base64 character count.
+     * The byte length of the <strong>ENCODED form of the encrypted data, as emitted</strong> —
+     * i.e. what actually traverses the wire.
      *
      * <ul>
-     *   <li>{@code isTheObject=false} (blob): the <strong>ciphertext byte count</strong>;</li>
-     *   <li>{@code isTheObject=true} (inline): the plaintext byte count, i.e. the decoded
-     *       {@code preview}.</li>
+     *   <li>{@code isTheObject=false} (blob): the length of the base64 body, <em>including</em> any
+     *       line breaks the producer emits;</li>
+     *   <li>{@code isTheObject=true} (inline): the plaintext byte count — there is no blob and no
+     *       encryption overhead, so it equals {@code originalSize}.</li>
      * </ul>
      *
-     * <p><strong>DR-030 (2026-08-14).</strong> This previously read "Base64 UTF-8 char count of the
-     * media", and producers implemented exactly that — which gave {@code size} the same defect as
-     * the old {@code encrypted_content_hash}: a base64 count varies with wrapping and padding, so
-     * Java (76/CRLF-wrapped) and the Dart port (one line) reported different sizes for identical
-     * content. Measuring bytes makes the encoding irrelevant, and the byte count is taken from the
-     * encryption itself rather than from the length of the encrypted FILE.</p>
+     * <p>Stated in terms of <em>the encoding</em> rather than of base64 specifically, so the
+     * definition survives an encoding change instead of silently becoming false. The normative text
+     * is {@code ATTACHMENT_PROTOCOL.md} §4.2.</p>
      *
-     * @see io.takamaka.extra.utils.TkmEncryptionUtils
+     * <p><strong>⚠️ "the size of the encrypted bytes" is a natural reading and it is wrong by ~33%</strong>
+     * (43 269 vs 57 692 on the reference blob). This field is the <em>transfer</em> quantity: it is
+     * the download-progress denominator in all three clients, and the only field that carries the
+     * number, since the encoded length cannot be derived exactly from a byte count — the encoders
+     * differ by design. For the plaintext size use {@link #originalSize}.</p>
+     *
+     * <p><strong>"As emitted" is load-bearing, and producer-relative on purpose.</strong> Java writes
+     * the base64 CRLF-wrapped at 76 (Apache Commons) and counts those breaks; the Dart port emits one
+     * line. The same file therefore declares 59 212 (Java) or 57 692 (Dart). That is correct rather
+     * than divergent: every encryption produces a fresh blob with its own {@code sed} and its own
+     * {@code encryptedFileHash}, so this number describes <em>this</em> producer's body and is never
+     * compared against another's.</p>
+     *
+     * <p><strong>DR-030 (2026-08-14) deliberately does NOT apply here.</strong> It moved
+     * {@code encrypted_content_hash} onto the ciphertext bytes because a hash is an <em>identity</em>
+     * and must be producer-independent. {@code size} is a transfer descriptor, not an identity, and
+     * was briefly moved with it — which broke uploads above ~3 MB and made every download bar read
+     * ~133%. DR-030 is scoped to the hash.</p>
      */
     @JsonProperty("size")
     private Long size;
