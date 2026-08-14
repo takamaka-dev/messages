@@ -46,11 +46,13 @@ import lombok.NoArgsConstructor;
  *   <li>{@code encryptedFileHash} MUST be populated</li>
  *   <li>{@code sed} MUST be populated</li>
  *   <li>{@code preview} is optional (256x256 WebP thumbnail)</li>
- *   <li>{@code size} = encrypted/Base64 size (existing behavior)</li>
+ *   <li>{@code size} = the <strong>ciphertext byte count</strong> (DR-030 — never the length of
+ *       the base64 that carries it; see the field's own javadoc)</li>
  *   <li>{@code originalSize} = plaintext file size in bytes</li>
  * </ul>
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
+ * @version 1.9.0
  */
 @Data
 @Builder
@@ -90,8 +92,22 @@ public class ChatMediaPlaceholderBean {
     private String mediaType;
 
     /**
-     * Base64 UTF-8 char count of the media (encrypted size for regular
-     * attachments, plaintext size for inline content).
+     * Size of the media in BYTES — never a base64 character count.
+     *
+     * <ul>
+     *   <li>{@code isTheObject=false} (blob): the <strong>ciphertext byte count</strong>;</li>
+     *   <li>{@code isTheObject=true} (inline): the plaintext byte count, i.e. the decoded
+     *       {@code preview}.</li>
+     * </ul>
+     *
+     * <p><strong>DR-030 (2026-08-14).</strong> This previously read "Base64 UTF-8 char count of the
+     * media", and producers implemented exactly that — which gave {@code size} the same defect as
+     * the old {@code encrypted_content_hash}: a base64 count varies with wrapping and padding, so
+     * Java (76/CRLF-wrapped) and the Dart port (one line) reported different sizes for identical
+     * content. Measuring bytes makes the encoding irrelevant, and the byte count is taken from the
+     * encryption itself rather than from the length of the encrypted FILE.</p>
+     *
+     * @see io.takamaka.extra.utils.TkmEncryptionUtils
      */
     @JsonProperty("size")
     private Long size;
