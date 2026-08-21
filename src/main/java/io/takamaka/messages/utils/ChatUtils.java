@@ -49,6 +49,12 @@ import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
+import io.takamaka.messages.chat.profile.ClearUserProfileRequestBean;
+import io.takamaka.messages.chat.profile.GetProfileDigestsRequestBean;
+import io.takamaka.messages.chat.profile.GetUserProfilePeerRequestBean;
+import io.takamaka.messages.chat.profile.GetUserProfileRequestBean;
+import io.takamaka.messages.chat.profile.PutProfileGrantsRequestBean;
+import io.takamaka.messages.chat.profile.SetUserProfileRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
@@ -242,6 +248,32 @@ public class ChatUtils {
 
     public static final TypingSignalBean fromJsonToTypingSignalBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, TypingSignalBean.class);
+    }
+
+    // ===== User profile channel (USER_PROFILE_DESIGN.md §6.1, DR-032) =====
+
+    public static final SetUserProfileRequestBean fromJsonToSetUserProfileRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, SetUserProfileRequestBean.class);
+    }
+
+    public static final PutProfileGrantsRequestBean fromJsonToPutProfileGrantsRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, PutProfileGrantsRequestBean.class);
+    }
+
+    public static final ClearUserProfileRequestBean fromJsonToClearUserProfileRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, ClearUserProfileRequestBean.class);
+    }
+
+    public static final GetUserProfileRequestBean fromJsonToGetUserProfileRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetUserProfileRequestBean.class);
+    }
+
+    public static final GetUserProfilePeerRequestBean fromJsonToGetUserProfilePeerRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetUserProfilePeerRequestBean.class);
+    }
+
+    public static final GetProfileDigestsRequestBean fromJsonToGetProfileDigestsRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetProfileDigestsRequestBean.class);
     }
 
     public static final SignedMessageBean fromJsonToSignedMessageBean(String jsonMessage) throws JsonProcessingException {

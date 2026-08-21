@@ -50,6 +50,22 @@ import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsSignedContentBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
 import io.takamaka.messages.chat.options.SetUserOptionSignedContentBean;
+import io.takamaka.messages.chat.profile.ClearUserProfileRequestBean;
+import io.takamaka.messages.chat.profile.ClearUserProfileSignedContentBean;
+import io.takamaka.messages.chat.profile.EncryptedProfileBean;
+import io.takamaka.messages.chat.profile.GetProfileDigestsRequestBean;
+import io.takamaka.messages.chat.profile.GetProfileDigestsSignedContentBean;
+import io.takamaka.messages.chat.profile.GetUserProfilePeerRequestBean;
+import io.takamaka.messages.chat.profile.GetUserProfilePeerSignedContentBean;
+import io.takamaka.messages.chat.profile.GetUserProfileRequestBean;
+import io.takamaka.messages.chat.profile.GetUserProfileSignedContentBean;
+import io.takamaka.messages.chat.profile.ProfileCardBean;
+import io.takamaka.messages.chat.profile.ProfileConstants;
+import io.takamaka.messages.chat.profile.ProfileGrantBean;
+import io.takamaka.messages.chat.profile.PutProfileGrantsRequestBean;
+import io.takamaka.messages.chat.profile.PutProfileGrantsSignedContentBean;
+import io.takamaka.messages.chat.profile.SetUserProfileRequestBean;
+import io.takamaka.messages.chat.profile.SetUserProfileSignedContentBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptRequestBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSignedContentBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeBean;
@@ -94,7 +110,18 @@ import io.takamaka.wallet.utils.TkmTextUtils;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.text.Normalizer;
 import java.util.List;
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -836,6 +863,455 @@ public class ChatCryptoUtils {
         }
     }
 
+    // ===== User profile channel (USER_PROFILE_DESIGN.md, registry, DR-032) =====
+
+    /**
+     * Generate a profile key: {@link ProfileConstants#PROFILE_KEY_BYTES} CSPRNG
+     * bytes, returned as Base64URL text.
+     *
+     * <p>Text rather than {@code byte[]} because that text is what gets
+     * RSA-wrapped per grantee by {@link #getInviteForUser} — the same primitive
+     * conversation keys use, unchanged (design D3).</p>
+     *
+     * <p>Note this does NOT go through {@link #generateRandomSafeKey}. That
+     * generator produces an alphanumeric PASSPHRASE for the estate's
+     * PBKDF2-then-AES path; a profile blob is sealed with the raw key directly
+     * (there is no KDF and no salt on the wire — see
+     * {@link #sealProfileCard}), so the key must BE 32 bytes of entropy, not a
+     * string that gets stretched into one.</p>
+     *
+     * @return a fresh profile key, Base64URL
+     */
+    public static final String generateProfileKey() {
+        byte[] key = new byte[ProfileConstants.PROFILE_KEY_BYTES];
+        TKM_CSPRNG.nextBytes(key);
+        return TkmSignUtils.fromByteArrayToB64URL(key);
+    }
+
+    /**
+     * SHA3-256 of the DECODED blob bytes, lowercase hex — the value that goes
+     * in {@code blob_hash} and in {@code known_blob_hash}.
+     *
+     * <p><b>Over BYTES, deliberately, and not via any {@code TkmSignUtils.Hash*}
+     * helper.</b> Those take a {@code String} and hash its UTF-8; the
+     * {@code Hash*byte} family returns the ASCII of Base64URL TEXT, not a raw
+     * digest, and hex-encoding that yields the hex of a string (C51). Hashing
+     * the base64 text instead of the bytes is precisely the defect DR-030
+     * records — and DR-031 records the check that then failed to enforce it,
+     * with four passing tests over a check that did nothing.</p>
+     *
+     * @param blobBytes the decoded ciphertext bytes ({@code IV || ct || tag})
+     * @return lowercase hex of the SHA3-256 digest
+     * @throws CryptoMessageException if SHA3-256 is unavailable
+     */
+    public static final String profileBlobHash(byte[] blobBytes) throws CryptoMessageException {
+        try {
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(new BouncyCastleProvider());
+            }
+            MessageDigest digest = MessageDigest.getInstance("SHA3-256", BouncyCastleProvider.PROVIDER_NAME);
+            byte[] out = digest.digest(blobBytes);
+            StringBuilder sb = new StringBuilder(out.length * 2);
+            for (byte b : out) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16));
+                sb.append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException | NoSuchProviderException ex) {
+            throw new CryptoMessageException("SHA3-256 unavailable for the profile blob hash", ex);
+        }
+    }
+
+    /**
+     * Enforce the registry §4 card caps at the PRODUCER, before anything is
+     * encrypted.
+     *
+     * <p>This is the only place they can be enforced at all: once the card is
+     * sealed the server sees ciphertext and can check nothing inside it (design
+     * D8). A client that leaves this to the server's {@code ERR_TOO_LARGE} is
+     * non-conformant — that error bounds the whole blob, not a name.</p>
+     *
+     * <p>Lengths are counted in Unicode CODE POINTS after NFC normalisation.
+     * Counting UTF-16 units truncates emoji and non-BMP scripts one glyph
+     * early, and two clients that disagree on the rule disagree on whether the
+     * same card is conformant.</p>
+     *
+     * @param card the plaintext card
+     * @throws CryptoMessageException if any registry §4 cap is exceeded, or the
+     * payload version is not the one this build writes
+     */
+    public static final void validateProfileCard(ProfileCardBean card) throws CryptoMessageException {
+        if (card == null) {
+            throw new CryptoMessageException("profile card must not be null");
+        }
+        if (!ProfileConstants.PAYLOAD_VERSION_1_0.equals(card.getPayloadVersion())) {
+            throw new CryptoMessageException("unsupported profile payload_version: " + card.getPayloadVersion());
+        }
+        int nameChars = nfcCodePointCount(card.getDisplayName());
+        if (nameChars > ProfileConstants.MAX_DISPLAY_NAME_CHARS) {
+            throw new CryptoMessageException("display_name is " + nameChars + " NFC characters, cap is "
+                    + ProfileConstants.MAX_DISPLAY_NAME_CHARS);
+        }
+        int statusChars = nfcCodePointCount(card.getStatusMessage());
+        if (statusChars > ProfileConstants.MAX_STATUS_MESSAGE_CHARS) {
+            throw new CryptoMessageException("status_message is " + statusChars + " NFC characters, cap is "
+                    + ProfileConstants.MAX_STATUS_MESSAGE_CHARS);
+        }
+        if (card.getAvatarMediaType() != null
+                && card.getAvatarMediaType().length() > ProfileConstants.MAX_AVATAR_MEDIA_TYPE_CHARS) {
+            throw new CryptoMessageException("avatar_media_type exceeds "
+                    + ProfileConstants.MAX_AVATAR_MEDIA_TYPE_CHARS + " characters");
+        }
+        if (card.getAvatar() != null) {
+            final int avatarBytes;
+            try {
+                avatarBytes = TkmSignUtils.fromAnyB64ToByteArray(card.getAvatar()).length;
+            } catch (RuntimeException ex) {
+                throw new CryptoMessageException("avatar is not decodable base64", ex);
+            }
+            // Bytes, never pixels. MAX_THUMBNAIL_DIMENSION_PX was removed on 2026-08-12 because
+            // validating a pixel limit means decoding untrusted image data — a decompression-bomb
+            // surface accepted for a cosmetic constraint. Registry §4.5.4; not reopened here.
+            if (avatarBytes > ProfileConstants.MAX_AVATAR_BYTES) {
+                throw new CryptoMessageException("avatar is " + avatarBytes + " decoded bytes, cap is "
+                        + ProfileConstants.MAX_AVATAR_BYTES);
+            }
+        }
+    }
+
+    private static int nfcCodePointCount(String value) {
+        if (value == null) {
+            return 0;
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFC);
+        return normalized.codePointCount(0, normalized.length());
+    }
+
+    /**
+     * Seal a profile card: AES-256-GCM under the profile key, emitted as
+     * {@code base64url(IV || ciphertext || tag)} — registry §4.1, design D2/D7.
+     *
+     * <p>The caps in {@link #validateProfileCard} are enforced first, and the
+     * resulting blob is checked against
+     * {@link ProfileConstants#MAX_BLOB_B64_CHARS}. A client that has fetched
+     * {@code serverinfo} should clamp to the manifest's value instead of the
+     * compiled-in one (DR-022/DR-023); this is the floor, not the authority.</p>
+     *
+     * <p><b>Why a raw key and not the estate's {@code toPasswordEncryptedContent}
+     * path.</b> That path is PBKDF2-then-AES and serialises an
+     * {@code EncMessageBean} carrying its own KDF parameters. The profile
+     * envelope has no KDF fields by design — it is one opaque string plus a
+     * named cipher — so the key here is used directly. Same primitive family,
+     * different envelope, and the difference is on the wire where a reader can
+     * see it.</p>
+     *
+     * @param card the plaintext card
+     * @param profileKey the profile key, Base64URL (see
+     * {@link #generateProfileKey})
+     * @param keyEpoch the key generation this blob belongs to — the
+     * {@code nonce_issue_time} of the write that created the key
+     * @return the sealed envelope, ready for {@code setuserprofile}
+     * @throws CryptoMessageException on a cap violation or any crypto failure
+     */
+    public static final EncryptedProfileBean sealProfileCard(ProfileCardBean card, String profileKey, long keyEpoch) throws CryptoMessageException {
+        validateProfileCard(card);
+        try {
+            final byte[] key = TkmSignUtils.fromAnyB64ToByteArray(profileKey);
+            if (key.length != ProfileConstants.PROFILE_KEY_BYTES) {
+                throw new CryptoMessageException("profile key must be " + ProfileConstants.PROFILE_KEY_BYTES
+                        + " bytes, was " + key.length);
+            }
+            final byte[] plaintext = SimpleRequestHelper.getCanonicalJson(card).getBytes(StandardCharsets.UTF_8);
+            final byte[] iv = new byte[ProfileConstants.GCM_IV_BYTES];
+            TKM_CSPRNG.nextBytes(iv);
+
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(new BouncyCastleProvider());
+            }
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", BouncyCastleProvider.PROVIDER_NAME);
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"),
+                    new GCMParameterSpec(ProfileConstants.GCM_TAG_BITS, iv));
+            final byte[] sealed = cipher.doFinal(plaintext);
+
+            final byte[] blobBytes = new byte[iv.length + sealed.length];
+            System.arraycopy(iv, 0, blobBytes, 0, iv.length);
+            System.arraycopy(sealed, 0, blobBytes, iv.length, sealed.length);
+
+            final String blob = TkmSignUtils.fromByteArrayToB64URL(blobBytes);
+            if (blob.length() > ProfileConstants.MAX_BLOB_B64_CHARS) {
+                throw new CryptoMessageException("sealed profile blob is " + blob.length()
+                        + " base64 characters, cap is " + ProfileConstants.MAX_BLOB_B64_CHARS);
+            }
+            return new EncryptedProfileBean(
+                    keyEpoch,
+                    ProfileConstants.BLOB_VERSION_1_0,
+                    ProfileConstants.CIPHER_AES_256_GCM,
+                    blob,
+                    profileBlobHash(blobBytes));
+        } catch (JsonProcessingException | GeneralSecurityException ex) {
+            throw new CryptoMessageException("unable to seal the profile card", ex);
+        }
+    }
+
+    /**
+     * Open a sealed profile card — the inverse of {@link #sealProfileCard}.
+     *
+     * <p>GCM authenticates: a tampered blob fails here rather than yielding
+     * plausible-looking garbage. {@code blob_hash} is verified too, because a
+     * server that swapped a blob for a DIFFERENT valid one under the same key
+     * would otherwise pass — the hash is what ties the body to the digest a
+     * client cached and to the tickle it acted on.</p>
+     *
+     * <p>The returned card is UNTRUSTED input from a peer. Sanitise before
+     * rendering, decode the avatar by magic bytes, and never let
+     * {@code display_name} displace the public key (registry §4.5).</p>
+     *
+     * @param encryptedProfile the sealed envelope as received
+     * @param profileKey the profile key, Base64URL
+     * @return the plaintext card
+     * @throws ChatMessageException if the envelope is malformed, the hash does
+     * not match the bytes, or authentication fails
+     */
+    public static final ProfileCardBean openProfileCard(EncryptedProfileBean encryptedProfile, String profileKey) throws ChatMessageException {
+        try {
+            if (encryptedProfile == null || encryptedProfile.getBlob() == null) {
+                throw new ChatMessageException("no profile blob to open");
+            }
+            if (!ProfileConstants.CIPHER_AES_256_GCM.equals(encryptedProfile.getCipher())) {
+                throw new ChatMessageException("unsupported profile cipher: " + encryptedProfile.getCipher());
+            }
+            if (!ProfileConstants.BLOB_VERSION_1_0.equals(encryptedProfile.getBlobVersion())) {
+                throw new ChatMessageException("unsupported profile blob_version: " + encryptedProfile.getBlobVersion());
+            }
+            // Both base64 alphabets, permanently — the F11 read contract
+            // (BASE64_ENCODING_CONTRACT.md §0.1), applied at the crypto boundary.
+            final byte[] blobBytes = TkmSignUtils.fromAnyB64ToByteArray(encryptedProfile.getBlob());
+            if (blobBytes.length <= ProfileConstants.GCM_IV_BYTES) {
+                throw new ChatMessageException("profile blob is too short to carry an IV and a tag");
+            }
+            final String actualHash = profileBlobHash(blobBytes);
+            if (encryptedProfile.getBlobHash() != null && !actualHash.equals(encryptedProfile.getBlobHash())) {
+                throw new ChatMessageException("profile blob_hash does not match the blob bytes");
+            }
+
+            final byte[] key = TkmSignUtils.fromAnyB64ToByteArray(profileKey);
+            if (key.length != ProfileConstants.PROFILE_KEY_BYTES) {
+                throw new ChatMessageException("profile key must be " + ProfileConstants.PROFILE_KEY_BYTES
+                        + " bytes, was " + key.length);
+            }
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(new BouncyCastleProvider());
+            }
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", BouncyCastleProvider.PROVIDER_NAME);
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
+                    new GCMParameterSpec(ProfileConstants.GCM_TAG_BITS, blobBytes, 0, ProfileConstants.GCM_IV_BYTES));
+            final byte[] plaintext = cipher.doFinal(blobBytes,
+                    ProfileConstants.GCM_IV_BYTES, blobBytes.length - ProfileConstants.GCM_IV_BYTES);
+
+            return TkmTextUtils.getJacksonMapper()
+                    .readValue(new String(plaintext, StandardCharsets.UTF_8), ProfileCardBean.class);
+        } catch (CryptoMessageException | GeneralSecurityException | JsonProcessingException ex) {
+            throw new ChatMessageException("unable to open the profile card", ex);
+        }
+    }
+
+    /**
+     * Wrap the profile key to one grantee's registered encryption key — design
+     * D3, registry §4.2.
+     *
+     * <p>This DELEGATES to {@link #getInviteForUser}: a profile-key grant is
+     * byte-identical in shape to a conversation-key invite, so it is produced by
+     * the same code. Reimplementing the RSA wrap here would fork the one place
+     * in the estate that owns {@code enc_key}'s encoding, and would inherit the
+     * F11 bug instead of the F11 fix.</p>
+     *
+     * @param grantee the grantee's registration envelope (supplies the identity
+     * key and the RSA encryption key)
+     * @param profileKey the profile key, Base64URL
+     * @param keyEpoch the epoch this grant unwraps
+     * @return the grant, ready for {@code setuserprofile} or
+     * {@code putprofilegrants}
+     * @throws CryptoMessageException if the wrap fails
+     */
+    public static final ProfileGrantBean getProfileGrantForUser(RegisterUserRequestBean grantee, String profileKey, long keyEpoch) throws CryptoMessageException {
+        final TopicKeyDistributionItemBean wrapped = getInviteForUser(grantee, profileKey);
+        return new ProfileGrantBean(
+                grantee.getFrom(),
+                keyEpoch,
+                wrapped.getEncryptionKeyHash(),
+                wrapped.getEncryptedTopicKey());
+    }
+
+    /**
+     * Build a signed {@code setuserprofile} request. The signature covers
+     * {@code canonical(pl)}.
+     *
+     * <p>Concurrent nonce-bearing writes from one client race and lose to each
+     * other under LWW: serialise them through the ordered-write helper the
+     * options channel already uses (design §8, handoff §5).</p>
+     */
+    public static final SetUserProfileRequestBean getSignedSetUserProfileRequest(
+            final NonceResponseBean nonce,
+            final EncryptedProfileBean profile,
+            final List<ProfileGrantBean> grants,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final SetUserProfileSignedContentBean pl = new SetUserProfileSignedContentBean(
+                    nonce, profile, grants, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new SetUserProfileRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.SET_USER_PROFILE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code putprofilegrants} request: republish grants for an
+     * existing epoch without rewriting the blob.
+     */
+    public static final PutProfileGrantsRequestBean getSignedPutProfileGrantsRequest(
+            final NonceResponseBean nonce,
+            final long keyEpoch,
+            final List<ProfileGrantBean> grants,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final PutProfileGrantsSignedContentBean pl = new PutProfileGrantsSignedContentBean(
+                    nonce, keyEpoch, grants, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new PutProfileGrantsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.PUT_PROFILE_GRANTS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code clearuserprofile} request. The nonce's issue time
+     * becomes the tombstone's watermark (design D6).
+     */
+    public static final ClearUserProfileRequestBean getSignedClearUserProfileRequest(
+            final NonceResponseBean nonce,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final ClearUserProfileSignedContentBean pl = new ClearUserProfileSignedContentBean(nonce, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new ClearUserProfileRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.CLEAR_USER_PROFILE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getuserprofile} self-read request (no nonce).
+     */
+    public static final GetUserProfileRequestBean getSignedGetUserProfileRequest(
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final GetUserProfileSignedContentBean pl = new GetUserProfileSignedContentBean(clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetUserProfileRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_USER_PROFILE.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getuserprofilepeer} request (no nonce).
+     *
+     * @param knownBlobHash the caller's cached {@code blob_hash}, or
+     * {@code null} for an unconditional read. Passing it is a conformance
+     * requirement wherever a cache exists (design D11).
+     */
+    public static final GetUserProfilePeerRequestBean getSignedGetUserProfilePeerRequest(
+            final String targetPublicKey,
+            final String knownBlobHash,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final GetUserProfilePeerSignedContentBean pl = new GetUserProfilePeerSignedContentBean(
+                    targetPublicKey, knownBlobHash, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetUserProfilePeerRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_USER_PROFILE_PEER.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getprofiledigests} batch request (no nonce), at most
+     * {@link ProfileConstants#MAX_DIGEST_BATCH} targets.
+     */
+    public static final GetProfileDigestsRequestBean getSignedGetProfileDigestsRequest(
+            final List<String> targetPublicKeys,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        if (targetPublicKeys != null && targetPublicKeys.size() > ProfileConstants.MAX_DIGEST_BATCH) {
+            // Refuse at the producer rather than let the server reject the batch: a client that
+            // silently truncated instead would read the missing targets as "no profile".
+            throw new CryptoMessageException("digest batch is " + targetPublicKeys.size()
+                    + " targets, cap is " + ProfileConstants.MAX_DIGEST_BATCH);
+        }
+        try {
+            final GetProfileDigestsSignedContentBean pl = new GetProfileDigestsSignedContentBean(
+                    targetPublicKeys, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetProfileDigestsRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_PROFILE_DIGESTS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
     public static final SignedMessageBean verifySignedMessage(String messageJson, String... from) throws ChatMessageException {
         return verifySignedMessage(messageJson, null, from);
     }
@@ -955,6 +1431,36 @@ public class ChatCryptoUtils {
                     final GetUserOptionPeerRequestBean getUserOptionPeerRequestBean = ChatUtils.fromJsonToGetUserOptionPeerRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionPeerRequestBean.getPl());
                     returnObj = getUserOptionPeerRequestBean;
+                }
+                case "SET_USER_PROFILE" -> {
+                    final SetUserProfileRequestBean setUserProfileRequestBean = ChatUtils.fromJsonToSetUserProfileRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(setUserProfileRequestBean.getPl());
+                    returnObj = setUserProfileRequestBean;
+                }
+                case "PUT_PROFILE_GRANTS" -> {
+                    final PutProfileGrantsRequestBean putProfileGrantsRequestBean = ChatUtils.fromJsonToPutProfileGrantsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(putProfileGrantsRequestBean.getPl());
+                    returnObj = putProfileGrantsRequestBean;
+                }
+                case "CLEAR_USER_PROFILE" -> {
+                    final ClearUserProfileRequestBean clearUserProfileRequestBean = ChatUtils.fromJsonToClearUserProfileRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(clearUserProfileRequestBean.getPl());
+                    returnObj = clearUserProfileRequestBean;
+                }
+                case "GET_USER_PROFILE" -> {
+                    final GetUserProfileRequestBean getUserProfileRequestBean = ChatUtils.fromJsonToGetUserProfileRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserProfileRequestBean.getPl());
+                    returnObj = getUserProfileRequestBean;
+                }
+                case "GET_USER_PROFILE_PEER" -> {
+                    final GetUserProfilePeerRequestBean getUserProfilePeerRequestBean = ChatUtils.fromJsonToGetUserProfilePeerRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserProfilePeerRequestBean.getPl());
+                    returnObj = getUserProfilePeerRequestBean;
+                }
+                case "GET_PROFILE_DIGESTS" -> {
+                    final GetProfileDigestsRequestBean getProfileDigestsRequestBean = ChatUtils.fromJsonToGetProfileDigestsRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getProfileDigestsRequestBean.getPl());
+                    returnObj = getProfileDigestsRequestBean;
                 }
                 case "READ_RECEIPT" -> {
                     final ReadReceiptRequestBean readReceiptRequestBean = ChatUtils.fromJsonToReadReceiptRequestBean(messageJson);

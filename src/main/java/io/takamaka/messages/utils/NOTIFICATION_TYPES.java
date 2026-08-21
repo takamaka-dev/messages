@@ -36,5 +36,25 @@ public enum NOTIFICATION_TYPES {
      * "new message". Never pushed to the deleter (NotificationService no-self-push).
      * The Flutter client should treat it as a sync trigger, not a display banner.
      */
-    MESSAGE_DELETED
+    MESSAGE_DELETED,
+    /**
+     * Unsigned invalidation tickle: "this identity's profile changed — refetch".
+     * Payload is {@code {owner_public_key, key_epoch, blob_hash}} and carries NO
+     * profile content, which is what lets it ride the plaintext notification
+     * sink at all — the same reasoning that let {@code SETTINGS_UPDATE} sidestep
+     * the read-receipt blocker (USER_PROFILE_DESIGN.md D10).
+     *
+     * <p><b>A hint, never a source of truth.</b> A forged or suppressed tickle
+     * causes stale UX and nothing worse: the authenticated re-fetch is the
+     * truth. Never render from the tickle.</p>
+     *
+     * <p>Fan-out is the CURRENT epoch's grantees that have a live sink, plus the
+     * owner's own sinks so a second device refreshes after an edit — not "all
+     * co-members". A peer with no grant has nothing to refetch. Offline peers
+     * converge on their next digest poll, the same wake-to-resync posture as
+     * {@link #MESSAGE_DELETED}.</p>
+     *
+     * <p>Align this literal with the Flutter client.</p>
+     */
+    PROFILE_UPDATE
 }

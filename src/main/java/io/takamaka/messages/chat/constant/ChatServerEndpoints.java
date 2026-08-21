@@ -191,4 +191,53 @@ public class ChatServerEndpoints {
      */
     public static final String TYPING_EMIT = "typingemit";
 
+    // ===== User profile channel (USER_PROFILE_DESIGN.md §6.1, DR-032) =====
+    // Six routes. The three writes carry a server-issued nonce and share the
+    // `write-profile` rate bucket; the three reads are nonce-free (idempotent,
+    // replay-harmless) and share `read-profile`.
+
+    /**
+     * Write the sealed profile card AND its grants in one signed request
+     * (nonce, {@code write-profile}). Last-writer-wins on the nonce's ISSUE
+     * TIME — never on a client clock (D5).
+     */
+    public static final String SET_USER_PROFILE = "setuserprofile";
+
+    /**
+     * Republish grants for an EXISTING epoch without rewriting the blob (nonce,
+     * {@code write-profile}). The cheap half of grant maintenance: new
+     * co-members and re-registered peers need a wrap, not ~93 KB of ciphertext
+     * re-uploaded.
+     */
+    public static final String PUT_PROFILE_GRANTS = "putprofilegrants";
+
+    /**
+     * Tombstone the profile (nonce, {@code write-profile}). Blanks the blob and
+     * drops the grants but KEEPS the row, so a straggler write with an older
+     * nonce cannot resurrect what the user just removed (D6).
+     */
+    public static final String CLEAR_USER_PROFILE = "clearuserprofile";
+
+    /**
+     * Read your own profile back (signed, no nonce, {@code read-profile}).
+     * Convergence for a second device: what was written, and the
+     * {@code nonce_issue_time} a rewrite must beat.
+     */
+    public static final String GET_USER_PROFILE = "getuserprofile";
+
+    /**
+     * Read a peer's profile, returning the blob AND the caller's grant together
+     * (signed, no nonce, {@code read-profile}). Gated on co-membership as
+     * ANTI-ENUMERATION only — the security boundary is the grant (D9).
+     */
+    public static final String GET_USER_PROFILE_PEER = "getuserprofilepeer";
+
+    /**
+     * Batch {@code (key_epoch, blob_hash, updated_at)} for up to 50 identities
+     * (signed, no nonce, {@code read-profile}). A client that renders a member
+     * list without it is non-conformant, not merely slow: 200 members naively
+     * fetched is ~18 MB per screen open (D11).
+     */
+    public static final String GET_PROFILE_DIGESTS = "getprofiledigests";
+
 }
