@@ -61,6 +61,37 @@ public enum CHAT_MESSAGE_TYPES {
      * (the client sends this type for both). Must match the Flutter client
      * constant {@code ChatServerEndpoints.fcmTokenRegistration}.
      */
-    FCM_TOKEN_REGISTRATION
+    FCM_TOKEN_REGISTRATION,
+    // ===== User profile channel (USER_PROFILE_DESIGN.md D4, DR-032) =====
+    // Each arm below needs THREE things to work, and a missing one fails at a
+    // different layer: this enum value, a ChatCryptoUtils.verifySignedMessage
+    // switch arm, and a ChatUtils.fromJsonTo<Bean> parser.
+    /**
+     * {@code setuserprofile} envelope: the sealed card plus its grants, under a
+     * server-issued nonce whose ISSUE TIME orders competing writes (D5).
+     */
+    SET_USER_PROFILE,
+    /**
+     * {@code putprofilegrants} envelope: republish grants for an existing epoch
+     * without rewriting the blob.
+     */
+    PUT_PROFILE_GRANTS,
+    /**
+     * {@code clearuserprofile} envelope: the D6 tombstone — the row survives so
+     * a straggler cannot resurrect the profile.
+     */
+    CLEAR_USER_PROFILE,
+    /**
+     * {@code getuserprofile} self-read envelope (signed, nonce-free).
+     */
+    GET_USER_PROFILE,
+    /**
+     * {@code getuserprofilepeer} peer-read envelope (signed, nonce-free).
+     */
+    GET_USER_PROFILE_PEER,
+    /**
+     * {@code getprofiledigests} batch-read envelope (signed, nonce-free).
+     */
+    GET_PROFILE_DIGESTS
 
 }

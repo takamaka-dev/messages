@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -27,8 +28,33 @@ class ServerInfoManifestTest {
     @Test
     void manifestVersionIsCurrent() {
         // 1.5 adds maxEncryptedContentSizeBytes (§PREVIEW-CONFORMANCE W5).
-        assertEquals("1.5", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
+        // 1.6 adds the nested `profile` limits object (DR-032).
+        assertEquals("1.6", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
                 "bump this when a field is ADDED — clients gate optional fields on it");
+    }
+
+    @Test
+    void profileLimitsRoundTripAndAreAbsentWhenTheChannelIsNot() throws Exception {
+        ServerInfoResponseBean withoutProfile = new ServerInfoResponseBean();
+        String bare = mapper.writeValueAsString(withoutProfile);
+        ServerInfoResponseBean bareBack = mapper.readValue(bare, ServerInfoResponseBean.class);
+        // A server without the channel advertises no limits. "Absent" must not decode to a bean full of
+        // zeros, or a client would clamp every profile write to a 0-byte blob and refuse all of them.
+        assertNull(bareBack.getProfile(),
+                "a server without the profile channel must advertise no profile limits: " + bare);
+
+        ServerInfoResponseBean bean = new ServerInfoResponseBean();
+        bean.setProfile(new io.takamaka.messages.chat.profile.ProfileLimitsBean(
+                245760, 256, 4096, 50,
+                java.util.List.of("AES_256_GCM"), java.util.List.of("1.0"),
+                120, 480, 20, 60));
+
+        String json = mapper.writeValueAsString(bean);
+        ServerInfoResponseBean back = mapper.readValue(json, ServerInfoResponseBean.class);
+        assertEquals(245760, back.getProfile().getMaxBlobB64Chars());
+        assertEquals(50, back.getProfile().getMaxDigestBatch());
+        assertEquals(java.util.List.of("AES_256_GCM"), back.getProfile().getAllowedCiphers());
+        assertEquals(java.util.List.of("1.0"), back.getProfile().getAllowedBlobVersions());
     }
 
     @Test

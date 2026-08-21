@@ -83,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.5";
+    public static final String MANIFEST_VERSION_CURRENT = "1.6";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -196,5 +196,21 @@ public class ServerInfoResponseBean {
      * constant disagree, the SMALLER is the safe one to enforce locally.</p>
      */
     private long maxEncryptedContentSizeBytes;
+
+    /**
+     * Manifest {@code 1.6+} (DR-032): the user-profile channel's server-enforced
+     * limits, or {@code null} on a server without the channel.
+     *
+     * <p>A nested object rather than another ten flat fields — the flat shape is
+     * already at its readable limit, and these ten belong together: they are one
+     * feature's envelope, and a client either speaks this channel or does not.</p>
+     *
+     * <p><b>Absent does not mean "unlimited", it means "no channel".</b> The
+     * authoritative check for availability is {@code supportedRoutes}; this field
+     * tells a client that already knows the routes exist what shape to produce.
+     * Advisory and UNSIGNED like every other field here (DR-023) — clamp to the
+     * SMALLER of this and the compiled-in constant.</p>
+     */
+    private io.takamaka.messages.chat.profile.ProfileLimitsBean profile;
 
 }
