@@ -93,15 +93,30 @@ public class SimpleRequestHelper {
      */
     public static final MessageAddress getAddress(String address) throws MessageException {
         try {
-            String typeOfAddress;
-            String addressinternal;
-            CompactAddressBean compactAddress = TkmAddressUtils.toCompactAddress(address);
-            if (address.length() == 64) {
-                if (ADDRESS_CHECK_COMPACT_PATTERN.matcher(String.valueOf(address)).find()) {
-                    typeOfAddress = "c";
-                    addressinternal = address;
-                }
+            // QR-04 (2026-09-01) — the compact short-circuit now RETURNS.
+            //
+            // It used to assign the two locals and fall through to the switch
+            // below, which reassigned both unconditionally, so the branch was
+            // dead and this method rejected its own compact output:
+            // getAddress("a".repeat(64)) threw "address not recognized (not
+            // qtesla)". The javadoc above has always specified the opposite.
+            //
+            // Nothing that worked before changes: a 64-character input reached
+            // toCompactAddress, came back qTesla/undefined, failed the
+            // 19 840-character qTesla pattern and threw. There is no cypher in
+            // KeyContexts whose full address is 64 characters, so this length
+            // is unambiguously the compact form.
+            if (address != null
+                    && address.length() == 64
+                    && ADDRESS_CHECK_COMPACT_PATTERN.matcher(address).find()) {
+                return new MessageAddress("c", address);
             }
+            // `final` on purpose: the dead branch above compiled only because
+            // these were reassignable. With single assignment enforced, that
+            // shape cannot come back silently.
+            final String typeOfAddress;
+            final String addressinternal;
+            CompactAddressBean compactAddress = TkmAddressUtils.toCompactAddress(address);
             switch (compactAddress.getType()) {
                 case ed25519:
                     if (ADDRESS_CHECK_ED25519_PATTERN.matcher(String.valueOf(address)).find()) {

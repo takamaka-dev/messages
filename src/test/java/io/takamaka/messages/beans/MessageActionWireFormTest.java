@@ -10,8 +10,10 @@ import java.math.BigInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import io.takamaka.messages.utils.ActionType;
 import io.takamaka.messages.beans.implementation.PayRequestAction;
 import io.takamaka.messages.utils.SimpleRequestHelper;
+import io.takamaka.messages.utils.SimpleRequestModels;
 
 /**
  * DR-034 — the wire form of the signed {@code MessageAction}, asserted on the
@@ -41,6 +43,7 @@ import io.takamaka.messages.utils.SimpleRequestHelper;
 class MessageActionWireFormTest {
 
     private static final String HUGE = "123456789012345678901234567890";
+    private static final String ED25519 = "4mfAa-hIJBU8_iU7IUDIgQpDZCpBVNp7oyCsMED6Y4A.";
 
     private static PayRequestAction payAction(BigInteger green, BigInteger red, String text) {
         PayRequestAction a = new PayRequestAction(
@@ -123,6 +126,42 @@ class MessageActionWireFormTest {
         assertEquals("25", back.getRed().toString());
         assertEquals(current, SimpleRequestHelper.getRequestJsonCompact(back),
                 "a legacy payload must normalise to the DR-034 form on re-emit");
+    }
+
+    @Test
+    @DisplayName("QR-03 — every model factory stamps its OWN action type")
+    void factoriesStampTheirOwnType() throws Exception {
+        // getSimpleStakeRequest_V_1_0 and getSimpleStakeUndoRequest_V_1_0 both
+        // stamped REQUEST_PAY until 2026-09-01, so a stake went out as
+        // {"t":"rp"} and a consumer dispatching on `t` -- the field's only
+        // purpose -- processed it as a payment. ActionType.STAKE/STAKE_UNDO
+        // existed and were simply not referenced.
+        //
+        // Asserted across ALL SIX factories rather than only the two that were
+        // wrong: the defect was copy-paste, so the guard has to cover the shape,
+        // not the instance.
+        assertEquals("rp", SimpleRequestModels
+                .getSimplePayRequest_V_1_0(ED25519, BigInteger.TEN, null, "pay").getTypeOfAction());
+        assertEquals("st", SimpleRequestModels
+                .getSimpleStakeRequest_V_1_0(ED25519, BigInteger.TEN, "stake").getTypeOfAction());
+        assertEquals("su", SimpleRequestModels
+                .getSimpleStakeUndoRequest_V_1_0(0L, "undo").getTypeOfAction());
+        assertEquals("b", SimpleRequestModels
+                .getSimpleBlobRequest_V_1_0("blob").getTypeOfAction());
+    }
+
+    @Test
+    @DisplayName("QR-03 — the six type codes are distinct, so `t` can dispatch at all")
+    void typeCodesAreDistinct() throws Exception {
+        // Control: if two factories ever collapse onto one code again, the
+        // assertions above could still pass individually while `t` stopped
+        // being a discriminator.
+        java.util.Set<String> codes = new java.util.HashSet<>();
+        for (ActionType t : ActionType.values()) {
+            assertTrue(codes.add(t.getShortCode()),
+                    "duplicate action short code: " + t.getShortCode());
+        }
+        assertTrue(codes.size() >= 6, "expected at least the six documented codes, got " + codes);
     }
 
     @Test
