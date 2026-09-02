@@ -52,7 +52,21 @@ import org.junit.jupiter.api.Test;
  * per run (no seeded RNG — see §2.11), so byte-equality across runs is
  * neither expected nor required. The cross-platform contract is
  * agreement on <em>validation outcome</em> for the frozen corpus, verified by
- * {@code CrossPlatformVectorTest} (Java) and the Dart mirror.</p>
+ * {@code CrossPlatformVectorTest} (Java).</p>
+ *
+ * <p>🔴 <b>There is NO Dart mirror. This javadoc claimed one until 2026-09-02.</b>
+ * Searched across {@code rsclient-flutter}, {@code tkmChat}, {@code wallet-core-flutter}
+ * and {@code wallet-extra-flutter}: <b>zero</b> references to this corpus. So the
+ * cross-platform half of the contract above is asserted by this comment and
+ * checked by nobody — which is exactly how a Java-side drift sat unnoticed until
+ * the validator was corrected (N-29: five vectors had been minted with the stale
+ * hash expression, and they agreed with the stale validator and with nothing
+ * else). A javadoc asserting a control that does not exist is worse than
+ * silence, because it stops the next reader looking.</p>
+ *
+ * <p>Tracked as <b>C61</b> in {@code rschat-docs/HANDOFF.md} §3.10. Either build
+ * the mirror or delete the claim — do not restore this sentence without the
+ * test that makes it true.</p>
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
