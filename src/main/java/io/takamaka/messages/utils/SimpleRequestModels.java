@@ -89,7 +89,11 @@ public class SimpleRequestModels {
                         SimpleRequestHelper.getAddress(to),
                         greenValueNanoTkg,
                         message),
-                ActionType.REQUEST_PAY.getShortCode(),
+                // QR-03 (2026-09-01): was REQUEST_PAY. A stake request went out
+                // as {"t":"rp"}, so a consumer dispatching on `t` -- the field's
+                // only purpose -- processed it as a payment. STAKE existed and
+                // was simply not referenced.
+                ActionType.STAKE.getShortCode(),
                 null,
                 null,
                 null);
@@ -100,7 +104,9 @@ public class SimpleRequestModels {
                 new StakeUndoRequestAction(
                         notBefore,
                         message),
-                ActionType.REQUEST_PAY.getShortCode(),
+                // QR-03 (2026-09-01): was REQUEST_PAY -- same copy-paste as the
+                // stake factory above.
+                ActionType.STAKE_UNDO.getShortCode(),
                 null,
                 null,
                 null);
