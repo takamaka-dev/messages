@@ -240,4 +240,12 @@ public class ChatServerEndpoints {
      */
     public static final String GET_PROFILE_DIGESTS = "getprofiledigests";
 
+    /**
+     * Storage quota, self-read (request-response, signed, nonce-free, rate-limited).
+     * Returns {@code StorageQuotaStatusResponseBean} for the SIGNER only — a quota is readable by
+     * its assignee and nobody else. Added in Messages 1.11.0 / rschat 0.9.1, alongside the QUOTA-1
+     * fix that made the figures real.
+     */
+    public static final String GET_STORAGE_QUOTA = "getstoragequota";
+
 }

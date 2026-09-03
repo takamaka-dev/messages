@@ -92,6 +92,12 @@ public enum CHAT_MESSAGE_TYPES {
     /**
      * {@code getprofiledigests} batch-read envelope (signed, nonce-free).
      */
-    GET_PROFILE_DIGESTS
+    GET_PROFILE_DIGESTS,
+    // ===== Storage quota (rschat 0.9.1, QUOTA-1) — same three-things rule as above =====
+    /**
+     * {@code getstoragequota} self-read envelope (signed, nonce-free): the signer asks for its
+     * own live quota status.
+     */
+    GET_STORAGE_QUOTA
 
 }

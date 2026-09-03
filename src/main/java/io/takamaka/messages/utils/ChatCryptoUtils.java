@@ -46,6 +46,8 @@ import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionPeerSignedContentBean;
 import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsSignedContentBean;
+import io.takamaka.messages.chat.quota.GetStorageQuotaRequestBean;
+import io.takamaka.messages.chat.quota.GetStorageQuotaSignedContentBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsSignedContentBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
@@ -614,6 +616,32 @@ public class ChatCryptoUtils {
                     signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
                     signature,
                     CHAT_MESSAGE_TYPES.GET_USER_OPTIONS.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code getstoragequota} self-read request (no nonce). The server answers for
+     * the signer only; there is nothing else to put in the payload but the client clock.
+     *
+     * @param clientTimestamp epoch millis at signing
+     */
+    public static final GetStorageQuotaRequestBean getSignedGetStorageQuotaRequest(
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final GetStorageQuotaSignedContentBean pl = new GetStorageQuotaSignedContentBean(clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new GetStorageQuotaRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.GET_STORAGE_QUOTA.name(),
                     signIwk.getWalletCypher().name());
         } catch (WalletException | MessageException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
@@ -1426,6 +1454,11 @@ public class ChatCryptoUtils {
                     final GetUserOptionsRequestBean getUserOptionsRequestBean = ChatUtils.fromJsonToGetUserOptionsRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionsRequestBean.getPl());
                     returnObj = getUserOptionsRequestBean;
+                }
+                case "GET_STORAGE_QUOTA" -> {
+                    final GetStorageQuotaRequestBean getStorageQuotaRequestBean = ChatUtils.fromJsonToGetStorageQuotaRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(getStorageQuotaRequestBean.getPl());
+                    returnObj = getStorageQuotaRequestBean;
                 }
                 case "GET_USER_OPTION_PEER" -> {
                     final GetUserOptionPeerRequestBean getUserOptionPeerRequestBean = ChatUtils.fromJsonToGetUserOptionPeerRequestBean(messageJson);
