@@ -48,6 +48,8 @@ import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsSignedContentBean;
 import io.takamaka.messages.chat.quota.GetStorageQuotaRequestBean;
 import io.takamaka.messages.chat.quota.GetStorageQuotaSignedContentBean;
+import io.takamaka.messages.chat.quota.WithdrawAttachmentRequestBean;
+import io.takamaka.messages.chat.quota.WithdrawAttachmentSignedContentBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsSignedContentBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
@@ -642,6 +644,34 @@ public class ChatCryptoUtils {
                     signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
                     signature,
                     CHAT_MESSAGE_TYPES.GET_STORAGE_QUOTA.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (WalletException | MessageException | JsonProcessingException ex) {
+            throw new CryptoMessageException(ex);
+        }
+    }
+
+    /**
+     * Build a signed {@code withdrawattachment} request (DR-037, no nonce): stop hosting the signer's
+     * own blobs to free quota. Idempotent; the server answers per hash.
+     *
+     * @param encryptedFileHashes the blobs to withdraw (64-char hex each), all owned by the signer
+     * @param clientTimestamp     epoch millis at signing (window-checked by the server)
+     */
+    public static final WithdrawAttachmentRequestBean getSignedWithdrawAttachmentRequest(
+            final java.util.List<String> encryptedFileHashes,
+            final Long clientTimestamp,
+            final InstanceWalletKeystoreInterface signIwk,
+            final int sigIwkIndex
+    ) throws CryptoMessageException {
+        try {
+            final WithdrawAttachmentSignedContentBean pl = new WithdrawAttachmentSignedContentBean(encryptedFileHashes, clientTimestamp);
+            final String canonicalJson = SimpleRequestHelper.getCanonicalJson(pl);
+            final String signature = SimpleRequestHelper.signChatMessage(canonicalJson, signIwk, sigIwkIndex);
+            return new WithdrawAttachmentRequestBean(
+                    pl,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    signature,
+                    CHAT_MESSAGE_TYPES.WITHDRAW_ATTACHMENT.name(),
                     signIwk.getWalletCypher().name());
         } catch (WalletException | MessageException | JsonProcessingException ex) {
             throw new CryptoMessageException(ex);
@@ -1454,6 +1484,11 @@ public class ChatCryptoUtils {
                     final GetUserOptionsRequestBean getUserOptionsRequestBean = ChatUtils.fromJsonToGetUserOptionsRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(getUserOptionsRequestBean.getPl());
                     returnObj = getUserOptionsRequestBean;
+                }
+                case "WITHDRAW_ATTACHMENT" -> {
+                    final WithdrawAttachmentRequestBean withdrawAttachmentRequestBean = ChatUtils.fromJsonToWithdrawAttachmentRequestBean(messageJson);
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(withdrawAttachmentRequestBean.getPl());
+                    returnObj = withdrawAttachmentRequestBean;
                 }
                 case "GET_STORAGE_QUOTA" -> {
                     final GetStorageQuotaRequestBean getStorageQuotaRequestBean = ChatUtils.fromJsonToGetStorageQuotaRequestBean(messageJson);

@@ -248,4 +248,12 @@ public class ChatServerEndpoints {
      */
     public static final String GET_STORAGE_QUOTA = "getstoragequota";
 
+    /**
+     * Withdraw hosting of one or more of the SIGNER's own blobs to free quota (DR-037): request-response,
+     * signed, nonce-free, idempotent, own rate bucket. A quota command, not a content command — the
+     * message stays, no client is asked to delete anything, the owner may re-host the same ciphertext.
+     * Messages 1.12.0 / rschat 0.9.1.
+     */
+    public static final String WITHDRAW_ATTACHMENT = "withdrawattachment";
+
 }

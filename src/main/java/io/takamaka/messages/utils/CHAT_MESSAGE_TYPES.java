@@ -98,6 +98,10 @@ public enum CHAT_MESSAGE_TYPES {
      * {@code getstoragequota} self-read envelope (signed, nonce-free): the signer asks for its
      * own live quota status.
      */
-    GET_STORAGE_QUOTA
+    GET_STORAGE_QUOTA,
+    /**
+     * {@code withdrawattachment} envelope (DR-037): the owner stops hosting its own blobs.
+     */
+    WITHDRAW_ATTACHMENT
 
 }

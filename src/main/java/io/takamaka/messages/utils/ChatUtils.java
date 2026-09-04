@@ -58,6 +58,7 @@ import io.takamaka.messages.chat.profile.SetUserProfileRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionPeerRequestBean;
 import io.takamaka.messages.chat.options.GetUserOptionsRequestBean;
 import io.takamaka.messages.chat.quota.GetStorageQuotaRequestBean;
+import io.takamaka.messages.chat.quota.WithdrawAttachmentRequestBean;
 import io.takamaka.messages.chat.options.ResetUserOptionsRequestBean;
 import io.takamaka.messages.chat.options.SetUserOptionRequestBean;
 import io.takamaka.messages.chat.receipt.ReadReceiptBatchBean;
@@ -225,6 +226,10 @@ public class ChatUtils {
 
     public static final GetStorageQuotaRequestBean fromJsonToGetStorageQuotaRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, GetStorageQuotaRequestBean.class);
+    }
+
+    public static final WithdrawAttachmentRequestBean fromJsonToWithdrawAttachmentRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, WithdrawAttachmentRequestBean.class);
     }
 
     public static final GetUserOptionPeerRequestBean fromJsonToGetUserOptionPeerRequestBean(String jsonMessage) throws JsonProcessingException {
