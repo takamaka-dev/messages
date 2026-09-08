@@ -14,7 +14,9 @@ import lombok.NoArgsConstructor;
 /**
  * Answer to {@code withdrawattachment} (DR-037): one outcome per requested hash, in request order,
  * plus the owner's quota AFTER the withdrawals — so a client can refresh its gauge from the same
- * round-trip. {@code error} is non-null only when the whole request was refused (bad signature,
+ * round-trip. {@code quota} is best-effort: it is {@code null} when the quota read failed AFTER the
+ * withdrawals were applied (the outcomes are still authoritative — re-read {@code getstoragequota}).
+ * {@code error} is non-null only when the whole request was refused (bad signature,
  * clock outside the window, rate limit); the outcomes are then empty.
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io

@@ -658,7 +658,7 @@ public class ChatCryptoUtils {
      * @param clientTimestamp     epoch millis at signing (window-checked by the server)
      */
     public static final WithdrawAttachmentRequestBean getSignedWithdrawAttachmentRequest(
-            final java.util.List<String> encryptedFileHashes,
+            final List<String> encryptedFileHashes,
             final Long clientTimestamp,
             final InstanceWalletKeystoreInterface signIwk,
             final int sigIwkIndex
