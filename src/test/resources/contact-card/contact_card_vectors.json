@@ -1,0 +1,66 @@
+{
+  "description": "DR-044 contact card v1.0 — canonical (RFC 8785) UTF-8 bytes and SHA3-256 hex content hash. Java ContactCardCodec is the reference; the Dart port must produce identical canonical strings and hashes.",
+  "media_type": "application/vnd.takamaka.contact+json",
+  "cases": [
+    {
+      "id": "address_only",
+      "card": {
+        "v": "1.0",
+        "address": "0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY."
+      },
+      "canonical": "{\"address\":\"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\",\"v\":\"1.0\"}",
+      "sha3_256_hex": "68bfd58974d165b604cf27d7713768b1f6604bedf591172691c8186394c0446e"
+    },
+    {
+      "id": "with_name",
+      "card": {
+        "v": "1.0",
+        "address": "0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.",
+        "name": "Alice"
+      },
+      "canonical": "{\"address\":\"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\",\"name\":\"Alice\",\"v\":\"1.0\"}",
+      "sha3_256_hex": "dc6001c63ed8d05c9e83ac62d9d9a93f30959806ca9122d83309c71346d7a1ec"
+    },
+    {
+      "id": "unicode_name_and_phone",
+      "card": {
+        "v": "1.0",
+        "address": "0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.",
+        "name": "Zoë \"Z\" 😀",
+        "phone": "+41 79 123 45 67"
+      },
+      "canonical": "{\"address\":\"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\",\"name\":\"Zoë \\\"Z\\\" 😀\",\"phone\":\"+41 79 123 45 67\",\"v\":\"1.0\"}",
+      "sha3_256_hex": "204cef2893caa3930f8d26f2a3108b1b255a8d9f36a0659d7643b0569d5a59ff"
+    }
+  ],
+  "invalid": [
+    {
+      "id": "missing_version",
+      "json": "{\"address\": \"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\"}"
+    },
+    {
+      "id": "wrong_version",
+      "json": "{\"v\": \"2.0\", \"address\": \"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\"}"
+    },
+    {
+      "id": "bad_address",
+      "json": "{\"v\": \"1.0\", \"address\": \"not-an-address\"}"
+    },
+    {
+      "id": "empty_name",
+      "json": "{\"v\": \"1.0\", \"address\": \"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\", \"name\": \"\"}"
+    },
+    {
+      "id": "name_too_long",
+      "json": "{\"v\": \"1.0\", \"address\": \"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\", \"name\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+    },
+    {
+      "id": "legacy_unversioned",
+      "json": "{\"name\": \"\", \"address\": \"0lcdQMnKt1byD_oOEn0DTxd-bTmtwUQSHdys7gzz2RY.\", \"phone\": \"\"}"
+    },
+    {
+      "id": "not_json",
+      "json": "hello"
+    }
+  ]
+}
