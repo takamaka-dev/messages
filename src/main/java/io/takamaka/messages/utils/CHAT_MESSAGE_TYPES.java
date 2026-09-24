@@ -102,6 +102,18 @@ public enum CHAT_MESSAGE_TYPES {
     /**
      * {@code withdrawattachment} envelope (DR-037): the owner stops hosting its own blobs.
      */
-    WITHDRAW_ATTACHMENT
+    WITHDRAW_ATTACHMENT,
+    // ===== History read BACKWARDS (F277, rschat P3/P4/P5 2026-09-24) =====
+    /**
+     * {@code retrieveallmessages} "load older" / restore backfill: the page of
+     * {@code number_of_messages} messages OLDER than {@code last_message_signature},
+     * NEWEST FIRST, keyset on the server's {@code (message_timestamp, message_signature)}.
+     * Same request bean ({@link io.takamaka.messages.chat.message.RetrieveMessageRequestBean})
+     * and same signed payload as {@link #RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE};
+     * only this {@code message_type} differs, so no new JSON key exists. To page on, send the
+     * signature of the LAST (oldest) row of the previous page. A short page means the start of
+     * the conversation. Appended last so no existing ordinal moves.
+     */
+    RETRIEVE_MESSAGE_FROM_CONVERSATION_BEFORE_SIGNATURE
 
 }
