@@ -111,8 +111,9 @@ public enum CHAT_MESSAGE_TYPES {
      * Same request bean ({@link io.takamaka.messages.chat.message.RetrieveMessageRequestBean})
      * and same signed payload as {@link #RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE};
      * only this {@code message_type} differs, so no new JSON key exists. To page on, send the
-     * signature of the LAST (oldest) row of the previous page. A short page means the start of
-     * the conversation. Appended last so no existing ordinal moves.
+     * signature of the LAST (oldest) row of the previous page. Only an EMPTY page means the start
+     * of the conversation: the server also caps a page in BYTES (rschat F281), so a non-empty page
+     * can be shorter than asked while older messages exist. Appended last so no existing ordinal moves.
      */
     RETRIEVE_MESSAGE_FROM_CONVERSATION_BEFORE_SIGNATURE
 
