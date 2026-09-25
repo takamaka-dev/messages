@@ -135,9 +135,17 @@ class LegacyWkchRsaKeyDerivationVectorTest {
 
         LegacyWkchRsaKeyDerivation.clearCache();
         assertFalse(LegacyWkchRsaKeyDerivation.isCached(seed, 0));
+        // the hook's order: select (derives) then unwrap — the first unwrap still reports "regenerated"
+        assertEquals(LegacyWkchInviteKeySelector.Selection.LEGACY_WKCH,
+                LegacyWkchInviteKeySelector.select(legacyInvite, parity0, seed, 0));
+        assertTrue(LegacyWkchRsaKeyDerivation.isCached(seed, 0));
         assertEquals(conversationKey, LegacyWkchInviteKeySelector.unwrapLegacy(legacyInvite, seed, 0));
-        assertTrue(LegacyWkchRsaKeyDerivation.isCached(seed, 0), "second invite must not re-derive");
+        assertFalse(LegacyWkchRsaKeyDerivation.claimFirstUse(seed, 0), "first use already claimed (regenerated)");
+        // a second invite reuses the memoized pair ("cached"): same object, no re-derivation
+        AsymmetricCipherKeyPair before = LegacyWkchRsaKeyDerivation.deriveKeyPair(seed, 0);
         assertEquals(conversationKey, LegacyWkchInviteKeySelector.unwrapLegacy(legacyInvite, seed, 0));
+        org.junit.jupiter.api.Assertions.assertSame(before, LegacyWkchRsaKeyDerivation.deriveKeyPair(seed, 0),
+                "second invite must not re-derive");
 
         // never trial: an invite naming the parity key is refused by the legacy unwrap
         TopicKeyDistributionItemBean parityInvite = invite(parity0,

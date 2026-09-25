@@ -76,7 +76,6 @@ public final class LegacyWkchInviteKeySelector {
      * @throws IllegalStateException when the invite was not selected as legacy or does not unwrap
      */
     public static String unwrapLegacy(TopicKeyDistributionItemBean invite, String seed, int index) {
-        boolean cached = LegacyWkchRsaKeyDerivation.isCached(seed, index);
         String legacyHash = LegacyWkchRsaKeyDerivation.derivePublicKeyHash(seed, index);
         if (invite == null || !legacyHash.equals(invite.getEncryptionKeyHash())) {
             // Never trial: a legacy unwrap is only ever attempted for an invite that NAMES the legacy key.
@@ -87,7 +86,8 @@ public final class LegacyWkchInviteKeySelector {
                     TkmSignUtils.asymmetricKeyParameterToRSAPrivateKey(
                             LegacyWkchRsaKeyDerivation.deriveKeyPair(seed, index).getPrivate()),
                     invite.getEncryptedTopicKey());
-            log.info("chat[invite] key=legacy_wkch ({})", cached ? "cached" : "regenerated");
+            log.info("chat[invite] key=legacy_wkch ({})",
+                    LegacyWkchRsaKeyDerivation.claimFirstUse(seed, index) ? "regenerated" : "cached");
             return key;
         } catch (Exception ex) {
             throw new IllegalStateException("legacy WKCH unwrap failed: " + ex, ex);

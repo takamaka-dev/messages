@@ -12,6 +12,7 @@ import java.security.spec.RSAPublicKeySpec;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
@@ -69,9 +70,18 @@ public final class LegacyWkchRsaKeyDerivation {
         return derived(seed, index).keyPair;
     }
 
-    /** Whether {@code (seed, index)} is already memoized — the "cached" half of the log line. */
+    /** Whether {@code (seed, index)} is already memoized. */
     static boolean isCached(String seed, int index) {
         return CACHE.containsKey(cacheKey(seed, index));
+    }
+
+    /**
+     * True exactly once per memoized derivation: the first UNWRAP that uses a freshly regenerated keypair
+     * ("regenerated" in the log line); every later unwrap reuses it ("cached"). Selection alone (which also
+     * derives) does not consume it, so select-then-unwrap still reports "regenerated".
+     */
+    static boolean claimFirstUse(String seed, int index) {
+        return derived(seed, index).firstUse.compareAndSet(false, true);
     }
 
     /** Test hook: forget every memoized derivation. */
@@ -104,7 +114,7 @@ public final class LegacyWkchRsaKeyDerivation {
         AsymmetricCipherKeyPair kp = generateKeyPair(new LegacyWkchSeededRandom(seed, SCOPE, index + 1));
         String url64 = publicKeyUrl64((RSAKeyParameters) kp.getPublic());
         try {
-            return new Derived(kp, TkmSignUtils.Hash256B64URL(url64));
+            return new Derived(kp, TkmSignUtils.Hash256B64URL(url64), new AtomicBoolean(false));
         } catch (Exception ex) {
             throw new IllegalStateException("legacy WKCH: cannot hash the public key", ex);
         }
@@ -119,7 +129,7 @@ public final class LegacyWkchRsaKeyDerivation {
         }
     }
 
-    private record Derived(AsymmetricCipherKeyPair keyPair, String encKeyHash) {
+    private record Derived(AsymmetricCipherKeyPair keyPair, String encKeyHash, AtomicBoolean firstUse) {
     }
 
     // ------------------------------------------------------------------------------------------------
