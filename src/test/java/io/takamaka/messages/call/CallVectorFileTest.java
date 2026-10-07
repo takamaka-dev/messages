@@ -50,7 +50,7 @@ class CallVectorFileTest {
     static String text;
     static JsonNode root;
     static final ObjectMapper M = new ObjectMapper();
-    static final MlKem768 KEM = new MlKem768TestDouble();
+    static final MlKem768 KEM = new io.takamaka.messages.call.channel.BcMlKem768();
 
     @BeforeAll
     static void load() throws Exception {
@@ -65,8 +65,8 @@ class CallVectorFileTest {
     void committedFileEqualsTheReferenceOutput() throws Exception {
         assertEquals(CallVectorGenerator.render(), text, "vectors drifted from the Java reference: regenerate deliberately");
         assertTrue(CallBytes.isAscii(text));
-        assertEquals("test-double", root.get("mlkem").asText());
-        assertEquals("test-double", root.get("group3_hybrid_combiner").get("mlkem").asText());
+        assertFalse(text.contains("test-double"), "no test-double ML-KEM value may remain in the vectors");
+        assertTrue(root.get("mlkem").asText().startsWith("ML-KEM-768 FIPS 203"));
     }
 
     @Test
@@ -283,18 +283,19 @@ class CallVectorFileTest {
                 }
             }
             assertEquals(s(e, "epoch_secret"), CallBytes.hex(secret), "epoch " + n);
+            byte[] bc = CallCrypto.hkdf(secret, CallBytes.concat(CallBytes.ascii("tkm-call/v1/broadcast"), era));
+            assertEquals(s(e, "broadcast"), CallBytes.hex(bc));
+            assertFalse(e.has("listener_text_key"));
             Iterator<Map.Entry<String, JsonNode>> it = e.get("per_leg").fields();
             while (it.hasNext()) {
                 Map.Entry<String, JsonNode> p = it.next();
                 byte[] legId = CallBytes.unhex(p.getKey());
-                assertEquals(s(p.getValue(), "sender_base"), CallBytes.hex(CallCrypto.hkdf(secret,
+                // A-15 RULED: frame and text keys come from broadcast_e
+                assertEquals(s(p.getValue(), "sender_base"), CallBytes.hex(CallCrypto.hkdf(bc,
                         CallBytes.concat(CallBytes.ascii("tkm-call/v1/sender"), legId))));
-                assertEquals(s(p.getValue(), "text_key"), CallBytes.hex(CallCrypto.hkdf(secret,
+                assertEquals(s(p.getValue(), "text_key"), CallBytes.hex(CallCrypto.hkdf(bc,
                         CallBytes.concat(CallBytes.ascii("tkm-call/v1/text"), legId))));
             }
-            byte[] bc = CallCrypto.hkdf(secret, CallBytes.concat(CallBytes.ascii("tkm-call/v1/broadcast"), era));
-            assertEquals(s(e, "broadcast"), CallBytes.hex(bc));
-            assertEquals(s(e, "listener_text_key"), CallBytes.hex(CallCrypto.hkdf(bc, CallBytes.ascii("tkm-call/v1/text"))));
             byte[] code = CallCrypto.hkdf(secret, CallBytes.ascii("tkm-call/v1/code"));
             assertEquals(s(e, "code_hkdf"), CallBytes.hex(code));
             long x = 0;
@@ -309,6 +310,8 @@ class CallVectorFileTest {
                 assertEquals(n, c.getEpoch());
                 assertEquals(rosterHex, c.getRoster());
                 assertEquals(s(e, "roster_hash"), c.getRhash());
+                assertFalse(s(e, "commit_header").contains("chain_idx"), "A-8: no top-level chain_idx");
+                c.getBoxes().forEach(b -> assertNotNull(b.getK(), "A-8: every box carries k"));
                 assertEquals(s(e, "commit_header"), Commits.canonicalHeader(c));
                 byte[] mac = CallCrypto.hmacSha512(secret, CallBytes.ascii("tkm-call/v1/confirm"),
                         CallCrypto.h(CallBytes.ascii(s(e, "commit_header"))));
@@ -406,6 +409,16 @@ class CallVectorFileTest {
                 fail(id + " must parse (the refusal must come from verification): " + ex);
                 return;
             }
+            if (n.has("check") && "announcement".equals(s(n, "check"))) {
+                // signature valid; the announcement verifier refuses it on the FIPS 203 ek check
+                CallSignatures.verify(o, s(n, "expected_t"), s(n, "expected_aud"));
+                io.takamaka.messages.call.beans.CallAnnounceBean an = (io.takamaka.messages.call.beans.CallAnnounceBean) o;
+                assertFalse(KEM.checkEncapsulationKey(CallBytes.unhex(an.getMlkem())), id);
+                CallProtocolException ex = assertThrows(CallProtocolException.class, () -> CallAnnouncements.verify(an,
+                        s(n, "expected_aud"), an.getCall(), an.getEra(), Set.of(an.getF()), Set.of(), Map.of(), KEM), id);
+                assertEquals("ML-KEM encapsulation key check failed", ex.getReason(), id);
+                continue;
+            }
             if ("valid".equals(s(n, "expect"))) {
                 CallSignatures.verify(o, s(n, "expected_t"), s(n, "expected_aud"));
                 continue;
@@ -423,6 +436,6 @@ class CallVectorFileTest {
                 assertEquals("non-ASCII", ex.getReason());
             }
         }
-        assertEquals(Set.of("N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "P1"), seen);
+        assertEquals(Set.of("N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "P1"), seen);
     }
 }

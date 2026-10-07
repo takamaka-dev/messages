@@ -31,8 +31,9 @@ class EpochCommitTest {
         assertArrayEquals(s.es0, CallTestKeys.seed("commit_secret/0"), "epoch_secret_0 = commit_secret_0");
         assertNull(s.cInitial.commit().getPrev());
         assertTrue(s.cInitial.commit().getBoxes().isEmpty());
-        assertEquals(0L, s.cLeave.commit().getChainIdx());
-        assertEquals(1L, s.cEra.commit().getChainIdx());
+        assertEquals(0L, s.cLeave.commit().getBoxes().get(0).getK());
+        assertEquals(1L, s.cEra.commit().getBoxes().get(0).getK());
+        assertFalse(Commits.canonicalHeader(s.cEra.commit()).contains("chain_idx"));
     }
 
     @Test
@@ -77,13 +78,18 @@ class EpochCommitTest {
     @Test
     void derivedKeysAreDistinct() {
         byte[] leg = s.legs.get("bob").legId;
-        byte[] sb = EpochSchedule.senderBase(s.es4, leg);
-        byte[] tk = EpochSchedule.textKey(s.es4, leg);
-        byte[] bc = EpochSchedule.broadcast(s.es4, CallBytes.unhex(s.eraHash1));
+        byte[] era = CallBytes.unhex(s.eraHash1);
+        byte[] sb = EpochSchedule.senderBase(s.es4, era, leg);
+        byte[] tk = EpochSchedule.textKey(s.es4, era, leg);
+        byte[] bc = EpochSchedule.broadcast(s.es4, era);
         assertFalse(java.util.Arrays.equals(sb, tk));
         assertFalse(java.util.Arrays.equals(sb, bc));
-        assertFalse(java.util.Arrays.equals(sb, EpochSchedule.senderBase(s.es4, s.legs.get("owner").legId)));
-        assertFalse(java.util.Arrays.equals(sb, EpochSchedule.senderBase(s.es3, leg)));
+        assertFalse(java.util.Arrays.equals(sb, EpochSchedule.senderBase(s.es4, era, s.legs.get("owner").legId)));
+        assertFalse(java.util.Arrays.equals(sb, EpochSchedule.senderBase(s.es3, era, leg)));
+        // A-15 RULED: a listener holding only broadcast_e derives the same frame and text keys
+        assertArrayEquals(sb, EpochSchedule.senderBaseFromBroadcast(bc, leg));
+        assertArrayEquals(tk, EpochSchedule.textKeyFromBroadcast(bc, leg));
+        assertArrayEquals(CallCrypto.hkdf(bc, CallBytes.concat(CallBytes.ascii("tkm-call/v1/sender"), leg)), sb);
     }
 
     /** Fresh channel pair owner→bob at k = 0 plus the epoch-2 state, for refusal tests. */
@@ -166,18 +172,37 @@ class EpochCommitTest {
         assertRefused(() -> accept(ts, r7.b(), owner), "box does not open");
     }
 
+    /** A-8 RULED: recipients at different k; each box carries its own k and opens on its own channel. */
     @Test
-    void builderRefusesChannelsAtDifferentChainIndices() throws Exception {
-        Rig a = rig();
-        Rig b = rig();
+    void recipientsAtDifferentChainIndices() throws Exception {
+        Rig a = rig("encaps/a");
+        Rig b = rig("encaps/b");
         b.o().advance();
+        b.b().advance();
+        b.o().advance();
+        b.b().advance();
         Map<String, ChannelState> rec = new HashMap<>();
         rec.put("0000000000000001", a.o());
         rec.put("0000000000000002", b.o());
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> Commits.build(CallVectorScenario.AUD_SVC, 1L,
-                s.callId, s.eraHash0, 3, CallConstants.KIND_LEAVE, List.of(CallHashes.annHashHex(s.annO)), rec,
-                CallTestKeys.seed("x"), s.es2, s.ids.get("owner")));
-        assertTrue(ex.getMessage().contains("A-8"));
+        Commits.Built built = Commits.build(CallVectorScenario.AUD_SVC, 1L, s.callId, s.eraHash0, 3, CallConstants.KIND_LEAVE,
+                List.of(CallHashes.annHashHex(s.annO), CallHashes.annHashHex(s.annB)), rec, CallTestKeys.seed("x"), s.es2, s.ids.get("owner"));
+        assertEquals(0L, built.commit().getBoxes().get(0).getK());
+        assertEquals(2L, built.commit().getBoxes().get(1).getK());
+        String hO = CallHashes.annHashHex(s.annO), hB = CallHashes.annHashHex(s.annB);
+        for (Object[] p : new Object[][]{{"0000000000000001", a.b()}, {"0000000000000002", b.b()}}) {
+            Commits.Accepted acc = Commits.accept(built.commit(), CallVectorScenario.AUD_SVC, Set.of(s.id("owner")), s.eraHash0, 2,
+                    s.es2, Set.of(hO, hB), hB, (String) p[0], (ChannelState) p[1]);
+            assertArrayEquals(built.epochSecret(), acc.epochSecret());
+        }
+        // a box whose declared k disagrees with the receiver's channel is refused
+        CallCommitBean lie = copy(built.commit());
+        lie.getBoxes().get(1).setK(1L);
+        resign(lie);
+        Rig c = rig("encaps/b");
+        c.b().advance();
+        c.b().advance();
+        assertRefused(() -> Commits.accept(lie, CallVectorScenario.AUD_SVC, Set.of(s.id("owner")), s.eraHash0, 2, s.es2,
+                Set.of(hO, hB), hB, "0000000000000002", c.b()), "chain index mismatch");
     }
 
     @Test

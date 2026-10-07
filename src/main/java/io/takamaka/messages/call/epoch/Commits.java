@@ -26,10 +26,10 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
  *
  * <p>Resolutions recorded in the C182 status report:
  * <ul>
- * <li>A-8: the commit carries ONE {@code chain_idx} while chains are per channel and k counts the fresh commits
- * applied since THAT channel opened (§5.3). The builder therefore requires every recipient channel to sit at the
- * same k and refuses otherwise; each box also carries its own k in its nonce.</li>
- * <li>A-10: boxes are sealed under the channel's CURRENT k (= {@code chain_idx}); the caller advances the
+ * <li>A-8 (RULED 2026-10-07): there is no top-level {@code chain_idx}; k is per channel (fresh commits applied since
+ * that channel opened, §5.3) and every box carries its own {@code k}: {@code {"to", "k", "box"}}. Recipients may sit
+ * at different k.</li>
+ * <li>A-10: boxes are sealed under each channel's CURRENT k; the caller advances the
  * channels ({@link ChannelState#advance()}) once the commit is accepted by the service (committer) or applied
  * (receiver). The builder does not advance, because a commit refused by the service ({@code epoch_taken}) must not
  * move the chains.</li>
@@ -73,15 +73,6 @@ public final class Commits {
         if (commitSecret.length != 32) {
             throw new IllegalArgumentException("commit secret must be 32 bytes");
         }
-        long chainIdx = 0;
-        if (!recipients.isEmpty()) {
-            Set<Long> ks = new HashSet<>();
-            recipients.values().forEach(s -> ks.add(s.chainIndex()));
-            if (ks.size() != 1) {
-                throw new IllegalStateException("spec ambiguity A-8: recipient channels at different chain indices " + ks);
-            }
-            chainIdx = ks.iterator().next();
-        }
         List<String> roster = EpochSchedule.sortedHex(rosterAnnHashesHex);
         byte[] eraHash = CallBytes.unhex(eraHashHex, CallConstants.HASH_LEN);
         byte[] rh = EpochSchedule.rosterHashHex(roster, eraHashHex);
@@ -97,13 +88,14 @@ public final class Commits {
         c.setKind(kind);
         c.setRoster(roster);
         c.setRhash(CallBytes.hex(rh));
-        c.setChainIdx(chainIdx);
         String header = canonicalHeader(c);
         byte[] aad = CallBytes.ascii(header);
 
         List<CallCommitBoxBean> boxes = new ArrayList<>();
         for (Map.Entry<String, ChannelState> e : new TreeMap<>(recipients).entrySet()) {
-            boxes.add(new CallCommitBoxBean(e.getKey(), CallBytes.hex(e.getValue().seal(aad, commitSecret))));
+            ChannelState st = e.getValue();
+            long k = st.chainIndex();
+            boxes.add(new CallCommitBoxBean(e.getKey(), k, CallBytes.hex(st.seal(aad, commitSecret))));
         }
         c.setBoxes(boxes);
 
@@ -166,9 +158,6 @@ public final class Commits {
         if (!CallBytes.hex(rh).equals(c.getRhash())) {
             throw refused("rhash does not recompute");
         }
-        if (c.getChainIdx() == null || c.getChainIdx() != channelToCommitter.chainIndex()) {
-            throw refused("chain index mismatch");
-        }
         CallCommitBoxBean mine = null;
         for (CallCommitBoxBean b : c.getBoxes()) {
             if (ownLegIdHex.equals(b.getTo())) {
@@ -180,6 +169,9 @@ public final class Commits {
         }
         if (mine == null) {
             throw refused("no box for this leg");
+        }
+        if (mine.getK() == null || mine.getK() != channelToCommitter.chainIndex()) {
+            throw refused("chain index mismatch");
         }
         String header = canonicalHeader(c);
         byte[] commitSecret;

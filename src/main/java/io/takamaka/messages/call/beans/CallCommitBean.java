@@ -38,8 +38,6 @@ public class CallCommitBean extends CallSignedObject {
     private List<String> roster;
     @JsonProperty("rhash")
     private String rhash;
-    @JsonProperty("chain_idx")
-    private Long chainIdx;
     @JsonProperty("boxes")
     private List<CallCommitBoxBean> boxes;
     /** confirm_e, 16 bytes hex. */

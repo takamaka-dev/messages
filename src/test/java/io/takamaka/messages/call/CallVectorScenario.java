@@ -47,7 +47,7 @@ public final class CallVectorScenario {
     public static final String AUD_RSCHAT = CallConstants.AUD_RSCHAT + NET;
 
     final ObjectMapper m = new ObjectMapper();
-    final MlKem768 kem = new MlKem768TestDouble();
+    final MlKem768 kem = new io.takamaka.messages.call.channel.BcMlKem768();
     final ServiceNonce nonces = new ServiceNonce(CallTestKeys.seed("k_nonce"));
 
     // identities
@@ -331,6 +331,24 @@ public final class CallVectorScenario {
         byType.put("unmute", unmute);
     }
 
+    /** ACVP ML-KEM-768 encapsulationKeyCheck tcId 137: an ek with a coefficient &ge; q (from the KAT subset). */
+    static final String INVALID_EK_HEX;
+
+    static {
+        try (java.io.InputStream in = CallVectorScenario.class.getResourceAsStream("/call/mlkem768_acvp_subset.json")) {
+            com.fasterxml.jackson.databind.JsonNode k = new ObjectMapper().readTree(in);
+            String found = null;
+            for (com.fasterxml.jackson.databind.JsonNode t : k.get("encapsulationKeyCheck")) {
+                if (t.get("tcId").asInt() == 137) {
+                    found = t.get("ek").asText().toLowerCase();
+                }
+            }
+            INVALID_EK_HEX = java.util.Objects.requireNonNull(found);
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
     /** rschat nonces are rschat's own format; fixed opaque values here. */
     static final String RSCHAT_NONCE = "00000000000000000000000000000000000000000000000000000000000000aa";
     static final String RSCHAT_NONCE_2 = "00000000000000000000000000000000000000000000000000000000000000bb";
@@ -360,11 +378,9 @@ public final class CallVectorScenario {
         root.put("spec", "tkm-call/v1 (rschat-docs/security/E2EE_CALLS_PROTOCOL_SPEC_v1.md, draft 0.1)");
         root.put("version", "1.0.0-draft");
         root.put("generator", "Messages io.takamaka.messages.call.CallVectorGenerator (feat/C182-calls-v1)");
-        root.put("mlkem", MlKem768TestDouble.NAME);
+        root.put("mlkem", "ML-KEM-768 FIPS 203 (KeyGen_internal(d,z), Encaps_internal(ek,m); BC 1.86 shaded)");
         root.put("about", "Java reference vectors for the call signalling/key plane. All binary values lowercase hex. "
                 + "'wire' fields are the JCS (RFC 8785) form of the whole object INCLUDING sg. "
-                + "Group 3 and everything downstream of a channel (boxes, chains) use the ML-KEM-768 TEST DOUBLE "
-                + "(see mlkem_test_double) and are NOT final: regenerate when the real ML-KEM binding lands. "
                 + "Resolutions of spec ambiguities are listed in rschat-docs/analysis/C182_JAVA_REFERENCE_STATUS_2026-10-07.md.");
         root.set("fixtures", fixtures());
         root.set("group1_signed_objects", group1());
@@ -403,14 +419,6 @@ public final class CallVectorScenario {
             o.put("mlkem_z", CallBytes.hex(l.kemZ));
         }
         f.put("conv_seed", CallBytes.hex(convSeed));
-        ObjectNode td = f.putObject("mlkem_test_double");
-        td.put("name", MlKem768TestDouble.NAME);
-        td.put("warning", "INSECURE stand-in with the real sizes; not ML-KEM. Vectors using it are provisional.");
-        td.put("definition", "L(x)=ASCII(\"tkm-call/v1/test-double/mlkem/\"+x); H=SHA3-256; XOF=SHAKE256. "
-                + "KeyGen(d,z): s=H(L(\"s\")||d||z); ek=XOF(L(\"ek\")||s,1184); dk=s||0^1120||ek||H(ek)||z. "
-                + "Encaps(ek,m): hek=H(ek); ct=(m XOR H(L(\"pad\")||hek))||XOF(L(\"ct\")||m||hek,1056); ss=H(L(\"ss\")||m||H(ct)). "
-                + "Decaps(dk,ct): ek=dk[1152..2336), hek=dk[2336..2368), z=dk[2368..2400); m=ct[0..32) XOR H(L(\"pad\")||hek); "
-                + "ss if Encaps(ek,m).ct==ct else H(L(\"reject\")||z||ct).");
         return f;
     }
 
@@ -462,7 +470,7 @@ public final class CallVectorScenario {
 
     ObjectNode group3() {
         ObjectNode g = m.createObjectNode();
-        g.put("mlkem", MlKem768TestDouble.NAME);
+        g.put("mlkem", "ML-KEM-768 FIPS 203: ek/dk = KeyGen_internal(mlkem_d, mlkem_z), (ss_k, ct) = Encaps_internal(ek, encaps_m)");
         ObjectNode x = g.putObject("x25519_rfc7748");
         x.put("alice_priv", RFC7748_ALICE_PRIV);
         x.put("alice_pub", RFC7748_ALICE_PUB);
@@ -509,7 +517,6 @@ public final class CallVectorScenario {
 
     ObjectNode group4() {
         ObjectNode g = m.createObjectNode();
-        g.put("mlkem", MlKem768TestDouble.NAME);
         g.put("channel", "owner>bob, direction A>B");
         byte[] chain = chOB.combined().chainAB();
         ArrayNode ks = g.putArray("chain");
@@ -549,17 +556,16 @@ public final class CallVectorScenario {
         EpochSchedule.sortedHex(rosterHex).forEach(r::add);
         n.put("roster_hash", CallBytes.hex(EpochSchedule.rosterHashHex(rosterHex, eraHash)));
         n.put("epoch_secret", CallBytes.hex(secret));
+        byte[] bc = EpochSchedule.broadcast(secret, CallBytes.unhex(eraHash));
+        n.put("broadcast", CallBytes.hex(bc));
         ObjectNode sb = n.putObject("per_leg");
         for (String ln : legNames) {
             byte[] legId = legs.get(ln).legId;
             ObjectNode p = sb.putObject(CallBytes.hex(legId));
             p.put("leg", ln);
-            p.put("sender_base", CallBytes.hex(EpochSchedule.senderBase(secret, legId)));
-            p.put("text_key", CallBytes.hex(EpochSchedule.textKey(secret, legId)));
+            p.put("sender_base", CallBytes.hex(EpochSchedule.senderBaseFromBroadcast(bc, legId)));
+            p.put("text_key", CallBytes.hex(EpochSchedule.textKeyFromBroadcast(bc, legId)));
         }
-        byte[] bc = EpochSchedule.broadcast(secret, CallBytes.unhex(eraHash));
-        n.put("broadcast", CallBytes.hex(bc));
-        n.put("listener_text_key", CallBytes.hex(EpochSchedule.listenerTextKey(bc)));
         n.put("code_hkdf", CallBytes.hex(EpochSchedule.codeBytes(secret)));
         n.put("code", EpochSchedule.code(secret));
         if (built != null) {
@@ -613,7 +619,7 @@ public final class CallVectorScenario {
 
         // our units: sender_base of bob's leg at epoch 4
         Leg b = legs.get("bob");
-        byte[] base = EpochSchedule.senderBase(es4, b.legId);
+        byte[] base = EpochSchedule.senderBase(es4, CallBytes.unhex(eraHash1), b.legId);
         long kid = SframeHeader.kid(b.legIndex, 4);
         SframeKeys k = SframeKeys.derive(kid, base);
         ObjectNode ours = g.putObject("units");
@@ -758,6 +764,17 @@ public final class CallVectorScenario {
 
         // 8.7 expected-type mismatch: an announce presented where a goodbye is expected
         a.add(neg("N8", "context: a valid announce presented where a goodbye is expected", wire(annB), "goodbye", AUD_SVC));
+
+        // 8.8 a validly signed announcement whose ML-KEM key fails the FIPS 203 modulus check (spec amendment 4.3)
+        CallAnnounceBean badEk = CallJson.parse(wire(annC), CallAnnounceBean.class);
+        badEk.setMlkem(INVALID_EK_HEX);
+        badEk.setSg(null);
+        CallSignatures.sign(badEk, ids.get("carol"));
+        ObjectNode n9 = neg("N9", "announcement validly signed, mlkem key fails the FIPS 203 encapsulation-key (modulus) check: the announcement verifier MUST refuse it",
+                wire(badEk), "announce", AUD_SVC);
+        n9.put("check", "announcement");
+        n9.put("ek_source", "ACVP ML-KEM-768 encapsulationKeyCheck tcId 137 (noisy linear system values too large)");
+        a.add(n9);
 
         // positive control: key order in the wire text is irrelevant (JCS)
         ObjectNode p = m.createObjectNode();

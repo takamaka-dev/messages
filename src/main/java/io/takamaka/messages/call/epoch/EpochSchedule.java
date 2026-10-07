@@ -16,9 +16,9 @@ import java.util.List;
  * salt_e         = H(roster_hash_e ‖ era_hash ‖ BE32(e))
  * step (join):     epoch_secret_e = HKDF(epoch_secret_e-1, "tkm-call/v1/step" ‖ ann_hash(joiner) ‖ roster_hash_e)
  * roster_hash_e  = H(sorted ann_hash of every roster leg ‖ era_hash)
- * sender_base_e  = HKDF(epoch_secret_e, "tkm-call/v1/sender" ‖ leg_id)
- * text_key_e     = HKDF(epoch_secret_e, "tkm-call/v1/text" ‖ leg_id)
  * broadcast_e    = HKDF(epoch_secret_e, "tkm-call/v1/broadcast" ‖ era_hash)
+ * sender_base_e  = HKDF(broadcast_e, "tkm-call/v1/sender" ‖ leg_id)          (A-15 RULED 2026-10-07)
+ * text_key_e     = HKDF(broadcast_e, "tkm-call/v1/text" ‖ leg_id)            (A-15 RULED 2026-10-07)
  * code_e         = first 40 bits of HKDF(epoch_secret_e, "tkm-call/v1/code") → 12 decimal digits
  * confirm_e      = HMAC-SHA-512(epoch_secret_e, "tkm-call/v1/confirm" ‖ H(canonical(commit header)))[0..16)
  * </pre>
@@ -26,10 +26,12 @@ import java.util.List;
  * All inputs are raw octets (hex decoded); ann_hash sorting is unsigned-lexicographic on the 32 raw bytes, which
  * equals the order of their lowercase hex strings.
  *
- * <p><b>code_e</b> (ambiguity A-9 of the C182 status report): 40 bits range up to 2^40-1 = 1 099 511 627 775,
- * which has 13 digits, so "40 bits → 12 decimal digits" cannot be a plain rendering. This implementation takes
- * the first 5 bytes of the HKDF output as a big-endian unsigned integer {@code x}, computes
- * {@code x mod 10^12}, and renders it as 12 decimal digits, zero-padded on the left.
+ * <p>A-15 (RULED): speakers derive {@code broadcast_e} first and every leg's frame and text keys from it, so a
+ * listener holding only {@code broadcast_e} derives every speaker's keys but never the epoch secret (Design §7.8.4).
+ * The listener text key of §10.2 is simply the sending leg's {@code text_key_e}.
+ *
+ * <p><b>code_e</b> (A-9 RULED): the first 5 bytes of {@code HKDF(epoch_secret_e, "tkm-call/v1/code")} as a
+ * big-endian unsigned integer, {@code mod 10^12}, rendered as 12 zero-padded decimal digits.
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
@@ -92,23 +94,30 @@ public final class EpochSchedule {
                 CallBytes.concat(CallBytes.ascii(CallConstants.L_STEP), joinerAnnHash, rosterHash));
     }
 
-    public static byte[] senderBase(byte[] epochSecret, byte[] legId) {
-        requireLeg(legId);
-        return CallCrypto.hkdf(epochSecret, CallBytes.concat(CallBytes.ascii(CallConstants.L_SENDER), legId));
-    }
-
-    public static byte[] textKey(byte[] epochSecret, byte[] legId) {
-        requireLeg(legId);
-        return CallCrypto.hkdf(epochSecret, CallBytes.concat(CallBytes.ascii(CallConstants.L_TEXT), legId));
-    }
-
     public static byte[] broadcast(byte[] epochSecret, byte[] eraHash) {
         return CallCrypto.hkdf(epochSecret, CallBytes.concat(CallBytes.ascii(CallConstants.L_BROADCAST), eraHash));
     }
 
-    /** Listener text key, spec §10.2: HKDF(broadcast_e, "tkm-call/v1/text"). */
-    public static byte[] listenerTextKey(byte[] broadcast) {
-        return CallCrypto.hkdf(broadcast, CallBytes.ascii(CallConstants.L_TEXT));
+    /** sender_base_e of a leg from broadcast_e (what a listener can compute). */
+    public static byte[] senderBaseFromBroadcast(byte[] broadcast, byte[] legId) {
+        requireLeg(legId);
+        return CallCrypto.hkdf(broadcast, CallBytes.concat(CallBytes.ascii(CallConstants.L_SENDER), legId));
+    }
+
+    /** text_key_e of a leg from broadcast_e. */
+    public static byte[] textKeyFromBroadcast(byte[] broadcast, byte[] legId) {
+        requireLeg(legId);
+        return CallCrypto.hkdf(broadcast, CallBytes.concat(CallBytes.ascii(CallConstants.L_TEXT), legId));
+    }
+
+    /** sender_base_e of a leg, for a speaker holding the epoch secret (broadcast_e derived first). */
+    public static byte[] senderBase(byte[] epochSecret, byte[] eraHash, byte[] legId) {
+        return senderBaseFromBroadcast(broadcast(epochSecret, eraHash), legId);
+    }
+
+    /** text_key_e of a leg, for a speaker holding the epoch secret (broadcast_e derived first). */
+    public static byte[] textKey(byte[] epochSecret, byte[] eraHash, byte[] legId) {
+        return textKeyFromBroadcast(broadcast(epochSecret, eraHash), legId);
     }
 
     /** The full 32-byte HKDF output the code is taken from. */
