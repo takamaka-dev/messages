@@ -70,6 +70,25 @@ class HybridChannelDartCaseTest {
         assertEquals(mid.get("chain_0[B>A]").asText(), CallBytes.hex(c.chainBA()), "chain_0[B>A]");
     }
 
+    /** With the real binding the Dart ML-KEM values are reproduced from the same d, z, m (FIPS 203 internal forms). */
+    @Test
+    void realMlKemReproducesTheDartKemValues() throws Exception {
+        JsonNode root;
+        try (InputStream in = getClass().getResourceAsStream("/call/combiner_case_dart.json")) {
+            root = new ObjectMapper().readTree(in);
+        }
+        JsonNode inp = root.get("inputs");
+        JsonNode mid = root.get("intermediates");
+        MlKem768 kem = new io.takamaka.messages.call.channel.BcMlKem768();
+        MlKem768.KeyPair kp = kem.keyGen(hx(inp, "B_mlkem_d"), hx(inp, "B_mlkem_z"));
+        assertEquals(mid.get("B.mlkem_ek").asText(), CallBytes.hex(kp.ek()), "B.mlkem_ek");
+        assertEquals(mid.get("B.mlkem_dk").asText(), CallBytes.hex(kp.dk()), "B.mlkem_dk");
+        MlKem768.Encapsulation e = kem.encaps(kp.ek(), hx(inp, "encaps_m"));
+        assertEquals(mid.get("ct").asText(), CallBytes.hex(e.ciphertext()), "ct");
+        assertEquals(mid.get("ss_k").asText(), CallBytes.hex(e.sharedSecret()), "ss_k");
+        assertEquals(mid.get("ss_k").asText(), CallBytes.hex(kem.decaps(kp.dk(), e.ciphertext())), "decaps");
+    }
+
     private static byte[] hx(JsonNode n, String k) {
         assertNotNull(n.get(k), "missing " + k);
         return CallBytes.unhex(n.get(k).asText());

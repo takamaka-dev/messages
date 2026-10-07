@@ -3,8 +3,8 @@ package io.takamaka.messages.call.channel;
 import java.security.SecureRandom;
 
 /**
- * ML-KEM-768 (FIPS 203) as the call protocol needs it (spec §5.1). Bouncy Castle 1.70 has no ML-KEM; the real
- * binding (BC 1.8x shaded, or the JDK 25 KEM API) is decided by a parallel spike and plugs in here.
+ * ML-KEM-768 (FIPS 203) as the call protocol needs it (spec §5.1). Bouncy Castle 1.70 has no ML-KEM; the binding
+ * is {@link BcMlKem768} (BC 1.86 relocated to {@code io.takamaka.shaded.bc}).
  *
  * <p>The deterministic {@code _internal} forms of FIPS 203 (KeyGen from {@code d ‖ z}, Encaps from {@code m}) are
  * part of the interface so that a real binding reproduces the FIPS 203 KATs and our vectors are regenerable.
@@ -30,6 +30,13 @@ public interface MlKem768 {
 
     /** FIPS 203 ML-KEM.Decaps(dk, c) (implicit rejection: never throws on a bad ciphertext of the right size). */
     byte[] decaps(byte[] dk, byte[] ct);
+
+    /**
+     * FIPS 203 §7.2 encapsulation-key check: the type check (1184 bytes) and the modulus check (every coefficient
+     * of the encoded vector below q). Spec amendment §4.3: the service and every client MUST run it on an announced
+     * {@code mlkem} key and refuse the announcement on failure.
+     */
+    boolean checkEncapsulationKey(byte[] ek);
 
     default KeyPair keyGen(SecureRandom random) {
         byte[] d = new byte[SEED_LEN];

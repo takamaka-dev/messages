@@ -40,6 +40,12 @@ public final class InjectedMlKem768 implements MlKem768 {
         return new Encapsulation(ss.clone(), ct.clone());
     }
 
+    /** Type check only: the double's keys are not ML-KEM encodings, so no modulus check applies. */
+    @Override
+    public boolean checkEncapsulationKey(byte[] ek) {
+        return ek != null && ek.length == EK_LEN;
+    }
+
     @Override
     public byte[] decaps(byte[] dk, byte[] ct) {
         if (Arrays.equals(dk, this.dk) && Arrays.equals(ct, this.ct)) {

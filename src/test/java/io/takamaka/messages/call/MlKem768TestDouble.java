@@ -6,9 +6,8 @@ import org.bouncycastle.crypto.digests.SHAKEDigest;
 
 /**
  * A DETERMINISTIC, INSECURE stand-in for ML-KEM-768 with the real sizes (ek 1184, dk 2400, ct 1088, ss 32), so
- * that the channel combiner, the channel-open object and the vectors can be built before the real binding exists.
- * Anyone holding {@code ek} can recover {@code m} from {@code ct}: never use it outside tests. Vectors made with it
- * are marked {@code "mlkem":"test-double"}.
+ * for unit tests of the KEM plumbing. Anyone holding {@code ek} can recover {@code m} from {@code ct}: never use it
+ * outside tests. The published vectors use the real binding ({@code BcMlKem768}) since 2026-10-07.
  *
  * <p>Definition (to be reproduced by the Dart port byte for byte; L(x) = ASCII("tkm-call/v1/test-double/mlkem/" + x),
  * H = SHA3-256, XOF = SHAKE256):
@@ -71,6 +70,12 @@ public final class MlKem768TestDouble implements MlKem768 {
         byte[] ct = CallBytes.concat(c0, xof(CT_LEN - 32, l("ct"), m, hek));
         byte[] ss = CallCrypto.h(l("ss"), m, CallCrypto.h(ct));
         return new Encapsulation(ss, ct);
+    }
+
+    /** Type check only: the double's keys are not ML-KEM encodings, so no modulus check applies. */
+    @Override
+    public boolean checkEncapsulationKey(byte[] ek) {
+        return ek != null && ek.length == EK_LEN;
     }
 
     @Override
