@@ -39,6 +39,8 @@ public final class CallConstants {
     public static final String T_LOOKUP = "lookup";
     public static final String T_MUTE = "mute";
     public static final String T_UNMUTE = "unmute";
+    /** [0.2] Read-only fetch of the creation record and every era record before announcing (§7.3 step 0). */
+    public static final String T_RECORDS = "records";
 
     // ---- audiences (spec §3.1) ----
     public static final String AUD_SVC = "svc:";
@@ -99,6 +101,10 @@ public final class CallConstants {
     public static final int GCM_TAG_LEN = 16;
     public static final int CONFIRM_LEN = 16;
     public static final int NONCE_MAC_LEN = 16;
+    /** [0.2] Length of the per-request random field {@code r} of the service nonce (spec §8.1). */
+    public static final int NONCE_RAND_LEN = 8;
+    /** Maximum size of an in-call text object (spec §10.2: max 4 kB). */
+    public static final int TEXT_MAX_BYTES = 4096;
     /** Validity of a service nonce (spec §8.1). */
     public static final long NONCE_VALIDITY_MS = 60_000L;
     /** Lifetime of a grant (spec §8.4: {@code exp = ts + 60000}). */

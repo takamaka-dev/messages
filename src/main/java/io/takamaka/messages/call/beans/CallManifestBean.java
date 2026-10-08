@@ -19,6 +19,12 @@ import lombok.ToString;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CallManifestBean extends CallSignedObject {
 
+    /**
+     * [0.2 amendment, C182 build 1] The network this service serves: the {@code net} a creation record must carry
+     * (§4.1). Signed with the rest of the manifest, so a client detects a service/network mismatch before signing.
+     */
+    @JsonProperty("net")
+    private String net;
     @JsonProperty("ver")
     private CallVersionRangeBean ver;
     @JsonProperty("suites")

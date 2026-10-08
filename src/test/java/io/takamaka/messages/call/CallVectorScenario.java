@@ -89,6 +89,7 @@ public final class CallVectorScenario {
     CallManifestBean manifest;
     CallLookupBean lookup;
     CallMuteBean mute, unmute;
+    CallRecordsBean recordsD;
     final Map<String, CallSignedObject> byType = new LinkedHashMap<>();
 
     public CallVectorScenario() throws Exception {
@@ -126,8 +127,15 @@ public final class CallVectorScenario {
         return CallSignatures.identityOf(ids.get(n));
     }
 
+    /** Service nonces in issue order; {@code r} of the i-th = the first 8 bytes of seed("nonce/r/" + i). */
+    int nonceCount;
+
+    static byte[] nonceR(int i) {
+        return Arrays.copyOf(CallTestKeys.seed("nonce/r/" + i), CallConstants.NONCE_RAND_LEN);
+    }
+
     String nonce(long t, String aud) {
-        return nonces.issue(t, aud);
+        return nonces.issue(t, aud, nonceR(nonceCount++));
     }
 
     CallAnnounceBean announce(Leg l, String eraHash, long ts, String cap) {
@@ -187,7 +195,8 @@ public final class CallVectorScenario {
         // ---- epoch 1: B joins (step); O opens O→B with the handover + conv_seed
         byte[] rh1 = EpochSchedule.rosterHashHex(List.of(hO, hB), eraHash0);
         es1 = EpochSchedule.step(es0, CallBytes.unhex(hB), rh1);
-        CallChannelBodyBean bodyOB = Commits.epochHandover(1, eraHash0, List.of(hO, hB), es1, 0);
+        // [0.2] since = the committer's ms since the last fresh commit it applied (the initial at T0 + 2 s)
+        CallChannelBodyBean bodyOB = Commits.epochHandover(1, eraHash0, List.of(hO, hB), es1, 0, 6_000 - 2_000);
         bodyOB.setConvSeed(CallBytes.hex(convSeed));
         chOB = HybridChannel.openChannel(callId, annO, o.xPriv, annB, kem, CallTestKeys.seed("encaps/o-b"), null,
                 bodyOB, ids.get("owner"), T0 + 6_000);
@@ -196,7 +205,7 @@ public final class CallVectorScenario {
         // ---- epoch 2: C joins (step); O→C with handover + conv_seed; C→B with conv_seed only
         byte[] rh2 = EpochSchedule.rosterHashHex(List.of(hO, hB, hC), eraHash0);
         es2 = EpochSchedule.step(es1, CallBytes.unhex(hC), rh2);
-        CallChannelBodyBean bodyOC = Commits.epochHandover(2, eraHash0, List.of(hO, hB, hC), es2, 0);
+        CallChannelBodyBean bodyOC = Commits.epochHandover(2, eraHash0, List.of(hO, hB, hC), es2, 0, 11_000 - 2_000);
         bodyOC.setConvSeed(CallBytes.hex(convSeed));
         chOC = HybridChannel.openChannel(callId, annO, o.xPriv, annC, kem, CallTestKeys.seed("encaps/o-c"), null,
                 bodyOC, ids.get("owner"), T0 + 11_000);
@@ -284,6 +293,7 @@ public final class CallVectorScenario {
 
         manifest = new CallManifestBean();
         manifest.setAud(CallConstants.AUD_ANY);
+        manifest.setNet(NET);
         manifest.setTs(T0 - 60_000);
         manifest.setVer(new CallVersionRangeBean("1.0", "1.0"));
         manifest.setSuites(List.of(CallConstants.SUITE_HYBRID_1));
@@ -316,6 +326,9 @@ public final class CallVectorScenario {
         unmute.setLeg(CallBytes.hex(c.legId));
         CallSignatures.sign(unmute, ids.get("bob"));
 
+        // [0.2] D, invited by era 1, fetches the records before announcing (§7.3 step 0)
+        recordsD = CallRecords.request(AUD_SVC, T0 + 122_000, callId, nonce(T0 + 122_000, AUD_SVC), ids.get("dave"));
+
         byType.put("create", create);
         byType.put("era", era1);
         byType.put("announce", annB);
@@ -329,6 +342,7 @@ public final class CallVectorScenario {
         byType.put("lookup", lookup);
         byType.put("mute", mute);
         byType.put("unmute", unmute);
+        byType.put("records", recordsD);
     }
 
     /** ACVP ML-KEM-768 encapsulationKeyCheck tcId 137: an ek with a coefficient &ge; q (from the KAT subset). */
@@ -375,7 +389,7 @@ public final class CallVectorScenario {
 
     public ObjectNode toJson() throws Exception {
         ObjectNode root = m.createObjectNode();
-        root.put("spec", "tkm-call/v1 (rschat-docs/security/E2EE_CALLS_PROTOCOL_SPEC_v1.md, draft 0.1)");
+        root.put("spec", "tkm-call/v1 (rschat-docs/security/E2EE_CALLS_PROTOCOL_SPEC_v1.md, draft 0.2)");
         root.put("version", "1.0.0-draft");
         root.put("generator", "Messages io.takamaka.messages.call.CallVectorGenerator (feat/C182-calls-v1)");
         root.put("mlkem", "ML-KEM-768 FIPS 203 (KeyGen_internal(d,z), Encaps_internal(ek,m); BC 1.86 shaded)");
@@ -401,6 +415,7 @@ public final class CallVectorScenario {
         f.put("net", NET);
         f.put("svc", SVC);
         f.put("k_nonce", CallBytes.hex(CallTestKeys.seed("k_nonce")));
+        f.put("nonce_r_rule", "the i-th service nonce of the scenario (i = 0, 1, …, in issue order) has r = the first 8 bytes of seed(\"nonce/r/<i>\")");
         ObjectNode idn = f.putObject("identities");
         for (String n : ids.keySet()) {
             ObjectNode o = idn.putObject(n);
@@ -674,12 +689,16 @@ public final class CallVectorScenario {
         c.put("salt", CallBytes.hex(ConvSeed.salt(convSeed)));
         c.put("key", CallBytes.hex(ConvSeed.key(convSeed)));
         ArrayNode ns = g.putArray("nonces");
-        for (Object[] p : new Object[][]{{T0, AUD_SVC}, {T0 + 5_000, AUD_SVC}, {T0 + 1, "svc:other"}}) {
+        int i = 0;
+        for (Object[] p : new Object[][]{{T0, AUD_SVC}, {T0, AUD_SVC}, {T0 + 5_000, AUD_SVC}, {T0 + 1, "svc:other"}}) {
             ObjectNode n = ns.addObject();
+            byte[] r = Arrays.copyOf(CallTestKeys.seed("nonce/group7/r/" + i++), CallConstants.NONCE_RAND_LEN);
             n.put("k_nonce", CallBytes.hex(CallTestKeys.seed("k_nonce")));
             n.put("t_ms", (Long) p[0]);
+            n.put("r", CallBytes.hex(r));
             n.put("aud", (String) p[1]);
-            n.put("nonce", nonces.issue((Long) p[0], (String) p[1]));
+            n.put("layout", "BE64(t_ms) || r(8) || HMAC-SHA-512(k_nonce, BE64(t_ms) || r || ASCII(aud))[0..16)");
+            n.put("nonce", nonces.issue((Long) p[0], (String) p[1], r));
         }
         ObjectNode gr = g.putObject("grant");
         gr.put("wire", wire(grantB));

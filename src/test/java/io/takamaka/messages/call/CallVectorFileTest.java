@@ -154,7 +154,7 @@ class CallVectorFileTest {
             CallSignatures.verify(o, t, s(n, "expected_aud"));
         }
         assertEquals(Set.of("create", "era", "announce", "channel", "commit", "goodbye", "decline", "ring", "grant",
-                "manifest", "lookup", "mute", "unmute"), types, "every type of spec 3.3");
+                "manifest", "lookup", "mute", "unmute", "records"), types, "every type of spec 3.3");
     }
 
     // ------------------------------------------------------------------ group 2
@@ -379,8 +379,11 @@ class CallVectorFileTest {
         for (JsonNode n : g.get("nonces")) {
             byte[] k = hx(n, "k_nonce");
             long t = n.get("t_ms").asLong();
-            byte[] mac = CallCrypto.hmacSha512(k, CallBytes.be64(t), CallBytes.ascii(s(n, "aud")));
-            assertEquals(s(n, "nonce"), CallBytes.hex(CallBytes.be64(t)) + CallBytes.hex(java.util.Arrays.copyOf(mac, 16)));
+            byte[] r = hx(n, "r");
+            assertEquals(8, r.length);
+            byte[] mac = CallCrypto.hmacSha512(k, CallBytes.be64(t), r, CallBytes.ascii(s(n, "aud")));
+            assertEquals(s(n, "nonce"), CallBytes.hex(CallBytes.be64(t)) + CallBytes.hex(r)
+                    + CallBytes.hex(java.util.Arrays.copyOf(mac, 16)));
             assertEquals(ServiceNonce.Check.OK, new ServiceNonce(k).peek(s(n, "nonce"), s(n, "aud"), t));
         }
         JsonNode gr = g.get("grant");

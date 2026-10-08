@@ -24,10 +24,19 @@ class ServiceAndConvTest {
         ServiceNonce n = new ServiceNonce(k);
         long t = 1_800_000_000_000L;
         String nonce = n.issue(t, "svc:a");
-        assertEquals(48, nonce.length());
+        assertEquals(64, nonce.length(), "[0.2] BE64(t) || r(8) || MAC(16)");
         assertEquals(CallBytes.hex(CallBytes.be64(t)), nonce.substring(0, 16));
-        byte[] mac = CallCrypto.hmacSha512(k, CallBytes.be64(t), CallBytes.ascii("svc:a"));
-        assertEquals(CallBytes.hex(Arrays.copyOf(mac, 16)), nonce.substring(16));
+        byte[] r = CallBytes.unhex(nonce.substring(16, 32));
+        byte[] mac = CallCrypto.hmacSha512(k, CallBytes.be64(t), r, CallBytes.ascii("svc:a"));
+        assertEquals(CallBytes.hex(Arrays.copyOf(mac, 16)), nonce.substring(32));
+        // explicit r reproduces the layout; r is covered by the MAC
+        assertEquals(nonce, n.issue(t, "svc:a", r));
+        byte[] r2 = r.clone();
+        r2[0] ^= 1;
+        String forged = nonce.substring(0, 16) + CallBytes.hex(r2) + nonce.substring(32);
+        assertEquals(ServiceNonce.Check.BAD_MAC, n.peek(forged, "svc:a", t + 1000), "r is authenticated");
+        // the old 24-byte form is malformed
+        assertEquals(ServiceNonce.Check.MALFORMED, n.peek(nonce.substring(0, 16) + nonce.substring(32), "svc:a", t + 1000));
 
         assertEquals(ServiceNonce.Check.OK, n.consume(nonce, "svc:a", t + 1000));
         assertEquals(ServiceNonce.Check.REPLAYED, n.consume(nonce, "svc:a", t + 2000));
@@ -38,6 +47,25 @@ class ServiceAndConvTest {
         assertEquals(ServiceNonce.Check.BAD_MAC, new ServiceNonce(CallTestKeys.seed("other")).consume(n.issue(t, "svc:a"), "svc:a", t));
         // after the window the replay cache entry is evicted, but the nonce itself has expired
         assertEquals(ServiceNonce.Check.EXPIRED, n.consume(nonce, "svc:a", t + 61_000));
+    }
+
+    /**
+     * [0.2] N-1 regression: many requesters in the SAME millisecond get distinct nonces, and every one of them is
+     * consumable once (before the fix: 8 simultaneous requests gave 1–2 distinct values and the replay cache refused
+     * the rest).
+     */
+    @Test
+    void sameMillisecondNoncesAreDistinctAndEachConsumableOnce() {
+        ServiceNonce n = new ServiceNonce(new java.security.SecureRandom());
+        long t = 1_800_000_000_000L;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (int i = 0; i < 1000; i++) {
+            String nonce = n.issue(t, "svc:a");
+            assertTrue(seen.add(nonce), "distinct in the same millisecond");
+            assertEquals(ServiceNonce.Check.OK, n.consume(nonce, "svc:a", t));
+        }
+        assertEquals(1000, n.cached(t));
+        assertEquals(0, n.cached(t + 60_001), "the replay cache lives for the validity window only");
     }
 
     @Test

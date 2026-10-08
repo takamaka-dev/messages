@@ -40,6 +40,9 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
  */
 public final class Commits {
 
+    /** Spec §2.2 [0.2]: every integer is a safe integer, |n| &le; 2^53 − 1. */
+    static final long MAX_SAFE_INTEGER = (1L << 53) - 1;
+
     private Commits() {
     }
 
@@ -197,9 +200,16 @@ public final class Commits {
         return new Accepted(commitSecret, secret, rh);
     }
 
-    /** Builds the epoch handover body of spec §6.4 (sent by the committer in a channel open). */
+    /**
+     * Builds the epoch handover body of spec §6.4 (sent by the committer in a channel open, or as a catch-up message on
+     * an existing channel). {@code chainIdx} = the {@code k} of THAT channel; <b>[0.2]</b> {@code sinceMs} = the
+     * committer's milliseconds elapsed since the last fresh commit it applied (O-11), never negative.
+     */
     public static CallChannelBodyBean epochHandover(long epoch, String eraHashHex, List<String> rosterHex,
-            byte[] epochSecret, long chainIdx) {
+            byte[] epochSecret, long chainIdx, long sinceMs) {
+        if (sinceMs < 0 || sinceMs > MAX_SAFE_INTEGER) {
+            throw new IllegalArgumentException("since must be a non-negative safe integer");
+        }
         CallChannelBodyBean b = new CallChannelBodyBean();
         b.setH("epoch");
         b.setEpoch(epoch);
@@ -207,7 +217,18 @@ public final class Commits {
         b.setRoster(EpochSchedule.sortedHex(rosterHex));
         b.setSecret(CallBytes.hex(epochSecret));
         b.setChainIdx(chainIdx);
+        b.setSince(sinceMs);
         return b;
+    }
+
+    /**
+     * [0.2] The receiver's budget window start after adopting an epoch handover (§6.4, O-11): {@code now − since},
+     * on the receiver's monotonic clock ({@code nowMono} = the arrival time of the handover). From then on the
+     * newcomer refuses a budgeted commit arriving less than {@code refuse_below} after that instant, like every older
+     * leg, and a committer places its next budgeted slot at that instant + {@code commit_delay}.
+     */
+    public static long budgetWindowStart(long nowMono, CallChannelBodyBean h) {
+        return nowMono - h.getSince();
     }
 
     /** Builds the listener (broadcast) handover body of spec §6.4. */
@@ -245,6 +266,9 @@ public final class Commits {
         }
         if (!CallBytes.isLowerHex(h.getSecret(), 32)) {
             throw refused("secret encoding");
+        }
+        if (h.getSince() == null || h.getSince() < 0 || h.getSince() > MAX_SAFE_INTEGER) {
+            throw refused("since missing or not a non-negative safe integer"); // [0.2] O-11
         }
         return EpochSchedule.rosterHashHex(h.getRoster(), heldEraHashHex);
     }

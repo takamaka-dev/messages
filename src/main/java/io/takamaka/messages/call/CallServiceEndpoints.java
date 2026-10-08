@@ -26,6 +26,12 @@ package io.takamaka.messages.call;
  * <tr><td>{@value #GOODBYE}</td><td>request-response</td><td>{@code goodbye}</td><td>reply</td></tr>
  * <tr><td>{@value #DECLINE}</td><td>request-response</td><td>{@code decline}</td><td>reply</td></tr>
  * <tr><td>{@value #MUTE} / {@value #UNMUTE}</td><td>request-response</td><td>{@code mute} / {@code unmute}</td><td>reply</td></tr>
+ * <tr><td>{@value #RECORDS}</td><td>request-response</td><td>{@code records} [0.2]</td><td>reply with {@code create}
+ * and {@code eras} (the creation record and every era record), read-only, to an identity named in {@code inv} or
+ * {@code alist} of any era (§7.3 step 0)</td></tr>
+ * <tr><td>{@value #TEXT}</td><td>request-response</td><td>{@link io.takamaka.messages.call.service.CallTextRequestBean}</td>
+ * <td>reply; the {@code text} object (§10.2) relayed to every other live leg of the call; rate-limited per leg
+ * (§8.2)</td></tr>
  * <tr><td>{@value #PRESENCE}</td><td>request-response</td><td>{@link io.takamaka.messages.call.service.CallLegRefBean}</td>
  * <td>reply with {@code presence}; only on the connection that holds that leg's stream</td></tr>
  * </table>
@@ -52,4 +58,8 @@ public final class CallServiceEndpoints {
     public static final String MUTE = "call.mute";
     public static final String UNMUTE = "call.unmute";
     public static final String PRESENCE = "call.presence";
+    /** [0.2] Read-only creation + era records before announcing (spec §7.3 step 0, O-1). */
+    public static final String RECORDS = "call.records";
+    /** In-call text relay (spec §10.2). */
+    public static final String TEXT = "call.text";
 }

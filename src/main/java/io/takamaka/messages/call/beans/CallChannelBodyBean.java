@@ -37,6 +37,12 @@ public class CallChannelBodyBean {
     private String secret;
     @JsonProperty("chain_idx")
     private Long chainIdx;
+    /**
+     * [0.2] Epoch handover only: the committer's milliseconds elapsed since the last fresh commit it applied (§6.4,
+     * shell oracle finding O-11). The newcomer starts its budget window at {@code now − since}.
+     */
+    @JsonProperty("since")
+    private Long since;
     /** broadcast_e, hex (broadcast handover). */
     @JsonProperty("key")
     private String key;

@@ -17,6 +17,11 @@ public enum CallError {
     TOO_MANY_DEVICES("too_many_devices"),
     FROZEN("frozen"),
     RATE_LIMITED("rate_limited"),
+    /**
+     * [0.2 amendment, C182 build 1] A creation record whose {@code svc} or {@code net} is not this service's own (the
+     * client reads {@code net} in the signed manifest and {@code svc} from the nonce's {@code aud} before signing).
+     */
+    WRONG_SERVICE("wrong_service"),
     EXISTS_MEMBER("exists_member"),
     /** Client-local: not a wire code of §11. */
     KEY_REFUSED("key_refused");

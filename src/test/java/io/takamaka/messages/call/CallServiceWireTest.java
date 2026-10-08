@@ -110,6 +110,6 @@ class CallServiceWireTest {
                 routes++;
             }
         }
-        assertEquals(12, routes);
+        assertEquals(14, routes, "12 of draft 0.1 + call.records [0.2] + call.text");
     }
 }

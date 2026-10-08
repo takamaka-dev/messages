@@ -26,7 +26,7 @@ class CallSignaturesTest {
 
     @Test
     void everyTypeSignsAndVerifiesAndSurvivesTheWire() throws Exception {
-        assertEquals(13, s.byType.size());
+        assertEquals(14, s.byType.size(), "13 types of draft 0.1 + records [0.2]");
         for (Map.Entry<String, CallSignedObject> e : s.byType.entrySet()) {
             CallSignedObject o = e.getValue();
             assertEquals(e.getKey(), o.getT());

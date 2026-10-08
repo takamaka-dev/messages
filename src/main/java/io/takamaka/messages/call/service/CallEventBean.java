@@ -21,6 +21,7 @@ import lombok.NoArgsConstructor;
  * <tr><td>{@value #ANNOUNCE}</td><td>{@code ann}</td><td>a sequenced announcement (join or re-announcement)</td></tr>
  * <tr><td>{@value #ERA}, {@value #COMMIT}, {@value #CHANNEL}, {@value #GOODBYE}, {@value #DECLINE}, {@value #MUTE},
  * {@value #UNMUTE}</td><td>{@code obj}</td><td>the signed object verbatim (verify it yourself)</td></tr>
+ * <tr><td>{@value #TEXT}</td><td>{@code text}</td><td>an in-call text object (§10.2) of another leg, verbatim</td></tr>
  * <tr><td>{@value #PRESENCE}</td><td>{@code presence}</td><td>the presence list after a change (absences coalesced per
  * {@code absence_window})</td></tr>
  * <tr><td>{@value #REPLACED}</td><td>—</td><td>another stream took over this leg (re-attach); this one completes</td></tr>
@@ -47,6 +48,7 @@ public class CallEventBean {
     public static final String MUTE = "mute";
     public static final String UNMUTE = "unmute";
     public static final String PRESENCE = "presence";
+    public static final String TEXT = "text";
     public static final String REPLACED = "replaced";
     public static final String GONE = "gone";
     public static final String END = "end";
@@ -63,6 +65,8 @@ public class CallEventBean {
     private List<CallPresenceBean> presence;
     @JsonProperty("error")
     private CallErrorBean error;
+    @JsonProperty("text")
+    private CallTextBean text;
 
     public static CallEventBean of(String e) {
         CallEventBean ev = new CallEventBean();

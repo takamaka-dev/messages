@@ -18,7 +18,10 @@ import lombok.NoArgsConstructor;
  * <li>{@code era}: {@code era} = the accepted era_hash(n);</li>
  * <li>{@code channel}: {@code delivered} = whether the {@code to} leg had a live stream (an undelivered channel open is
  * dropped, not queued: the service stores nothing; catch-up is the handover of §6.4);</li>
- * <li>{@code presence}: {@code presence} = the per-leg states of §7.2.</li>
+ * <li>{@code presence}: {@code presence} = the per-leg states of §7.2;</li>
+ * <li>{@code records} [0.2]: {@code create} = the creation record, {@code eras} = era records 1..n in order
+ * ({@code []} in era 0) — verify the chain yourself (owner signatures, {@code prev} links) and compute the current
+ * era_hash from the last record.</li>
  * </ul>
  *
  * Not signed: the service's answers are bound to the request on the same RSocket stream; the objects that need the
@@ -47,6 +50,12 @@ public class CallReplyBean {
     private Boolean delivered;
     @JsonProperty("presence")
     private List<CallPresenceBean> presence;
+    /** {@code records}: the creation record (era 0). */
+    @JsonProperty("create")
+    private io.takamaka.messages.call.beans.CallCreateBean create;
+    /** {@code records}: era records 1..n, in order. */
+    @JsonProperty("eras")
+    private List<io.takamaka.messages.call.beans.CallEraBean> eras;
 
     public static CallReplyBean ok() {
         CallReplyBean r = new CallReplyBean();
