@@ -256,4 +256,33 @@ public class ChatServerEndpoints {
      */
     public static final String WITHDRAW_ATTACHMENT = "withdrawattachment";
 
+
+    // ---- C182 E2EE calls (tkm-call/v1, DR-055): the three rschat routes of the protocol --------------------------
+    // Payloads/answers are call objects and io.takamaka.messages.call.service.CallReplyBean as JSON TEXT, parsed with
+    // the strict call parser (io.takamaka.messages.call.CallJson); refusals are typed spec §11 codes, never free text.
+    // rschat stores nothing for any of them (no row, no log of the lookup; spec §7.1 N9, §8.3).
+
+    /**
+     * rschat's call nonce (request-response, no payload): the stateless §8.1 form bound to {@code aud = rschat:<net>},
+     * held in memory for its 60 s window only — no {@code nonces} row. Answer: {@code CallReplyBean} {@code n}, {@code aud}.
+     * Every {@code ring} and {@code lookup} carries one ({@code n}).
+     */
+    public static final String CALL_NONCE = "callnonce";
+
+    /**
+     * Ring (spec §7.1, request-response): a caller-signed {@code ring} object (signature context {@code tkm-call/v1/ring},
+     * {@code aud = rschat:<net>}). rschat verifies the signature, the nonce, that the caller and every {@code to} are
+     * registered, and 10 per minute / 100 per day per verified caller; then delivers {@code CALL_RING} live on each
+     * callee's notification stream, or as an FCM push carrying {@code call_id}, {@code svc}, {@code f}, {@code mode}
+     * only. No row. Answer: {@code CallReplyBean} ok, or a typed error.
+     */
+    public static final String CALL_RING = "callring";
+
+    /**
+     * Registration lookup (spec §8.3, service → rschat, request-response): a {@code lookup} object signed by a call
+     * service key on rschat's allow-list ({@code rschat.calls.services}), one identity per request. Answer:
+     * {@code CallReplyBean} {@code reg} (the registration record verbatim) or {@code not_registered}. Not logged.
+     */
+    public static final String CALL_LOOKUP = "calllookup";
+
 }

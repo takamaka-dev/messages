@@ -15,6 +15,7 @@
  */
 package io.takamaka.messages.chat.conversation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.takamaka.messages.chat.conversation.CreateConversationRequestBean;
 import lombok.AllArgsConstructor;
@@ -34,4 +35,32 @@ public class CreateConversationResponseBean {
     private String conversationHashName;
     @JsonProperty("create_conversation_request")
     private CreateConversationRequestBean createConversationRequestBean;
+    /**
+     * C182 (tkm-call/v1 §10.1, §11, Design §6.1 rule 6): {@value #RESULT_EXISTS_MEMBER} when the conversation hash
+     * already existed and the requester is one of its members — a typed success: {@code create_conversation_request}
+     * is then the STORED creation request (not an echo of this one) and no notification was sent. Absent on a fresh
+     * creation, so that answer's JSON is unchanged.
+     */
+    @JsonProperty("result")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String result;
+
+    /** {@code result} of an existing conversation answered to one of its members (§11 {@code exists_member}). */
+    public static final String RESULT_EXISTS_MEMBER = "exists_member";
+
+    /** A fresh creation (no {@code result}). */
+    public CreateConversationResponseBean(String conversationHashName, CreateConversationRequestBean createConversationRequestBean) {
+        this(conversationHashName, createConversationRequestBean, null);
+    }
+
+    /** The typed {@code exists_member} success carrying the stored topic. */
+    public static CreateConversationResponseBean existsMember(String conversationHashName, CreateConversationRequestBean stored) {
+        return new CreateConversationResponseBean(conversationHashName, stored, RESULT_EXISTS_MEMBER);
+    }
+
+    /** True when this answer is the typed {@code exists_member} result. */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isExistsMember() {
+        return RESULT_EXISTS_MEMBER.equals(result);
+    }
 }

@@ -19,6 +19,9 @@ import lombok.NoArgsConstructor;
  * <li>{@code channel}: {@code delivered} = whether the {@code to} leg had a live stream (an undelivered channel open is
  * dropped, not queued: the service stores nothing; catch-up is the handover of §6.4);</li>
  * <li>{@code presence}: {@code presence} = the per-leg states of §7.2;</li>
+ * <li>rschat {@code callnonce} (C182 build 3): {@code n} and {@code aud} ({@code rschat:<net>});</li>
+ * <li>rschat {@code callring}: nothing (never whether a callee was live: the caller learns nothing about presence);</li>
+ * <li>rschat {@code calllookup}: {@code reg} = the registration record verbatim, or the error {@code not_registered};</li>
  * <li>{@code records} [0.2]: {@code create} = the creation record, {@code eras} = era records 1..n in order
  * ({@code []} in era 0) — verify the chain yourself (owner signatures, {@code prev} links) and compute the current
  * era_hash from the last record.</li>
@@ -56,6 +59,13 @@ public class CallReplyBean {
     /** {@code records}: era records 1..n, in order. */
     @JsonProperty("eras")
     private List<io.takamaka.messages.call.beans.CallEraBean> eras;
+    /**
+     * rschat {@code calllookup} (spec §8.3, C182 build 3): the identity's registration record VERBATIM — the stored
+     * canonical JSON of its signed {@code registeruser} request (identity, RSA-4096 encryption key, signature). The
+     * service verifies it itself (chat signature under the looked-up identity, Design §4.4) before trusting it.
+     */
+    @JsonProperty("reg")
+    private String reg;
 
     public static CallReplyBean ok() {
         CallReplyBean r = new CallReplyBean();

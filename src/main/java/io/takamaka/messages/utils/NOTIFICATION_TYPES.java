@@ -56,5 +56,13 @@ public enum NOTIFICATION_TYPES {
      *
      * <p>Align this literal with the Flutter client.</p>
      */
-    PROFILE_UPDATE
+    PROFILE_UPDATE,
+    /**
+     * C182 (tkm-call/v1 §7.1, DR-055): an incoming call. Delivered on the live notification stream or as an FCM
+     * push, and <b>never stored</b> (N9): no {@code user_notifications} row, so it never appears in
+     * {@code notificationhistory}. The notification carries {@code ring} = {@code call}, {@code svc}, {@code f},
+     * {@code mode} and nothing else; the callee shows the caller as verified only after fetching and verifying the
+     * creation record from the call service (N7). Align this literal with the Flutter client.
+     */
+    CALL_RING
 }

@@ -15,7 +15,9 @@
  */
 package io.takamaka.messages.chat.notification;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.takamaka.messages.call.rschat.CallRingNoticeBean;
 import io.takamaka.messages.utils.NOTIFICATION_TYPES;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -46,5 +48,19 @@ public class UserNotificationJsonBean {
     private String conversationHashName;
     @JsonProperty("read")
     private boolean read;
+    /**
+     * C182 (tkm-call/v1 §7.1): present only on a {@code CALL_RING} notification, which is delivered live and NEVER
+     * stored (no row, no {@code notificationhistory} entry): {@code call}, {@code svc}, {@code f}, {@code mode} and
+     * nothing else. Absent (not {@code null}) on every other notification, so their JSON is unchanged.
+     */
+    @JsonProperty("ring")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private CallRingNoticeBean ring;
+
+    /** The pre-C182 seven-field form (every chat notification). */
+    public UserNotificationJsonBean(String notificationHash, String senderKey, String receiverKey, Long submissionTime,
+            String notificationType, String conversationHashName, boolean read) {
+        this(notificationHash, senderKey, receiverKey, submissionTime, notificationType, conversationHashName, read, null);
+    }
 
 }
