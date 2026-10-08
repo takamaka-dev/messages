@@ -103,8 +103,10 @@ public final class CallConstants {
 
     /**
      * §6.2 budget (R11): a receiver refuses a live commit of a BUDGETED kind ({@code leave}, {@code backstop},
-     * [0.2] {@code rotation}) that arrives less than {@code refuse_below} after the previous fresh commit it applied;
-     * {@code era}, {@code restart} and {@code initial} are exempt (and reset the window).
+     * [0.2] {@code rotation}) whose SIGNED {@code ts} is less than {@code refuse_below} after the signed {@code ts} of the
+     * previous fresh commit it applied ([0.2] X-1/X-2, 2026-10-08: measured on the committers' timestamps, never on
+     * arrival); the service enforces the same window on its own clock. {@code era}, {@code restart} and
+     * {@code initial} are exempt (and reset the window).
      */
     public static boolean isBudgetedKind(String kind) {
         return KIND_LEAVE.equals(kind) || KIND_BACKSTOP.equals(kind) || KIND_ROTATION.equals(kind);
@@ -132,6 +134,20 @@ public final class CallConstants {
     public static final int TEXT_MAX_BYTES = 4096;
     /** Validity of a service nonce (spec §8.1). */
     public static final long NONCE_VALIDITY_MS = 60_000L;
+    /**
+     * [0.2] §6.2 {@code ts_tolerance} (X-1/X-2, 2026-10-08): how far a commit's signed {@code ts} may be AHEAD of the
+     * verifier's wall clock — the receiver refuses beyond it, the service refuses beyond it on its own clock. The spec
+     * names no separate value; it is the §8.1 time tolerance, the nonce validity (60 s).
+     */
+    public static final long TS_TOLERANCE_MS = NONCE_VALIDITY_MS;
+    /**
+     * [0.2] §6.2 catch-up (X-1): the {@code h} of the channel-message body a leg that is behind sends to the committer
+     * to ask for a catch-up handover ({@code {"h":"catchup","epoch":e}}, e = the epoch it holds). The answer is the
+     * §6.4 step 4 handover. The spec names the request, not its object: resolution C-1 of the X-1/X-2 fix report.
+     */
+    public static final String H_CATCHUP = "catchup";
+    /** [0.2] §6.2: at most this many {@code epoch_taken} refusals in a row before a leg asks for the catch-up. */
+    public static final int EPOCH_TAKEN_MAX_IN_ROW = 3;
     /** Lifetime of a grant (spec §8.4: {@code exp = ts + 60000}). */
     public static final long GRANT_LIFETIME_MS = 60_000L;
     /** Maximum lifetime of a creation record (spec §4.1: at most 4 h). */

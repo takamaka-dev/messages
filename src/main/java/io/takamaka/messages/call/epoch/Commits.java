@@ -21,7 +21,8 @@ import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 
 /**
  * Fresh commits (spec §6.2): the committer's builder and the purely cryptographic acceptance checks of a
- * receiving device. Committer selection, the budget window, acknowledgements and switching are state/timing
+ * receiving device, and [0.2] the budget window on signed {@code ts} ({@link #checkBudget}, X-1/X-2). Committer
+ * selection, the catch-up timers, acknowledgements and switching are state/timing
  * rules of the client, not here.
  *
  * <p>Resolutions recorded in the C182 status report:
@@ -132,6 +133,28 @@ public final class Commits {
     public static Accepted accept(CallCommitBean c, String expectedAud, Set<String> allowedSigners,
             String heldEraHashHex, long currentEpoch, byte[] currentEpochSecret, Set<String> verifiedAnnHashesHex,
             String ownAnnHashHex, String ownLegIdHex, ChannelState channelToCommitter) throws CallProtocolException {
+        return accept(c, expectedAud, allowedSigners, heldEraHashHex, currentEpoch, currentEpochSecret, verifiedAnnHashesHex,
+                ownAnnHashHex, ownLegIdHex, channelToCommitter, null);
+    }
+
+    /**
+     * [0.2] §6.2 the receiver's budget inputs (X-1/X-2, 2026-10-08): the signed {@code ts} of the previous fresh commit
+     * it applied ({@code null} = none yet; after a handover: its wall clock at arrival − {@code since}), its own wall
+     * clock now, and {@code refuse_below}.
+     */
+    public record Budget(Long prevFreshTs, long nowWall, long refuseBelow) {
+
+    }
+
+    /**
+     * {@link #accept(CallCommitBean, String, Set, String, long, byte[], Set, String, String, ChannelState)} plus the
+     * [0.2] §6.2 budget on SIGNED timestamps ({@link #checkBudget}), checked after the signature, signer, era and epoch
+     * checks and before the box is opened. {@code budget == null} skips it.
+     */
+    public static Accepted accept(CallCommitBean c, String expectedAud, Set<String> allowedSigners,
+            String heldEraHashHex, long currentEpoch, byte[] currentEpochSecret, Set<String> verifiedAnnHashesHex,
+            String ownAnnHashHex, String ownLegIdHex, ChannelState channelToCommitter, Budget budget)
+            throws CallProtocolException {
         CallSignatures.verify(c, CallConstants.T_COMMIT, expectedAud);
         if (!allowedSigners.contains(c.getF())) {
             throw refused("signer is neither the computed committer nor the owner");
@@ -144,6 +167,9 @@ public final class Commits {
         }
         if (CallConstants.KIND_INITIAL.equals(c.getKind())) {
             throw refused("initial commit is never received live");
+        }
+        if (budget != null) {
+            checkBudget(c, budget.prevFreshTs(), budget.nowWall(), budget.refuseBelow());
         }
         List<String> roster = c.getRoster();
         if (roster == null || !roster.equals(EpochSchedule.sortedHex(roster)) || new HashSet<>(roster).size() != roster.size()) {
@@ -201,6 +227,61 @@ public final class Commits {
     }
 
     /**
+     * [0.2] §6.2 budget (R11) on SIGNED timestamps — X-1/X-2, RULED 2026-10-08. Draft 0.1 measured the window on the
+     * receiver's ARRIVAL clock: a commit delivered later than {@code commit_delay − refuse_below} made the receiver
+     * refuse the next one and forked the call for good (X-2), and a leg frozen with its socket open measured from the
+     * moment of resume and was left behind forever (X-1). Now, for a live commit {@code c}:
+     * <ul>
+     * <li>its {@code ts} more than {@link CallConstants#TS_TOLERANCE_MS} ahead of {@code nowWall} is refused (any kind:
+     * an exempt commit RESETS the window to its ts, so a future ts would poison the next window);</li>
+     * <li>a budgeted kind ({@link CallConstants#isBudgetedKind}) with {@code ts − prevFreshTs < refuseBelow} is refused
+     * ("budget: …"); {@code prevFreshTs == null} (no fresh commit applied yet) never refuses.</li>
+     * </ul>
+     * {@code era}, {@code restart} and {@code initial} are exempt from the window and reset it (the caller stores the
+     * applied commit's {@code ts} as the next {@code prevFreshTs}, whatever its kind). Failures are
+     * {@link CallError#KEY_REFUSED}.
+     */
+    public static void checkBudget(CallCommitBean c, Long prevFreshTs, long nowWall, long refuseBelow)
+            throws CallProtocolException {
+        Long ts = c.getTs();
+        if (ts == null) {
+            throw refused("ts missing");
+        }
+        if (ts - nowWall > CallConstants.TS_TOLERANCE_MS) {
+            throw refused("ts " + (ts - nowWall) + " ms ahead of this wall clock (> ts_tolerance "
+                    + CallConstants.TS_TOLERANCE_MS + ")");
+        }
+        if (CallConstants.isBudgetedKind(c.getKind()) && prevFreshTs != null && ts - prevFreshTs < refuseBelow) {
+            throw refused("budget: " + c.getKind() + " commit " + (ts - prevFreshTs)
+                    + " ms after the previous fresh commit (signed ts; < refuse_below " + refuseBelow + ")");
+        }
+    }
+
+    /**
+     * [0.2] §6.2 the committer's budget anchor on its MONOTONIC clock after it applied (or made) a fresh commit with
+     * signed {@code ts}, stamped {@code arrivedMono} / {@code nowWall}: the arrival, pushed later by however much the
+     * commit's {@code ts} is ahead of this wall clock (at most {@code ts_tolerance}, else it was refused). A budgeted
+     * commit made at this anchor + {@code commit_delay} therefore carries a {@code ts} at least {@code commit_delay}
+     * after the previous one on every clock that accepted it — whatever the skew between the two committers.
+     */
+    public static long committerAnchor(long arrivedMono, long nowWall, long ts) {
+        return arrivedMono + Math.max(0, ts - nowWall);
+    }
+
+    /**
+     * [0.2] §6.2 catch-up (X-1), resolution C-1: the body a leg that is behind seals on its channel to the committer to
+     * ask for a catch-up handover (§6.4 step 4): {@code {"h":"catchup","epoch":e}}, e = the epoch it holds. A committer
+     * that cannot open it (the requester's {@code k} is older than its own: it missed fresh commits) treats the signed
+     * channel message under a stale {@code k} as the same request.
+     */
+    public static CallChannelBodyBean catchUpRequest(long heldEpoch) {
+        CallChannelBodyBean b = new CallChannelBodyBean();
+        b.setH(CallConstants.H_CATCHUP);
+        b.setEpoch(heldEpoch);
+        return b;
+    }
+
+    /**
      * Builds the epoch handover body of spec §6.4 (sent by the committer in a channel open, or as a catch-up message on
      * an existing channel). {@code chainIdx} = the {@code k} of THAT channel; <b>[0.2]</b> {@code sinceMs} = the
      * committer's milliseconds elapsed since the last fresh commit it applied (O-11), never negative.
@@ -222,10 +303,11 @@ public final class Commits {
     }
 
     /**
-     * [0.2] The receiver's budget window start after adopting an epoch handover (§6.4, O-11): {@code now − since},
-     * on the receiver's monotonic clock ({@code nowMono} = the arrival time of the handover). From then on the
-     * newcomer refuses a budgeted commit arriving less than {@code refuse_below} after that instant, like every older
-     * leg, and a committer places its next budgeted slot at that instant + {@code commit_delay}.
+     * [0.2] The receiver's budget window start after adopting an epoch handover (§6.4, O-11): {@code now − since}.
+     * On the receiver's WALL clock at the handover's arrival it is the {@code prevFreshTs} of {@link #checkBudget}
+     * ([0.2] X-1/X-2: the window is on signed ts); on its monotonic clock it is the committer anchor, so a committer
+     * places its next budgeted slot at that instant + {@code commit_delay}. The committer computes {@code since} as its
+     * wall clock now − the signed ts of the previous fresh commit it applied.
      */
     public static long budgetWindowStart(long nowMono, CallChannelBodyBean h) {
         return nowMono - h.getSince();
