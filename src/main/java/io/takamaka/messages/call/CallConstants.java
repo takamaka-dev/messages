@@ -121,6 +121,13 @@ public final class CallConstants {
     public static final int NONCE_MAC_LEN = 16;
     /** [0.2] Length of the per-request random field {@code r} of the service nonce (spec §8.1). */
     public static final int NONCE_RAND_LEN = 8;
+    /**
+     * [0.2] §10.2 (J-3): the AAD domain of the in-call text AEAD, followed by a 0x00 separator, call_id (32 raw bytes),
+     * leg_id (8 raw bytes) and BE32(e).
+     */
+    public static final String AAD_TEXT = PREFIX + "text";
+    /** [0.2] §10.2/§9.2: at most this many epochs (the current one included) whose texts a receiver still opens. */
+    public static final int TEXT_MAX_EPOCHS = 4;
     /** Maximum size of an in-call text object (spec §10.2: max 4 kB). */
     public static final int TEXT_MAX_BYTES = 4096;
     /** Validity of a service nonce (spec §8.1). */

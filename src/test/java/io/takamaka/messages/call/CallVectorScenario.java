@@ -405,6 +405,7 @@ public final class CallVectorScenario {
         root.set("group6_sframe", group6());
         root.set("group7_conv_nonce_grant", group7());
         root.set("group8_negative", group8());
+        root.set("group9_text", group9());
         return root;
     }
 
@@ -609,6 +610,66 @@ public final class CallVectorScenario {
         a.add(epochNode(3, "leave", es3, List.of(hO, hB), eraHash0, List.of("owner", "bob"), cLeave));
         a.add(epochNode(4, "era", es4, List.of(hO1, hB1), eraHash1, List.of("owner", "bob"), cEra));
         return a;
+    }
+
+    /** One §10.2 text: inputs, AAD, nonce, ct ‖ tag and the wire object. */
+    ObjectNode textNode(String what, byte[] epochSecret, String eraHashHex, String callIdHex, byte[] legId, long e, long ctr,
+            byte[] plaintext) {
+        ObjectNode n = m.createObjectNode();
+        n.put("what", what);
+        n.put("epoch_secret", CallBytes.hex(epochSecret));
+        n.put("era_hash", eraHashHex);
+        n.put("call_id", callIdHex);
+        n.put("leg_id", CallBytes.hex(legId));
+        n.put("epoch", e);
+        n.put("ctr", ctr);
+        n.put("plaintext_utf8", CallBytes.hex(plaintext));
+        byte[] bc = EpochSchedule.broadcast(epochSecret, CallBytes.unhex(eraHashHex));
+        byte[] key = EpochSchedule.textKeyFromBroadcast(bc, legId);
+        n.put("broadcast", CallBytes.hex(bc));
+        n.put("text_key", CallBytes.hex(key));
+        byte[] cid = CallBytes.unhex(callIdHex);
+        n.put("aad", CallBytes.hex(CallTexts.aad(cid, legId, e)));
+        n.put("nonce", CallBytes.hex(CallTexts.nonce(e, ctr)));
+        n.put("ct", CallBytes.hex(CallTexts.seal(key, cid, legId, e, ctr, plaintext)));
+        n.put("wire", CallJson.toWire(CallTexts.build(bc, callIdHex, CallBytes.hex(legId), e, ctr, plaintext)));
+        return n;
+    }
+
+    /**
+     * [0.2] §10.2 (J-3): the in-call text AEAD. "fixed" is the Dart port's independently computed vector
+     * (C182_DART_FIXES_J5_J3_2026-10-08.md §3.4), reproduced here byte for byte; "scenario" seals texts under the
+     * scenario's epoch 4 (the era commit) for two legs.
+     */
+    ObjectNode group9() {
+        ObjectNode g = m.createObjectNode();
+        g.put("rule", "ct = AES-256-GCM(text_key_e of the SENDING leg, nonce = BE32(e) || BE64(ctr), "
+                + "AAD = ASCII(\"tkm-call/v1/text\") || 0x00 || call_id || leg_id || BE32(e), UTF-8(text)) = ciphertext || tag; "
+                + "text_key_e = HKDF(broadcast_e, \"tkm-call/v1/text\" || leg_id); call_id (32) and leg_id (8) raw bytes; "
+                + "ctr from 0, strictly increasing per (leg, epoch); a receiver opens the current and retained epochs, "
+                + "refuses a repeated ctr (counted only after it opened) and drops a text whose AAD does not match");
+        byte[] fixedSecret = new byte[32];
+        byte[] fixedEra = new byte[32];
+        byte[] fixedCall = new byte[32];
+        for (int i = 0; i < 32; i++) {
+            fixedSecret[i] = (byte) i;
+            fixedEra[i] = (byte) (0x20 + i);
+            fixedCall[i] = (byte) (0x40 + i);
+        }
+        ObjectNode fixed = textNode("fixed (Dart port vector, J-3)", fixedSecret, CallBytes.hex(fixedEra), CallBytes.hex(fixedCall),
+                CallBytes.unhex("0102030405060708"), 7, 3, "hello, call \u260e".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        byte[] key = CallBytes.unhex(fixed.get("text_key").asText());
+        fixed.put("ct_empty_aad_must_not_open", CallBytes.hex(CallCrypto.aesGcmSeal(key, CallTexts.nonce(7, 3), new byte[0],
+                CallBytes.unhex(fixed.get("plaintext_utf8").asText()))));
+        g.set("fixed", fixed);
+        ArrayNode sc = g.putArray("scenario");
+        sc.add(textNode("owner, epoch 4, ctr 0", es4, eraHash1, callId, legs.get("owner").legId, 4, 0,
+                "ciao".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        sc.add(textNode("owner, epoch 4, ctr 1", es4, eraHash1, callId, legs.get("owner").legId, 4, 1,
+                "ciao".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        sc.add(textNode("bob, epoch 4, ctr 0", es4, eraHash1, callId, legs.get("bob").legId, 4, 0,
+                "ok \u2713".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        return g;
     }
 
     ObjectNode group6() throws Exception {

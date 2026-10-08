@@ -322,6 +322,52 @@ class CallVectorFileTest {
         }
     }
 
+    // ------------------------------------------------------------------ group 9 [0.2] text (J-3)
+
+    @Test
+    void group9TextIsRederivedAndTheDartVectorIsReproduced() throws Exception {
+        JsonNode g = root.get("group9_text");
+        JsonNode fixed = g.get("fixed");
+        // the Dart port's vector (C182_DART_FIXES_J5_J3_2026-10-08.md §3.4), literal
+        assertEquals("ec875a3eadca0722ff7dc80cf20169e1a91b966060bcbd513d3c096187513c", s(fixed, "ct"));
+        assertEquals("91fa7ad5dad002e9d2a01f66fc470999c31d0e3ec3f8f9a48cdd1a6f4c4911cd", s(fixed, "text_key"));
+        assertEquals("ec875a3eadca0722ff7dc80cf20169a21d41de8de61e3800f73a23e530b837", s(fixed, "ct_empty_aad_must_not_open"));
+        List<JsonNode> all = new ArrayList<>();
+        all.add(fixed);
+        g.get("scenario").forEach(all::add);
+        for (JsonNode t : all) {
+            byte[] bc = CallCrypto.hkdf(hx(t, "epoch_secret"), CallBytes.concat(CallBytes.ascii("tkm-call/v1/broadcast"),
+                    hx(t, "era_hash")));
+            assertEquals(s(t, "broadcast"), CallBytes.hex(bc));
+            byte[] key = CallCrypto.hkdf(bc, CallBytes.concat(CallBytes.ascii("tkm-call/v1/text"), hx(t, "leg_id")));
+            assertEquals(s(t, "text_key"), CallBytes.hex(key));
+            long e = t.get("epoch").asLong();
+            long ctr = t.get("ctr").asLong();
+            byte[] aad = CallBytes.concat(CallBytes.ascii("tkm-call/v1/text"), new byte[]{0}, hx(t, "call_id"), hx(t, "leg_id"),
+                    CallBytes.be32(e));
+            assertEquals(s(t, "aad"), CallBytes.hex(aad));
+            byte[] nonce = CallBytes.concat(CallBytes.be32(e), CallBytes.be64(ctr));
+            assertEquals(s(t, "nonce"), CallBytes.hex(nonce));
+            assertArrayEquals(hx(t, "plaintext_utf8"), CallCrypto.aesGcmOpen(key, nonce, aad, hx(t, "ct")));
+            io.takamaka.messages.call.service.CallTextBean w = CallJson.parse(s(t, "wire"),
+                    io.takamaka.messages.call.service.CallTextBean.class);
+            assertEquals(s(t, "ct"), w.getCt());
+            assertEquals(s(t, "leg_id"), w.getLeg());
+            assertEquals(e, w.getEpoch());
+            assertEquals(ctr, w.getCtr());
+        }
+        byte[] fk = hx(fixed, "text_key");
+        assertThrows(CallCrypto.AeadException.class, () -> CallCrypto.aesGcmOpen(fk, hx(fixed, "nonce"), hx(fixed, "aad"),
+                hx(fixed, "ct_empty_aad_must_not_open")));
+        // the scenario texts are sealed under epoch 4 of group 5 and the scenario's call_id
+        JsonNode e4 = root.get("group5_epoch_schedule").get(4);
+        for (JsonNode t : g.get("scenario")) {
+            assertEquals(s(e4, "epoch_secret"), s(t, "epoch_secret"));
+            assertEquals(s(e4.get("per_leg").get(s(t, "leg_id")), "text_key"), s(t, "text_key"));
+            assertEquals(s(root.get("group2_hashes"), "call_id"), s(t, "call_id"));
+        }
+    }
+
     // ------------------------------------------------------------------ group 6
 
     @Test
