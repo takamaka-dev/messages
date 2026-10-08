@@ -100,7 +100,45 @@ class CallDraft02Test {
         negative.setSince(-1L);
         assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(negative, s.eraHash0, Set.of(hO, hB), hB));
         assertThrows(IllegalArgumentException.class, () -> Commits.epochHandover(1, s.eraHash0, List.of(hO, hB),
-                new byte[32], 0, -5));
+                new byte[32], 0, -5, CallVectorScenario.T0));
+    }
+
+    /**
+     * [0.2] §6.4 {@code prev_ts} (RULED 2026-10-08): the handover carries the signed ts of the fresh commit that produced
+     * the secret; the adopting leg's budget window is that ts, whatever the delay; a handover without it is refused
+     * like one without {@code since} (B1-6); the committer anchor is the later of {@code arrival − since} and the instant
+     * this wall clock reads {@code prev_ts}.
+     */
+    @Test
+    void handoverCarriesPrevTsAndTheAdoptedWindowIsTheCommittersSignedTs() throws Exception {
+        CallChannelBodyBean h = s.accOB.body();
+        assertEquals(CallVectorScenario.T0 + 2_000, h.getPrevTs(), "the initial commit's signed ts");
+        assertEquals(CallVectorScenario.T0 + 2_000, s.accOC.body().getPrevTs());
+        assertEquals(CallVectorScenario.T0 + 2_000, s.cInitial.commit().getTs());
+        assertTrue(CallJson.toWire(h).contains("\"prev_ts\":" + (CallVectorScenario.T0 + 2_000)), "wire name prev_ts");
+        String hO = CallHashes.annHashHex(s.annO), hB = CallHashes.annHashHex(s.annB);
+        Commits.acceptEpochHandover(h, s.eraHash0, Set.of(hO, hB), hB);
+        // delivered 3 s late: arrival − since would be T0 + 5 000; the window is the committer's ts
+        assertEquals(CallVectorScenario.T0 + 2_000, Commits.adoptedPrevFreshTs(h));
+        long arrivalWall = CallVectorScenario.T0 + 6_000 + 3_000;
+        // anchor: zero skew → arrival − since (the later bound); receiver clock 10 s behind → the prev_ts instant
+        assertEquals(500_000L - 4_000, Commits.handoverAnchor(500_000L, arrivalWall, h));
+        assertEquals(500_000L + 2_000 - 9_000 + 10_000, Commits.handoverAnchor(500_000L, arrivalWall - 10_000, h));
+
+        CallChannelBodyBean noPrev = CallJson.parse(CallJson.toWire(h), CallChannelBodyBean.class);
+        noPrev.setPrevTs(null);
+        CallProtocolException ex = assertThrows(CallProtocolException.class,
+                () -> Commits.acceptEpochHandover(noPrev, s.eraHash0, Set.of(hO, hB), hB),
+                "[0.2] a handover without prev_ts is refused");
+        assertEquals(CallError.KEY_REFUSED, ex.getError());
+        CallChannelBodyBean negative = CallJson.parse(CallJson.toWire(h), CallChannelBodyBean.class);
+        negative.setPrevTs(-1L);
+        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(negative, s.eraHash0, Set.of(hO, hB), hB));
+        CallChannelBodyBean unsafe = CallJson.parse(CallJson.toWire(h), CallChannelBodyBean.class);
+        unsafe.setPrevTs(1L << 53);
+        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(unsafe, s.eraHash0, Set.of(hO, hB), hB));
+        assertThrows(IllegalArgumentException.class, () -> Commits.epochHandover(1, s.eraHash0, List.of(hO, hB),
+                new byte[32], 0, 0, -1));
     }
 
     @Test

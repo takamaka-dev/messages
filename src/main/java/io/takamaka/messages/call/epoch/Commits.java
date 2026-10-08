@@ -139,7 +139,7 @@ public final class Commits {
 
     /**
      * [0.2] §6.2 the receiver's budget inputs (X-1/X-2, 2026-10-08): the signed {@code ts} of the previous fresh commit
-     * it applied ({@code null} = none yet; after a handover: its wall clock at arrival − {@code since}), its own wall
+     * it applied ({@code null} = none yet; after a handover: the handover's {@code prev_ts}, 2026-10-08), its own wall
      * clock now, and {@code refuse_below}.
      */
     public record Budget(Long prevFreshTs, long nowWall, long refuseBelow) {
@@ -284,12 +284,17 @@ public final class Commits {
     /**
      * Builds the epoch handover body of spec §6.4 (sent by the committer in a channel open, or as a catch-up message on
      * an existing channel). {@code chainIdx} = the {@code k} of THAT channel; <b>[0.2]</b> {@code sinceMs} = the
-     * committer's milliseconds elapsed since the last fresh commit it applied (O-11), never negative.
+     * committer's milliseconds elapsed since the last fresh commit it applied (O-11), never negative; <b>[0.2]
+     * (2026-10-08)</b> {@code prevTsMs} = the SIGNED {@code ts} of the fresh commit that produced the handed-over
+     * secret, the reference of the adopting leg's budget window (§6.2).
      */
     public static CallChannelBodyBean epochHandover(long epoch, String eraHashHex, List<String> rosterHex,
-            byte[] epochSecret, long chainIdx, long sinceMs) {
+            byte[] epochSecret, long chainIdx, long sinceMs, long prevTsMs) {
         if (sinceMs < 0 || sinceMs > MAX_SAFE_INTEGER) {
             throw new IllegalArgumentException("since must be a non-negative safe integer");
+        }
+        if (prevTsMs < 0 || prevTsMs > MAX_SAFE_INTEGER) {
+            throw new IllegalArgumentException("prev_ts must be a non-negative safe integer");
         }
         CallChannelBodyBean b = new CallChannelBodyBean();
         b.setH("epoch");
@@ -299,18 +304,39 @@ public final class Commits {
         b.setSecret(CallBytes.hex(epochSecret));
         b.setChainIdx(chainIdx);
         b.setSince(sinceMs);
+        b.setPrevTs(prevTsMs);
         return b;
     }
 
     /**
-     * [0.2] The receiver's budget window start after adopting an epoch handover (§6.4, O-11): {@code now − since}.
-     * On the receiver's WALL clock at the handover's arrival it is the {@code prevFreshTs} of {@link #checkBudget}
-     * ([0.2] X-1/X-2: the window is on signed ts); on its monotonic clock it is the committer anchor, so a committer
-     * places its next budgeted slot at that instant + {@code commit_delay}. The committer computes {@code since} as its
-     * wall clock now − the signed ts of the previous fresh commit it applied.
+     * [0.2] {@code now − since} (§6.4, O-11) on the clock {@code nowMono} is read from. Since the {@code prev_ts}
+     * ruling (2026-10-08) it is NO LONGER the receiver's budget window — that is {@link #adoptedPrevFreshTs}, the
+     * committer's signed ts — only one of the two bounds of the adopting leg's committer anchor
+     * ({@link #handoverAnchor}). The committer computes {@code since} as its wall clock now − the signed ts of the
+     * previous fresh commit it applied.
      */
     public static long budgetWindowStart(long nowMono, CallChannelBodyBean h) {
         return nowMono - h.getSince();
+    }
+
+    /**
+     * [0.2] §6.4 {@code prev_ts} (RULED 2026-10-08): the {@code prevFreshTs} of {@link #checkBudget} for a leg that
+     * adopted its epoch by handover = the handover's {@code prev_ts}, the signed ts of the fresh commit that produced the
+     * secret — never its own wall clock minus {@code since}, which ran late by the handover's delay plus the clock skew
+     * and made it refuse the next commit once when that exceeded {@code commit_delay − refuse_below}.
+     */
+    public static long adoptedPrevFreshTs(CallChannelBodyBean h) {
+        return h.getPrevTs();
+    }
+
+    /**
+     * [0.2] The adopting leg's committer anchor on its MONOTONIC clock (where its own next budgeted slot is measured
+     * from): the later of {@code arrival − since} (O-11) and the instant this wall clock reads {@code prev_ts}
+     * ({@code arrival + prev_ts − wallAtArrival}) — so, like {@link #committerAnchor}, its next budgeted commit carries a
+     * {@code ts} at least {@code commit_delay} after {@code prev_ts} even when this clock is behind the committer's.
+     */
+    public static long handoverAnchor(long arrivedMono, long wallAtArrival, CallChannelBodyBean h) {
+        return Math.max(budgetWindowStart(arrivedMono, h), arrivedMono + h.getPrevTs() - wallAtArrival);
     }
 
     /** Builds the listener (broadcast) handover body of spec §6.4. */
@@ -351,6 +377,9 @@ public final class Commits {
         }
         if (h.getSince() == null || h.getSince() < 0 || h.getSince() > MAX_SAFE_INTEGER) {
             throw refused("since missing or not a non-negative safe integer"); // [0.2] O-11
+        }
+        if (h.getPrevTs() == null || h.getPrevTs() < 0 || h.getPrevTs() > MAX_SAFE_INTEGER) {
+            throw refused("prev_ts missing or not a non-negative safe integer"); // [0.2] 2026-10-08, as since (B1-6)
         }
         return EpochSchedule.rosterHashHex(h.getRoster(), heldEraHashHex);
     }

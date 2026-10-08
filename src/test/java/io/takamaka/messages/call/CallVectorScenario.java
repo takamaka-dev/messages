@@ -195,8 +195,10 @@ public final class CallVectorScenario {
         // ---- epoch 1: B joins (step); O opens O→B with the handover + conv_seed
         byte[] rh1 = EpochSchedule.rosterHashHex(List.of(hO, hB), eraHash0);
         es1 = EpochSchedule.step(es0, CallBytes.unhex(hB), rh1);
-        // [0.2] since = the committer's ms since the last fresh commit it applied (the initial at T0 + 2 s)
-        CallChannelBodyBean bodyOB = Commits.epochHandover(1, eraHash0, List.of(hO, hB), es1, 0, 6_000 - 2_000);
+        // [0.2] since = the committer's ms since the last fresh commit it applied (the initial at T0 + 2 s); [0.2]
+        // (2026-10-08) prev_ts = that commit's signed ts
+        CallChannelBodyBean bodyOB = Commits.epochHandover(1, eraHash0, List.of(hO, hB), es1, 0, 6_000 - 2_000,
+                T0 + 2_000);
         bodyOB.setConvSeed(CallBytes.hex(convSeed));
         chOB = HybridChannel.openChannel(callId, annO, o.xPriv, annB, kem, CallTestKeys.seed("encaps/o-b"), null,
                 bodyOB, ids.get("owner"), T0 + 6_000);
@@ -205,7 +207,8 @@ public final class CallVectorScenario {
         // ---- epoch 2: C joins (step); O→C with handover + conv_seed; C→B with conv_seed only
         byte[] rh2 = EpochSchedule.rosterHashHex(List.of(hO, hB, hC), eraHash0);
         es2 = EpochSchedule.step(es1, CallBytes.unhex(hC), rh2);
-        CallChannelBodyBean bodyOC = Commits.epochHandover(2, eraHash0, List.of(hO, hB, hC), es2, 0, 11_000 - 2_000);
+        CallChannelBodyBean bodyOC = Commits.epochHandover(2, eraHash0, List.of(hO, hB, hC), es2, 0, 11_000 - 2_000,
+                T0 + 2_000);
         bodyOC.setConvSeed(CallBytes.hex(convSeed));
         chOC = HybridChannel.openChannel(callId, annO, o.xPriv, annC, kem, CallTestKeys.seed("encaps/o-c"), null,
                 bodyOC, ids.get("owner"), T0 + 11_000);

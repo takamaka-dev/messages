@@ -43,6 +43,14 @@ public class CallChannelBodyBean {
      */
     @JsonProperty("since")
     private Long since;
+    /**
+     * [0.2] (2026-10-08) Epoch handover only, required: the SIGNED {@code ts} (ms since the Unix epoch) of the fresh
+     * commit that produced the handed-over secret (§6.4 step 3). The adopting leg measures its §6.2 budget window from
+     * it — a committer timestamp — never from its own clock minus {@code since}, so a late handover cannot make it
+     * refuse the next commit.
+     */
+    @JsonProperty("prev_ts")
+    private Long prevTs;
     /** broadcast_e, hex (broadcast handover). */
     @JsonProperty("key")
     private String key;
