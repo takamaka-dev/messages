@@ -1444,7 +1444,8 @@ public class ChatCryptoUtils {
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveAllConversationsRequestBean.getAllConversationsRequestContentBean());
                     returnObj = fromJsonToRetrieveAllConversationsRequestBean;
                 }
-                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N", "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE" -> {
+                case "RETRIEVE_MESSAGE_FROM_CONVERSATION_LAST_N", "RETRIEVE_MESSAGE_FROM_CONVERSATION_BY_SIGNATURE",
+                        "RETRIEVE_MESSAGE_FROM_CONVERSATION_BEFORE_SIGNATURE" -> {
                     final RetrieveMessageRequestBean fromJsonToRetrieveMessageRequestBean = ChatUtils.fromJsonToRetrieveMessageRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToRetrieveMessageRequestBean.getRetrieveMessageSignedRequestBean());
                     returnObj = fromJsonToRetrieveMessageRequestBean;
@@ -2174,6 +2175,24 @@ public class ChatCryptoUtils {
         try {
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveConversationRequestContentBean), iwk, i);
             return new RetrieveConversationRequestBean(retrieveConversationRequestContentBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_CONVERSATION.name(), iwk.getWalletCypher().name());
+        } catch (JsonProcessingException | MessageException ex) {
+            log.error("json error ", ex);
+            throw new MessageException("json error ", ex);
+        } catch (WalletException ex) {
+            log.error("wallet error ", ex);
+            throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    /**
+     * F277: sign a BACKWARDS history read — the {@code number_of_messages} messages older than
+     * {@code last_message_signature}, newest first. Same payload as the BY_SIGNATURE builder; only
+     * the {@code message_type} is {@link CHAT_MESSAGE_TYPES#RETRIEVE_MESSAGE_FROM_CONVERSATION_BEFORE_SIGNATURE}.
+     */
+    public static final RetrieveMessageRequestBean getRetrieveMessageRequestBeanBeforeSignature(InstanceWalletKeystoreInterface iwk, int i, RetrieveMessageSignedRequestBean retrieveMessageSignedRequestBean) throws MessageException {
+        try {
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(retrieveMessageSignedRequestBean), iwk, i);
+            return new RetrieveMessageRequestBean(retrieveMessageSignedRequestBean, iwk.getPublicKeyAtIndexURL64(i), messageSignature, CHAT_MESSAGE_TYPES.RETRIEVE_MESSAGE_FROM_CONVERSATION_BEFORE_SIGNATURE.name(), iwk.getWalletCypher().name());
         } catch (JsonProcessingException | MessageException ex) {
             log.error("json error ", ex);
             throw new MessageException("json error ", ex);
