@@ -91,6 +91,24 @@ public final class CallConstants {
     public static final String KIND_ERA = "era";
     public static final String KIND_BACKSTOP = "backstop";
     public static final String KIND_RESTART = "restart";
+    /**
+     * [0.2] §6.5 {@code rotation} row (K-3/J-2, 2026-10-08): the committer's own periodic rekey, {@code rotation} ms
+     * after the last fresh commit it applied, same roster; budgeted like {@code leave} and {@code backstop}.
+     */
+    public static final String KIND_ROTATION = "rotation";
+
+    /** Every {@code kind} of a fresh commit (§6.2 + the [0.2] §6.5 {@code rotation} row); anything else is refused. */
+    public static final java.util.Set<String> COMMIT_KINDS = java.util.Set.of(KIND_INITIAL, KIND_LEAVE, KIND_ERA,
+            KIND_BACKSTOP, KIND_RESTART, KIND_ROTATION);
+
+    /**
+     * §6.2 budget (R11): a receiver refuses a live commit of a BUDGETED kind ({@code leave}, {@code backstop},
+     * [0.2] {@code rotation}) that arrives less than {@code refuse_below} after the previous fresh commit it applied;
+     * {@code era}, {@code restart} and {@code initial} are exempt (and reset the window).
+     */
+    public static boolean isBudgetedKind(String kind) {
+        return KIND_LEAVE.equals(kind) || KIND_BACKSTOP.equals(kind) || KIND_ROTATION.equals(kind);
+    }
 
     // ---- sizes ----
     public static final int HASH_LEN = 32;
