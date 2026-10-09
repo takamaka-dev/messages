@@ -1,0 +1,2 @@
+# byte-exact test vectors: never CRLF-converted on checkout (the generator and the Dart port read them as LF)
+src/test/resources/call/call_vectors_v1.json text eol=lf

@@ -24,7 +24,11 @@ public class CallVectorGenerator {
     public static String render() throws Exception {
         ObjectMapper m = new ObjectMapper();
         m.getFactory().configure(JsonGenerator.Feature.ESCAPE_NON_ASCII, true);
-        return m.writerWithDefaultPrettyPrinter().writeValueAsString(new CallVectorScenario().toJson()) + "\n";
+        // LF on every platform: Jackson's default object indenter uses System.lineSeparator() (CRLF on Windows),
+        // which made the vectors differ by platform (found 2026-10-09 on the Windows workstation).
+        com.fasterxml.jackson.core.util.DefaultPrettyPrinter pp = new com.fasterxml.jackson.core.util.DefaultPrettyPrinter()
+                .withObjectIndenter(new com.fasterxml.jackson.core.util.DefaultIndenter("  ", "\n"));
+        return m.writer(pp).writeValueAsString(new CallVectorScenario().toJson()) + "\n";
     }
 
     public static void main(String[] args) throws Exception {
