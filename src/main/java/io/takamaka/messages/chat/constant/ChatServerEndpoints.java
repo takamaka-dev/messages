@@ -275,6 +275,10 @@ public class ChatServerEndpoints {
      * registered, and 10 per minute / 100 per day per verified caller; then delivers {@code CALL_RING} live on each
      * callee's notification stream, or as an FCM push carrying {@code call_id}, {@code svc}, {@code f}, {@code mode}
      * only. No row. Answer: {@code CallReplyBean} ok, or a typed error.
+     *
+     * <p>[0.2] (C-16): the same route takes the ANSWERED NOTICE — a {@code ring} with {@code k = "answered"} signed by
+     * the callee, {@code to = [f]} — checked like a ring and charged to the ring limits of {@code f}; rschat delivers
+     * {@code CALL_ANSWERED} to {@code f}'s own devices (live, else a push of {@code call_id} only), never stored.
      */
     public static final String CALL_RING = "callring";
 

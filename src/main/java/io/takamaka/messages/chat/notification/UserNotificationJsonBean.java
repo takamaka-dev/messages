@@ -49,7 +49,7 @@ public class UserNotificationJsonBean {
     @JsonProperty("read")
     private boolean read;
     /**
-     * C182 (tkm-call/v1 §7.1): present only on a {@code CALL_RING} notification, which is delivered live and NEVER
+     * C182 (tkm-call/v1 §7.1): present only on a {@code CALL_RING} (or, [0.2], {@code CALL_ANSWERED}) notification, which is delivered live and NEVER
      * stored (no row, no {@code notificationhistory} entry): {@code call}, {@code svc}, {@code f}, {@code mode} and
      * nothing else. Absent (not {@code null}) on every other notification, so their JSON is unchanged.
      */

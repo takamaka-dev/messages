@@ -28,6 +28,10 @@ import java.util.regex.Pattern;
  * and refuse with {@code bad_signature}, as the call service does for a malformed field: §11 has no "malformed"
  * code, and a malformed field of a signed object is a signer error.
  *
+ * <p>[0.2] (C-16 answered elsewhere, 2026-10-09): a {@code ring} with {@code k = "answered"}, signed by the CALLEE with
+ * {@code to = [f]}, is the answered notice (§7.1): rschat checks it as a ring and delivers {@link #NOTIFICATION_TYPE_ANSWERED}
+ * to the callee's own devices; a device still ringing for that call declines {@code elsewhere} to the service (§7.6).
+ *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 public final class CallRschat {
@@ -37,6 +41,9 @@ public final class CallRschat {
 
     /** The notification type of a ring ({@link NOTIFICATION_TYPES#CALL_RING}). */
     public static final String NOTIFICATION_TYPE = NOTIFICATION_TYPES.CALL_RING.name();
+
+    /** [0.2] §7.1: the notification type of an answered notice ({@link NOTIFICATION_TYPES#CALL_ANSWERED}). */
+    public static final String NOTIFICATION_TYPE_ANSWERED = NOTIFICATION_TYPES.CALL_ANSWERED.name();
 
     /** Initial limit on {@code to} (the invitation-list size, spec §8.2 / {@code inv_max}). */
     public static final int RING_TO_MAX = 100;
@@ -77,6 +84,21 @@ public final class CallRschat {
         return r;
     }
 
+    /**
+     * [0.2] §7.1: an unsigned answered notice for the ring {@code callId} — {@code to = [self]}, {@code k = answered},
+     * {@code svc} and {@code mode} copied from the ring; sign it with the CALLEE's key ({@code f} must be {@code self}).
+     */
+    public static CallRingBean answered(String callId, String svc, String mode, String self, String nonce, String aud, long ts) {
+        CallRingBean r = ring(callId, svc, List.of(self), mode, nonce, aud, ts);
+        r.setK(CallConstants.RING_K_ANSWERED);
+        return r;
+    }
+
+    /** [0.2] §7.1: true for an answered notice ({@code k = answered}), false for a ring. */
+    public static boolean isAnswered(CallRingBean r) {
+        return r != null && CallConstants.RING_K_ANSWERED.equals(r.getK());
+    }
+
     /** An unsigned lookup of ONE identity (sign it with the service key). */
     public static CallLookupBean lookup(String identity, String nonce, String aud, long ts) {
         CallLookupBean l = new CallLookupBean();
@@ -89,7 +111,9 @@ public final class CallRschat {
 
     /**
      * §7.1 fields of a VERIFIED ring: {@code call} 32-byte hex, {@code svc} a service id, {@code mode} an enumeration,
-     * {@code to} 1..{@code toMax} distinct identities, {@code f} an identity, {@code n} present.
+     * {@code to} 1..{@code toMax} distinct identities, {@code f} an identity, {@code n} present. [0.2] {@code k} absent
+     * (a ring) or {@code answered} (the answered notice, whose {@code to} is exactly {@code [f]}); anything else is
+     * refused.
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
@@ -106,6 +130,9 @@ public final class CallRschat {
             if (!isIdentity(id) || !seen.add(id)) {
                 throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
             }
+        }
+        if (r.getK() != null && !(isAnswered(r) && to.size() == 1 && r.getF().equals(to.get(0)))) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring k");
         }
     }
 
@@ -127,7 +154,19 @@ public final class CallRschat {
      * service and verified (N7, N14).
      */
     public static Optional<CallRingNoticeBean> ringOf(UserNotificationJsonBean n) {
-        if (n == null || !NOTIFICATION_TYPE.equals(n.getNotificationType())) {
+        return noticeOf(n, NOTIFICATION_TYPE);
+    }
+
+    /**
+     * [0.2] §7.1: the answered notice a notification carries, if it is a well-formed {@code CALL_ANSWERED} — a device of
+     * this identity accepted {@code call}. A hint written by rschat: it only stops a ring (a false one costs a ring).
+     */
+    public static Optional<CallRingNoticeBean> answeredOf(UserNotificationJsonBean n) {
+        return noticeOf(n, NOTIFICATION_TYPE_ANSWERED);
+    }
+
+    private static Optional<CallRingNoticeBean> noticeOf(UserNotificationJsonBean n, String type) {
+        if (n == null || !type.equals(n.getNotificationType())) {
             return Optional.empty();
         }
         CallRingNoticeBean r = n.getRing();

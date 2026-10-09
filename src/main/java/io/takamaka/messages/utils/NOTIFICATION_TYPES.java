@@ -64,5 +64,13 @@ public enum NOTIFICATION_TYPES {
      * {@code mode} and nothing else; the callee shows the caller as verified only after fetching and verifying the
      * creation record from the call service (N7). Align this literal with the Flutter client.
      */
-    CALL_RING
+    CALL_RING,
+    /**
+     * C182 [0.2] (tkm-call/v1 §7.1, C-16 answered elsewhere): a device of THIS identity accepted the call named by
+     * {@code ring.call}; a device still ringing for it dismisses the ring ({@code elsewhere}). Delivered like
+     * {@link #CALL_RING} — live or as a push, never stored — to the callee's own devices only. A separate type so that
+     * a client that knows only {@code CALL_RING} ignores it instead of ringing. Align this literal with the Flutter
+     * client.
+     */
+    CALL_ANSWERED
 }

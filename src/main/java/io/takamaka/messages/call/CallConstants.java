@@ -82,6 +82,8 @@ public final class CallConstants {
     // ---- enumerations ----
     public static final String MODE_STANDARD = "standard";
     public static final String MODE_CONFERENCE = "conference";
+    /** [0.2] §7.1 (C-16): {@code k} of the answered notice — a {@code ring} signed by the callee to its own devices. */
+    public static final String RING_K_ANSWERED = "answered";
     public static final String ROLE_SPEAKER = "speaker";
     public static final String ROLE_LISTENER = "listener";
     public static final String CAP_BASIC = "basic";
