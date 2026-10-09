@@ -18,6 +18,9 @@ class EpochCommitTest {
 
     static CallVectorScenario s;
 
+    /** The newcomer's wall clock when it adopts the scenario's handovers (O hands over to B at T0 + 6 s). */
+    private static final long WALL = CallVectorScenario.T0 + 6_000;
+
     @BeforeAll
     static void build() throws Exception {
         s = new CallVectorScenario();
@@ -208,11 +211,11 @@ class EpochCommitTest {
     @Test
     void handoverAcceptance() throws Exception {
         String hO = CallHashes.annHashHex(s.annO), hB = CallHashes.annHashHex(s.annB);
-        byte[] rh = Commits.acceptEpochHandover(s.accOB.body(), s.eraHash0, Set.of(hO, hB), hB);
+        byte[] rh = Commits.acceptEpochHandover(s.accOB.body(), s.eraHash0, Set.of(hO, hB), hB, WALL);
         assertArrayEquals(EpochSchedule.rosterHashHex(List.of(hO, hB), s.eraHash0), rh);
         assertEquals(CallBytes.hex(s.es1), s.accOB.body().getSecret());
-        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(s.accOB.body(), s.eraHash1, Set.of(hO, hB), hB));
-        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(s.accOB.body(), s.eraHash0, Set.of(hB), hB));
+        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(s.accOB.body(), s.eraHash1, Set.of(hO, hB), hB, WALL));
+        assertThrows(CallProtocolException.class, () -> Commits.acceptEpochHandover(s.accOB.body(), s.eraHash0, Set.of(hB), hB, WALL));
     }
 
     private void resign(CallCommitBean c) {

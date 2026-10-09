@@ -351,10 +351,13 @@ public final class Commits {
 
     /**
      * Newcomer's checks of an epoch handover (spec §6.4): era held, roster sorted and every entry verified, own
-     * announcement in it; returns roster_hash_e.
+     * announcement in it; returns roster_hash_e. <b>[0.2] §6.4 prev_ts far-future (C-4, 2026-10-09)</b>: a
+     * {@code prev_ts} more than {@link CallConstants#TS_TOLERANCE_MS} ahead of {@code nowWall} (the adopter's wall
+     * clock) is refused, the same rule as a commit's {@code ts} ({@link #checkBudget}): it becomes the adopted budget
+     * window, so a future one would make the newcomer refuse every on-time commit.
      */
     public static byte[] acceptEpochHandover(CallChannelBodyBean h, String heldEraHashHex,
-            Set<String> verifiedAnnHashesHex, String ownAnnHashHex) throws CallProtocolException {
+            Set<String> verifiedAnnHashesHex, String ownAnnHashHex, long nowWall) throws CallProtocolException {
         if (!"epoch".equals(h.getH()) || h.getSecret() == null || h.getEpoch() == null || h.getRoster() == null) {
             throw refused("not an epoch handover");
         }
@@ -380,6 +383,10 @@ public final class Commits {
         }
         if (h.getPrevTs() == null || h.getPrevTs() < 0 || h.getPrevTs() > MAX_SAFE_INTEGER) {
             throw refused("prev_ts missing or not a non-negative safe integer"); // [0.2] 2026-10-08, as since (B1-6)
+        }
+        if (h.getPrevTs() - nowWall > CallConstants.TS_TOLERANCE_MS) { // [0.2] §6.4 prev_ts far-future (C-4, 2026-10-09)
+            throw refused("prev_ts " + (h.getPrevTs() - nowWall) + " ms ahead of this wall clock (> ts_tolerance "
+                    + CallConstants.TS_TOLERANCE_MS + ")");
         }
         return EpochSchedule.rosterHashHex(h.getRoster(), heldEraHashHex);
     }
