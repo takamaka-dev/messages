@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Names one leg of one call, unsigned: the payload of the {@code presence} route. It needs no signature because the
+ * Names one leg of one call, unsigned: the payload of the {@code presence} and [0.2] {@code grant} (refresh) routes. It needs no signature because the
  * service answers it only on the connection that holds that leg's event stream (connection-bound, as rschat's
  * typing stream binds its identity, DR-007).
  *

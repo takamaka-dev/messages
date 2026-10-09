@@ -24,7 +24,9 @@ import lombok.NoArgsConstructor;
  * <li>rschat {@code calllookup}: {@code reg} = the registration record verbatim, or the error {@code not_registered};</li>
  * <li>{@code records} [0.2]: {@code create} = the creation record, {@code eras} = era records 1..n in order
  * ({@code []} in era 0) — verify the chain yourself (owner signatures, {@code prev} links) and compute the current
- * era_hash from the last record.</li>
+ * era_hash from the last record;</li>
+ * <li>{@code grant} [0.2]: {@code grant} = a fresh §8.4 grant for the asking leg (signed by the service key; verify it
+ * as at join: audience {@code leg:<leg_id>}, same call and leg_index).</li>
  * </ul>
  *
  * Not signed: the service's answers are bound to the request on the same RSocket stream; the objects that need the
@@ -66,6 +68,9 @@ public class CallReplyBean {
      */
     @JsonProperty("reg")
     private String reg;
+    /** {@code grant} [0.2]: the fresh grant (§8.4) of the asking leg. */
+    @JsonProperty("grant")
+    private io.takamaka.messages.call.beans.CallGrantBean grant;
 
     public static CallReplyBean ok() {
         CallReplyBean r = new CallReplyBean();

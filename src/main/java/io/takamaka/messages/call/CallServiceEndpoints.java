@@ -62,4 +62,11 @@ public final class CallServiceEndpoints {
     public static final String RECORDS = "call.records";
     /** In-call text relay (spec §10.2). */
     public static final String TEXT = "call.text";
+    /**
+     * [0.2] Grant refresh (spec §8.4, C-1 / K-8): a live leg asks a fresh {@code grant} (new {@code exp}, new relay
+     * token) on the connection that holds its event stream, before (re)connecting to the relay once the old one is
+     * near or past its {@code exp}. Payload = {@link io.takamaka.messages.call.service.CallLegRefBean}, unsigned,
+     * connection-bound like {@link #PRESENCE}.
+     */
+    public static final String GRANT = "call.grant";
 }

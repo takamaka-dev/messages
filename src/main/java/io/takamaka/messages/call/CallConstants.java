@@ -150,6 +150,12 @@ public final class CallConstants {
     public static final int EPOCH_TAKEN_MAX_IN_ROW = 3;
     /** Lifetime of a grant (spec §8.4: {@code exp = ts + 60000}). */
     public static final long GRANT_LIFETIME_MS = 60_000L;
+    /**
+     * [0.2] Grant refresh (§8.4): a client asks a fresh grant before (re)connecting to the relay when its grant has
+     * less than this left (or is past {@code exp}); the service answers at most one refresh per leg per this interval
+     * ({@code rate_limited grant_refresh} otherwise).
+     */
+    public static final long GRANT_REFRESH_MARGIN_MS = 10_000L;
     /** Maximum lifetime of a creation record (spec §4.1: at most 4 h). */
     public static final long CREATE_MAX_LIFETIME_MS = 4L * 3600_000L;
 }
