@@ -51,6 +51,13 @@ public class CallChannelBodyBean {
      */
     @JsonProperty("prev_ts")
     private Long prevTs;
+    /**
+     * [0.3] S-1 (2026-10-13): the catch-up REQUEST carries a fresh random {@code req} (16 bytes hex); the catch-up
+     * handover echoes it, and the requester accepts a catch-up handover only with the {@code req} of its outstanding
+     * request. Absent on a join handover (gated by the phase and the sender instead).
+     */
+    @JsonProperty("req")
+    private String req;
     /** broadcast_e, hex (broadcast handover). */
     @JsonProperty("key")
     private String key;

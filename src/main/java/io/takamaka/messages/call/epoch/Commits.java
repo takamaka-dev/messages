@@ -281,6 +281,13 @@ public final class Commits {
         return b;
     }
 
+    /** [0.3] S-1: a catch-up request bound to a fresh {@code req} nonce (16 bytes hex) the handover must echo. */
+    public static CallChannelBodyBean catchUpRequest(long heldEpoch, String req) {
+        CallChannelBodyBean b = catchUpRequest(heldEpoch);
+        b.setReq(req);
+        return b;
+    }
+
     /**
      * Builds the epoch handover body of spec §6.4 (sent by the committer in a channel open, or as a catch-up message on
      * an existing channel). {@code chainIdx} = the {@code k} of THAT channel; <b>[0.2]</b> {@code sinceMs} = the
@@ -305,6 +312,14 @@ public final class Commits {
         b.setChainIdx(chainIdx);
         b.setSince(sinceMs);
         b.setPrevTs(prevTsMs);
+        return b;
+    }
+
+    /** [0.3] S-1: the catch-up handover echoing the request's {@code req}; null = a join / re-attach handover. */
+    public static CallChannelBodyBean epochHandover(long epoch, String eraHashHex, List<String> rosterHex,
+            byte[] epochSecret, long chainIdx, long sinceMs, long prevTsMs, String req) {
+        CallChannelBodyBean b = epochHandover(epoch, eraHashHex, rosterHex, epochSecret, chainIdx, sinceMs, prevTsMs);
+        b.setReq(req);
         return b;
     }
 
