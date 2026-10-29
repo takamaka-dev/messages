@@ -46,10 +46,14 @@ public final class CallRschat {
     public static final String NOTIFICATION_TYPE_ANSWERED = NOTIFICATION_TYPES.CALL_ANSWERED.name();
 
     /**
-     * Initial limit on {@code to} per ring. S-12 (Q13, 2026-10-29): 20, well below the invitation-list size
-     * ({@code inv_max} 100, spec §8.2) — a longer list needs several rings, each charged {@code to.size()} units.
+     * Initial limit on {@code to} per ring. S-12 (Q13, 2026-10-29): 25 (interim step, operator 10-29 17:3x; was 100),
+     * below the invitation-list size ({@code inv_max} 100, spec §8.2) — a longer list needs several rings, each charged
+     * {@code to.size()} units. rschat's {@code rschat.calls.ring-to-max} defaults to this value.
      */
-    public static final int RING_TO_MAX = 20;
+    public static final int RING_TO_MAX = 25;
+
+    /** The {@code limit} of the {@code rate_limited} refusal of a ring whose {@code to} is longer than the cap. */
+    public static final String LIMIT_RING_TO_MAX = "ring_to_max";
 
     /** An identity in registration-string form: Base64URL of 32 bytes with {@code .} padding. */
     private static final Pattern IDENTITY = Pattern.compile("[A-Za-z0-9_-]{43}\\.");
@@ -116,7 +120,10 @@ public final class CallRschat {
      * §7.1 fields of a VERIFIED ring: {@code call} 32-byte hex, {@code svc} a service id, {@code mode} an enumeration,
      * {@code to} 1..{@code toMax} distinct identities, {@code f} an identity, {@code n} present. [0.2] {@code k} absent
      * (a ring) or {@code answered} (the answered notice, whose {@code to} is exactly {@code [f]}); anything else is
-     * refused.
+     * refused. A {@code to} longer than {@code toMax} is a LIMIT, not a malformed object: {@link CallError#RATE_LIMITED}
+     * with reason {@link #LIMIT_RING_TO_MAX} (2026-10-29: it used to come back as {@code bad_signature}, which told the
+     * user nothing); every other violation stays {@link CallError#BAD_SIGNATURE} (a malformed field of a signed object,
+     * §7.1 — §11 has no other structural code).
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
@@ -125,8 +132,11 @@ public final class CallRschat {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring fields");
         }
         List<String> to = r.getTo();
-        if (to == null || to.isEmpty() || to.size() > toMax) {
+        if (to == null || to.isEmpty()) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
+        }
+        if (to.size() > toMax) {
+            throw new CallProtocolException(CallError.RATE_LIMITED, LIMIT_RING_TO_MAX);
         }
         Set<String> seen = new HashSet<>();
         for (String id : to) {

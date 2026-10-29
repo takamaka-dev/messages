@@ -78,7 +78,7 @@ class CallRschatTest {
         assertRefused(signedRing(List.of()));
         assertRefused(signedRing(List.of(id(DAVE), id(DAVE))));
         assertRefused(signedRing(List.of("not-an-identity")));
-        assertEquals(20, CallRschat.RING_TO_MAX, "S-12 (Q13): ring-to-max 20, well below inv_max 100");
+        assertEquals(25, CallRschat.RING_TO_MAX, "S-12 (Q13): ring-to-max 25 (interim step 10-29), below inv_max 100");
         List<String> many = new ArrayList<>();
         SecureRandom rnd = new SecureRandom();
         for (int i = 0; i < CallRschat.RING_TO_MAX + 1; i++) {
@@ -86,7 +86,11 @@ class CallRschatTest {
             rnd.nextBytes(seed);
             many.add(id(CallTestKeys.ed25519(seed)));
         }
-        assertRefused(signedRing(many));
+        // one over the cap is a LIMIT (rate_limited ring_to_max), not a malformed object
+        CallProtocolException over = assertThrows(CallProtocolException.class,
+                () -> CallRschat.checkRing(signedRing(many), CallRschat.RING_TO_MAX));
+        assertEquals(CallError.RATE_LIMITED, over.getError());
+        assertEquals(CallRschat.LIMIT_RING_TO_MAX, over.getReason());
         CallRschat.checkRing(signedRing(many.subList(0, CallRschat.RING_TO_MAX)), CallRschat.RING_TO_MAX);
 
         CallRingBean badCall = CallRschat.ring("AB".repeat(32), "svc", List.of(id(DAVE)), "standard", NONCE, AUD, 1L);
