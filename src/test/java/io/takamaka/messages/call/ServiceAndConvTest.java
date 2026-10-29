@@ -68,6 +68,27 @@ class ServiceAndConvTest {
         assertEquals(0, n.cached(t + 60_001), "the replay cache lives for the validity window only");
     }
 
+    /**
+     * S-11: the replay cache is keyed by CONSUME time and evicted in consume order, stopping at the first still-valid
+     * entry (no full scan under the lock). A nonce dated t+40 s consumed first, then an older one (dated t) consumed at
+     * t+50 s: at t+61 s the head (consumed t+40 s) is still valid, so eviction stops there and both stay. Before the
+     * fix the value was the nonce's own t and the whole map was scanned: the older nonce was evicted out of order.
+     */
+    @Test
+    void replayCacheEvictsInConsumeOrderAndStopsAtTheFirstValidEntry() {
+        ServiceNonce n = new ServiceNonce(CallTestKeys.seed("k_nonce"));
+        long t = 1_800_000_000_000L;
+        String older = n.issue(t, "svc:a");
+        String newer = n.issue(t + 40_000, "svc:a");
+        assertEquals(ServiceNonce.Check.OK, n.consume(newer, "svc:a", t + 40_000));
+        assertEquals(ServiceNonce.Check.OK, n.consume(older, "svc:a", t + 50_000));
+        assertEquals(ServiceNonce.Check.REPLAYED, n.consume(newer, "svc:a", t + 61_000),
+                "a replay inside the newer nonce's window is still refused");
+        assertEquals(2, n.cached(t + 61_000), "the head is still valid: eviction stops there");
+        assertEquals(1, n.cached(t + 100_001), "the head (consumed t+40 s) leaves at consume + validity");
+        assertEquals(0, n.cached(t + 110_001), "the last entry leaves at its own consume + validity");
+    }
+
     @Test
     void grantShape() throws Exception {
         CallGrantBean g = s.grantB;

@@ -45,8 +45,11 @@ public final class CallRschat {
     /** [0.2] §7.1: the notification type of an answered notice ({@link NOTIFICATION_TYPES#CALL_ANSWERED}). */
     public static final String NOTIFICATION_TYPE_ANSWERED = NOTIFICATION_TYPES.CALL_ANSWERED.name();
 
-    /** Initial limit on {@code to} (the invitation-list size, spec §8.2 / {@code inv_max}). */
-    public static final int RING_TO_MAX = 100;
+    /**
+     * Initial limit on {@code to} per ring. S-12 (Q13, 2026-10-29): 20, well below the invitation-list size
+     * ({@code inv_max} 100, spec §8.2) — a longer list needs several rings, each charged {@code to.size()} units.
+     */
+    public static final int RING_TO_MAX = 20;
 
     /** An identity in registration-string form: Base64URL of 32 bytes with {@code .} padding. */
     private static final Pattern IDENTITY = Pattern.compile("[A-Za-z0-9_-]{43}\\.");

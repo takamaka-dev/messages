@@ -41,6 +41,11 @@ public final class ServiceNonce {
 
     private final byte[] kNonce;
     private final SecureRandom random;
+    /**
+     * The replay cache: nonce + aud → the time it was CONSUMED (S-11). Insertion order is consume order, so for a
+     * monotonic clock the values are sorted and {@link #evict(long)} stops at the first still-valid entry instead of
+     * scanning the whole map under the lock on every consume.
+     */
     private final Map<String, Long> seen = new LinkedHashMap<>();
 
     /** Production: a fresh random {@code k_nonce} per instance; {@code r} from the same CSPRNG. */
@@ -118,7 +123,9 @@ public final class ServiceNonce {
         if (seen.containsKey(nonceHex + "|" + aud)) {
             return Check.REPLAYED;
         }
-        seen.put(nonceHex + "|" + aud, CallBytes.readBe64(CallBytes.unhex(nonceHex), 0));
+        // S-11: the value is the consume time, not the nonce's t. peek() returned OK, so t <= nowMs and the nonce
+        // expires at t + validity <= nowMs + validity: the entry outlives the nonce it guards.
+        seen.put(nonceHex + "|" + aud, nowMs);
         return Check.OK;
     }
 
@@ -128,12 +135,18 @@ public final class ServiceNonce {
         return seen.size();
     }
 
+    /**
+     * S-11: drops the expired head of the cache and stops at the first still-valid entry (amortized O(1) per consume;
+     * the old full scan made a nonce flood O(n²) under this lock). If the clock steps backwards an entry may outlive
+     * its window a little longer: that only keeps a replay refused, never evicts early.
+     */
     private void evict(long nowMs) {
         Iterator<Map.Entry<String, Long>> it = seen.entrySet().iterator();
         while (it.hasNext()) {
-            if (nowMs - it.next().getValue() > CallConstants.NONCE_VALIDITY_MS) {
-                it.remove();
+            if (nowMs - it.next().getValue() <= CallConstants.NONCE_VALIDITY_MS) {
+                return;
             }
+            it.remove();
         }
     }
 }

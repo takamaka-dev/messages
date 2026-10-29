@@ -78,6 +78,7 @@ class CallRschatTest {
         assertRefused(signedRing(List.of()));
         assertRefused(signedRing(List.of(id(DAVE), id(DAVE))));
         assertRefused(signedRing(List.of("not-an-identity")));
+        assertEquals(20, CallRschat.RING_TO_MAX, "S-12 (Q13): ring-to-max 20, well below inv_max 100");
         List<String> many = new ArrayList<>();
         SecureRandom rnd = new SecureRandom();
         for (int i = 0; i < CallRschat.RING_TO_MAX + 1; i++) {
