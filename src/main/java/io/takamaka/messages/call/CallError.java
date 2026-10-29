@@ -24,7 +24,13 @@ public enum CallError {
     WRONG_SERVICE("wrong_service"),
     EXISTS_MEMBER("exists_member"),
     /** Client-local: not a wire code of §11. */
-    KEY_REFUSED("key_refused");
+    KEY_REFUSED("key_refused"),
+    /**
+     * [0.3] S-4 (2026-10-29): the served {@code params} (manifest, creation record or grant) are outside the pinned
+     * bounds of {@link CallParamsBounds} — a hostile or misconfigured service. Client-local (refused before any ring,
+     * at create and at join); callsvc checks its own profile at boot with the same bounds.
+     */
+    BAD_PARAMS("bad_params");
 
     private final String code;
 
