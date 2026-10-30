@@ -118,12 +118,16 @@ public final class CallRschat {
 
     /**
      * §7.1 fields of a VERIFIED ring: {@code call} 32-byte hex, {@code svc} a service id, {@code mode} an enumeration,
-     * {@code to} 1..{@code toMax} distinct identities, {@code f} an identity, {@code n} present. [0.2] {@code k} absent
-     * (a ring) or {@code answered} (the answered notice, whose {@code to} is exactly {@code [f]}); anything else is
-     * refused. A {@code to} longer than {@code toMax} is a LIMIT, not a malformed object: {@link CallError#RATE_LIMITED}
-     * with reason {@link #LIMIT_RING_TO_MAX} (2026-10-29: it used to come back as {@code bad_signature}, which told the
-     * user nothing); every other violation stays {@link CallError#BAD_SIGNATURE} (a malformed field of a signed object,
-     * §7.1 — §11 has no other structural code).
+     * {@code to} 1..{@code toMax} distinct identities none of which is {@code f}, {@code f} an identity, {@code n}
+     * present. [0.2] {@code k} absent (a ring) or {@code answered} (the answered notice, whose {@code to} is exactly
+     * {@code [f]}); anything else is refused. A {@code to} longer than {@code toMax} is a LIMIT, not a malformed object:
+     * {@link CallError#RATE_LIMITED} with reason {@link #LIMIT_RING_TO_MAX} (2026-10-29: it used to come back as
+     * {@code bad_signature}, which told the user nothing); every other violation stays {@link CallError#BAD_SIGNATURE}
+     * (a malformed field of a signed object, §7.1 — §11 has no other structural code).
+     *
+     * <p>Iris §7.117 item 8m (2026-10-30): the identity and duplicate checks on {@code to} run BEFORE the length check,
+     * so a junk list of any length answers {@code bad_signature} and only a well-formed over-long list is the limit; and
+     * a ring whose {@code to} names its own signer is refused — the answered notice is the one object addressed to self.
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
@@ -135,16 +139,20 @@ public final class CallRschat {
         if (to == null || to.isEmpty()) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
         }
-        if (to.size() > toMax) {
-            throw new CallProtocolException(CallError.RATE_LIMITED, LIMIT_RING_TO_MAX);
-        }
+        boolean notice = r.getK() != null;
         Set<String> seen = new HashSet<>();
         for (String id : to) {
             if (!isIdentity(id) || !seen.add(id)) {
                 throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
             }
+            if (!notice && id.equals(r.getF())) {
+                throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring self");
+            }
         }
-        if (r.getK() != null && !(isAnswered(r) && to.size() == 1 && r.getF().equals(to.get(0)))) {
+        if (to.size() > toMax) {
+            throw new CallProtocolException(CallError.RATE_LIMITED, LIMIT_RING_TO_MAX);
+        }
+        if (notice && !(isAnswered(r) && to.size() == 1 && r.getF().equals(to.get(0)))) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring k");
         }
     }

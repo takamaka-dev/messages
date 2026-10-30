@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.takamaka.messages.call.beans.CallChannelBean;
 import io.takamaka.messages.call.beans.CallCommitBean;
+import io.takamaka.messages.call.beans.CallRingBean;
 import io.takamaka.messages.call.beans.CallSignedObject;
 import io.takamaka.messages.call.channel.HybridChannel;
 import io.takamaka.messages.call.channel.MlKem768;
 import io.takamaka.messages.call.conv.ConvSeed;
 import io.takamaka.messages.call.epoch.Commits;
 import io.takamaka.messages.call.epoch.EpochSchedule;
+import io.takamaka.messages.call.rschat.CallRschat;
 import io.takamaka.messages.call.service.ServiceNonce;
 import io.takamaka.messages.call.sframe.SframeCipher;
 import io.takamaka.messages.call.sframe.SframeHeader;
@@ -152,6 +154,12 @@ class CallVectorFileTest {
             assertEquals(s(n, "sg"), o.getSg());
             assertTrue(rawEd25519Verify(o.getF(), octets, CallBytes.unhex(o.getSg())), t + " raw Ed25519");
             CallSignatures.verify(o, t, s(n, "expected_aud"));
+            if (o instanceof CallRingBean ring) {
+                // the published ring passes rschat's field checks as they stand (Iris 7.117 8m: a ring never names
+                // its own signer, so the vector must not either)
+                CallRschat.checkRing(ring, CallRschat.RING_TO_MAX);
+                assertFalse(ring.getTo().contains(ring.getF()), "the vector ring rings its signer");
+            }
         }
         assertEquals(Set.of("create", "era", "announce", "channel", "commit", "goodbye", "decline", "ring", "grant",
                 "manifest", "lookup", "mute", "unmute", "records"), types, "every type of spec 3.3");

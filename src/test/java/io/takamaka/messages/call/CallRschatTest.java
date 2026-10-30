@@ -92,6 +92,14 @@ class CallRschatTest {
         assertEquals(CallError.RATE_LIMITED, over.getError());
         assertEquals(CallRschat.LIMIT_RING_TO_MAX, over.getReason());
         CallRschat.checkRing(signedRing(many.subList(0, CallRschat.RING_TO_MAX)), CallRschat.RING_TO_MAX);
+        // Iris 7.117 8m: an over-long list that is ALSO malformed (a duplicate, a non-identity) is bad_signature, not
+        // the limit — the shape checks come first
+        List<String> manyDup = new ArrayList<>(many);
+        manyDup.set(manyDup.size() - 1, manyDup.get(0));
+        assertRefused(signedRing(manyDup));
+        List<String> manyJunk = new ArrayList<>(many);
+        manyJunk.set(3, "not-an-identity");
+        assertRefused(signedRing(manyJunk));
 
         CallRingBean badCall = CallRschat.ring("AB".repeat(32), "svc", List.of(id(DAVE)), "standard", NONCE, AUD, 1L);
         CallSignatures.sign(badCall, OWNER);
@@ -110,6 +118,26 @@ class CallRschatTest {
     static void assertRefused(CallRingBean r) {
         CallProtocolException ex = assertThrows(CallProtocolException.class, () -> CallRschat.checkRing(r, CallRschat.RING_TO_MAX));
         assertEquals(CallError.BAD_SIGNATURE, ex.getError());
+    }
+
+    @Test
+    void aRingNamingItsOwnSignerIsRefused_8m() throws Exception {
+        // Iris 7.117 8m (2026-10-30): a ring never rings its signer — alone, first or last in the list, over-long or not
+        assertRefused(signedRing(List.of(id(OWNER))));
+        assertRefused(signedRing(List.of(id(OWNER), id(DAVE))));
+        assertRefused(signedRing(List.of(id(DAVE), id(OWNER))));
+        List<String> many = new ArrayList<>();
+        SecureRandom rnd = new SecureRandom();
+        for (int i = 0; i < CallRschat.RING_TO_MAX; i++) {
+            byte[] seed = new byte[32];
+            rnd.nextBytes(seed);
+            many.add(id(CallTestKeys.ed25519(seed)));
+        }
+        many.add(id(OWNER));
+        assertRefused(signedRing(many));
+        // the signer's other devices are reached by the answered notice, the one object addressed to self
+        CallRschat.checkRing(signedAnswered(OWNER, List.of(id(OWNER)), CallConstants.RING_K_ANSWERED), CallRschat.RING_TO_MAX);
+        CallRschat.checkRing(signedRing(List.of(id(DAVE))), CallRschat.RING_TO_MAX);
     }
 
     @Test
