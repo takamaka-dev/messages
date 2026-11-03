@@ -71,6 +71,9 @@ public class CallReplyBean {
     /** {@code grant} [0.2]: the fresh grant (§8.4) of the asking leg. */
     @JsonProperty("grant")
     private io.takamaka.messages.call.beans.CallGrantBean grant;
+    /** [0.4] §7.10: the service-signed {@code meetstatus} answer. */
+    @JsonProperty("status")
+    private io.takamaka.messages.call.beans.CallMeetStatusBean status;
 
     public static CallReplyBean ok() {
         CallReplyBean r = new CallReplyBean();

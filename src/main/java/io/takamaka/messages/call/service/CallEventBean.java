@@ -27,6 +27,11 @@ import lombok.NoArgsConstructor;
  * <tr><td>{@value #REPLACED}</td><td>—</td><td>another stream took over this leg (re-attach); this one completes</td></tr>
  * <tr><td>{@value #GONE}</td><td>—</td><td>this leg was excluded by a fresh commit or its era; the stream completes</td></tr>
  * <tr><td>{@value #END}</td><td>—</td><td>the call ended (§7.7); the service dropped everything; the stream completes</td></tr>
+ * <tr><td>{@value #BKEY}</td><td>{@code obj}</td><td>[0.4] the committer's {@code bkey} of an epoch with only this
+ * listener's box (§6.6)</td></tr>
+ * <tr><td>{@value #HAND}</td><td>{@code obj}</td><td>[0.4] a listener's signed {@code hand} (§7.8), owner + moderators
+ * only; replayed for the open hands when an owner / moderator leg joins</td></tr>
+ * <tr><td>{@value #DROPPED}</td><td>—</td><td>[0.4] this listener leg was dropped (§7.9); the stream completes</td></tr>
  * </table>
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
@@ -52,6 +57,12 @@ public class CallEventBean {
     public static final String REPLACED = "replaced";
     public static final String GONE = "gone";
     public static final String END = "end";
+    /** [0.4] §6.6: a {@code bkey} with ONLY this listener's box (the header is what the committer signed). */
+    public static final String BKEY = "bkey";
+    /** [0.4] §7.8: a raised / lowered hand (the signed {@code hand} object), to the owner's and the moderators' legs. */
+    public static final String HAND = "hand";
+    /** [0.4] §7.9: this listener leg was dropped by the owner / a moderator; the stream completes. */
+    public static final String DROPPED = "dropped";
 
     @JsonProperty("e")
     private String e;

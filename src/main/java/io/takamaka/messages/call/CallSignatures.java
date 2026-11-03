@@ -36,8 +36,17 @@ public final class CallSignatures {
     private CallSignatures() {
     }
 
-    /** {@code canonical(obj)}: JCS of the object with {@code sg} removed (spec §2.3). */
+    /**
+     * {@code canonical(obj)}: JCS of the object with {@code sg} removed (spec §2.3). [0.4] (§3.2, §6.6) ONE exception:
+     * a {@code bkey} is signed over its HEADER only — {@code boxes} removed as well — so that the service can relay
+     * each listener its own box with the signed header (a listener never sees another listener's box or leg_id, D23)
+     * and the listener still verifies the committer's signature; every box is bound to the header through the AEAD's
+     * AAD (= this same canonical header).
+     */
     public static String canonical(CallSignedObject obj) {
+        if (obj instanceof io.takamaka.messages.call.beans.CallBkeyBean) {
+            return CallJson.canonicalWithout(obj, "sg", "boxes");
+        }
         return CallJson.canonicalWithout(obj, "sg");
     }
 
