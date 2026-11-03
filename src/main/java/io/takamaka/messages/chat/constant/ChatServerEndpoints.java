@@ -281,6 +281,13 @@ public class ChatServerEndpoints {
      * {@code CALL_ANSWERED} to {@code f}'s own devices (live, else a push of {@code call_id} only), never stored.
      */
     public static final String CALL_RING = "callring";
+    /**
+     * [0.4] tkm-call/v1 §7.11 (M9, 2026-11-03): the ad-hoc MEET NOTICE — a {@code meetnotice} object signed by the meet's
+     * owner (or acting owner), checked like a ring (signature under the call context, rschat nonce, {@code svc} on the
+     * allow-list, every {@code to} registered, {@code to} ≤ 100), charged as ring units, delivered as {@code CALL_MEET}
+     * live or as a SILENT push, never rings and never occupies the callee's receive slots; no row stored.
+     */
+    public static final String CALL_MEETNOTICE = "callmeetnotice";
 
     /**
      * Registration lookup (spec §8.3, service → rschat, request-response): a {@code lookup} object signed by a call

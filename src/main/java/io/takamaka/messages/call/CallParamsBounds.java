@@ -1,5 +1,6 @@
 package io.takamaka.messages.call;
 
+import io.takamaka.messages.call.beans.CallLimitsBean;
 import io.takamaka.messages.call.beans.CallParamsBean;
 
 /**
@@ -17,7 +18,10 @@ import io.takamaka.messages.call.beans.CallParamsBean;
  *   <li>{@code retention} ∈ [0, {@value #RETENTION_MAX_MS}];</li>
  *   <li>{@code committer_timeout} ∈ [{@value #COMMITTER_TIMEOUT_MIN_MS}, {@value #COMMITTER_TIMEOUT_MAX_MS}];</li>
  *   <li>{@code grace} ∈ [{@value #GRACE_MIN_MS}, {@value #GRACE_MAX_MS}]; {@code absence_window} ∈ [0, grace];</li>
- *   <li>{@code cap} ∈ [2, {@value #CAP_MAX}]; {@code devices_per_identity} ∈ [1, {@value #DEVICES_MAX}].</li>
+ *   <li>{@code cap} ∈ [2, {@value #CAP_MAX}]; {@code devices_per_identity} ∈ [1, {@value #DEVICES_MAX}];</li>
+ *   <li>[0.4] {@code owner_timeout} (optional) ∈ [committer_timeout, {@value #OWNER_TIMEOUT_MAX_MS}];
+ *   {@code era_gate} (optional) ∈ [committer_timeout, min({@value #ERA_GATE_MAX_MS}, refuse_below)] — and the meet
+ *   limits of {@link #limitsViolation}.</li>
  * </ul>
  * Checked by the owner before signing the creation record, by every joiner on the verified record (and on the
  * grant, which must equal the record), and at first contact on the signed manifest — so a bad profile is refused
@@ -37,6 +41,15 @@ public final class CallParamsBounds {
     public static final long GRACE_MAX_MS = 120_000;
     public static final int CAP_MAX = 100;
     public static final int DEVICES_MAX = 5;
+    /** [0.4] (M4) {@code owner_timeout} ≤ 300 s (and ≥ {@code committer_timeout}). */
+    public static final long OWNER_TIMEOUT_MAX_MS = 300_000;
+    /** [0.4] (M5) {@code era_gate} ≤ 30 s (and ≥ {@code committer_timeout}, ≤ {@code refuse_below}). */
+    public static final long ERA_GATE_MAX_MS = 30_000;
+    /** [0.4] (M1) the manifest ceiling of {@code listeners_max}: 200 (served 50 until the staging gates pass). */
+    public static final int LISTENERS_MAX_BOUND = 200;
+    public static final int ALIST_MAX_BOUND = 1_000;
+    public static final int TOTAL_LEGS_BOUND = 250;
+    public static final int RING_TO_MAX_BOUND = 50;
 
     private CallParamsBounds() {
     }
@@ -90,7 +103,56 @@ public final class CallParamsBounds {
         if (dev == null || dev < 1 || dev > DEVICES_MAX) {
             return "devices_per_identity must be in [1, " + DEVICES_MAX + "]";
         }
+        // [0.4] the meet keys (optional on the wire; bounded when present — spec §8.6)
+        Long ot = p.getOwnerTimeout();
+        if (ot != null && (ot < ct || ot > OWNER_TIMEOUT_MAX_MS)) {
+            return "owner_timeout must be in [committer_timeout, " + OWNER_TIMEOUT_MAX_MS + "] ms";
+        }
+        Long eg = p.getEraGate();
+        if (eg != null && (eg < ct || eg > ERA_GATE_MAX_MS || eg > rb)) {
+            return "era_gate must be in [committer_timeout, min(" + ERA_GATE_MAX_MS + ", refuse_below)] ms";
+        }
         return null;
+    }
+
+    /**
+     * [0.4] (M1) Spec §8.6: the bounds on the manifest's meet LIMITS, checked beside {@link #violation}:
+     * {@code listeners_max} absent or in [0, {@value #LISTENERS_MAX_BOUND}] (absent or 0 = conference mode not
+     * served); when served, {@code alist_max} in [listeners_max, {@value #ALIST_MAX_BOUND}] and
+     * {@code cap + listeners_max} ≤ {@value #TOTAL_LEGS_BOUND}; {@code ring_to_max} absent or in
+     * [1, {@value #RING_TO_MAX_BOUND}]. Returns the first violated rule or {@code null}.
+     */
+    public static String limitsViolation(CallLimitsBean l, CallParamsBean p) {
+        if (l == null) {
+            return "limits missing";
+        }
+        Integer lm = l.getListenersMax();
+        if (lm != null && (lm < 0 || lm > LISTENERS_MAX_BOUND)) {
+            return "listeners_max must be in [0, " + LISTENERS_MAX_BOUND + "]";
+        }
+        if (lm != null && lm > 0) {
+            Integer am = l.getAlistMax();
+            if (am == null || am < lm || am > ALIST_MAX_BOUND) {
+                return "alist_max must be in [listeners_max, " + ALIST_MAX_BOUND + "]";
+            }
+            Integer cap = p == null ? null : p.getCap();
+            if (cap == null || cap + lm > TOTAL_LEGS_BOUND) {
+                return "cap + listeners_max must be <= " + TOTAL_LEGS_BOUND;
+            }
+        }
+        Integer rt = l.getRingToMax();
+        if (rt != null && (rt < 1 || rt > RING_TO_MAX_BOUND)) {
+            return "ring_to_max must be in [1, " + RING_TO_MAX_BOUND + "]";
+        }
+        return null;
+    }
+
+    /** [0.4] Throws {@link CallError#BAD_PARAMS} naming the first violated limits rule. */
+    public static void checkLimits(CallLimitsBean l, CallParamsBean p, String where) throws CallProtocolException {
+        String v = limitsViolation(l, p);
+        if (v != null) {
+            throw new CallProtocolException(CallError.BAD_PARAMS, where + ": " + v);
+        }
     }
 
     /** True when every rule holds. */

@@ -160,4 +160,58 @@ public final class CallConstants {
     public static final long GRANT_REFRESH_MARGIN_MS = 10_000L;
     /** Maximum lifetime of a creation record (spec §4.1: at most 4 h). */
     public static final long CREATE_MAX_LIFETIME_MS = 4L * 3600_000L;
+    // ---- [0.4] the meet (spec draft 0.4, rulings M1–M10 of 2026-11-03) ----
+    /** [0.4] §6.6 batched broadcast-key distribution, committer → every present listener. */
+    public static final String T_BKEY = "bkey";
+    /** [0.4] §7.8 raise / lower hand, a listener leg → owner + moderators. */
+    public static final String T_HAND = "hand";
+    /** [0.4] §7.9 remove a listener leg (no key change). */
+    public static final String T_DROP = "drop";
+    /** [0.4] §7.10 meet status request (identity → service) and its service-signed answer (same {@code t}). */
+    public static final String T_MEETSTATUS = "meetstatus";
+    /** [0.4] §7.11 the ad-hoc meet notice, owner → rschat (never rings). */
+    public static final String T_MEETNOTICE = "meetnotice";
+    /** [0.4] §7.10: audience of the service-signed {@code meetstatus} answer, {@code id:<identity>}. */
+    public static final String AUD_ID = "id:";
+
+    /** Era reasons (§4.2); [0.4] {@link #REASON_SUCCEED} = the acting owner's first era (§4.4). */
+    public static final String REASON_ADD = "add";
+    public static final String REASON_REMOVE = "remove";
+    public static final String REASON_PROMOTE = "promote";
+    public static final String REASON_DEMOTE = "demote";
+    public static final String REASON_MODE = "mode";
+    public static final String REASON_MODS = "mods";
+    public static final String REASON_SUCCEED = "succeed";
+    public static final java.util.Set<String> ERA_REASONS = java.util.Set.of(REASON_ADD, REASON_REMOVE, REASON_PROMOTE,
+            REASON_DEMOTE, REASON_MODE, REASON_MODS, REASON_SUCCEED);
+    /** [0.4] §6.5: the era reasons that ENLARGE the roster and open or extend the era gate (a {@code succeed} era counts). */
+    public static boolean isEnlargingReason(String reason) {
+        return REASON_ADD.equals(reason) || REASON_PROMOTE.equals(reason) || REASON_SUCCEED.equals(reason);
+    }
+
+    /** Audience policies (§4.1); [0.4] M8: {@code open} is refused {@code apol_unsupported} in release 1. */
+    public static final String APOL_INVITED = "invited";
+    public static final String APOL_OPEN = "open";
+
+    /** [0.4] §4.1 initial {@code owner_timeout}: the wait after the commit that first left the creator out (§4.4). */
+    public static final long OWNER_TIMEOUT_MS = 30_000L;
+    /** [0.4] §4.1 initial {@code era_gate}: the coalescing window of enlarging era commits (§6.5). */
+    public static final long ERA_GATE_MS = 10_000L;
+    /** [0.4] §8.2 M1: listeners per meet on the manifest (the ceiling clients bound; served 50 until the staging gates). */
+    public static final int LISTENERS_MAX = 200;
+    /** [0.4] §8.2 M1: the served value of {@code listeners_max} during the staging (§8.2, §8.6). */
+    public static final int LISTENERS_SERVED_STAGING = 50;
+    /** [0.4] §8.2: audience list size. */
+    public static final int ALIST_MAX = 200;
+    /** [0.4] §7.8: the raised-hands queue per call. */
+    public static final int HAND_QUEUE_MAX = 25;
+    /** [0.4] §7.11: {@code to} of a meet notice. */
+    public static final int MEETNOTICE_TO_MAX = 100;
+    /** [0.4] §11 the {@code rate_limited} limit names of the meet. */
+    public static final String LIMIT_LISTENERS_MAX = "listeners_max";
+    public static final String LIMIT_CAP = "cap";
+    public static final String LIMIT_ALIST_MAX = "alist_max";
+    public static final String LIMIT_ERA_GATE = "era_gate";
+    public static final String LIMIT_BKEY = "bkey";
+    public static final String LIMIT_HANDS = "hands";
 }

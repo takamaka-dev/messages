@@ -30,7 +30,15 @@ public enum CallError {
      * bounds of {@link CallParamsBounds} — a hostile or misconfigured service. Client-local (refused before any ring,
      * at create and at join); callsvc checks its own profile at boot with the same bounds.
      */
-    BAD_PARAMS("bad_params");
+    BAD_PARAMS("bad_params"),
+    /** [0.4] M8: {@code apol:"open"} (link meets) is release 2; a create/era carrying it is refused. */
+    APOL_UNSUPPORTED("apol_unsupported"),
+    /** [0.4] §4.4: the era / drop signer is neither the creator nor the acting owner the service computes. */
+    NOT_OWNER("not_owner"),
+    /** [0.4] §7.9: the drop / mute signer is not the owner, the acting owner or in {@code mods}. */
+    NOT_MODERATOR("not_moderator"),
+    /** [0.4] §7.9: the signal to the dropped listener leg. */
+    DROPPED("dropped");
 
     private final String code;
 

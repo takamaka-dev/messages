@@ -46,6 +46,21 @@ public class CallParamsBean {
      */
     @JsonProperty("rotation_max")
     private Long rotationMax;
+    /**
+     * [0.4] (M4, 2026-11-03) OPTIONAL on the wire like {@code rotation_max} (absent in every draft-0.2 vector; absent =
+     * {@link io.takamaka.messages.call.CallConstants#OWNER_TIMEOUT_MS}): the wait, after the fresh commit that first
+     * left the creator out of the roster, before the acting-owner rule of spec §4.4 applies. Served on every network of
+     * the reference service; clients must know the key first (the {@code rotation_max} order).
+     */
+    @JsonProperty("owner_timeout")
+    private Long ownerTimeout;
+    /**
+     * [0.4] (M5, 2026-11-03) OPTIONAL on the wire (absent = {@link io.takamaka.messages.call.CallConstants#ERA_GATE_MS}):
+     * the coalescing window of the meet rekey regime (spec §6.5) — eras that enlarge the roster are committed once per
+     * gate, at {@code first era + era_gate}, no earlier than {@code latest era + committer_timeout}.
+     */
+    @JsonProperty("era_gate")
+    private Long eraGate;
 
     /** The ten draft 0.2 fields (the signed objects of the vectors carry exactly these); {@code rotation_max} absent. */
     public CallParamsBean(Long grace, Long rotation, Long commitDelay, Long refuseBelow, Long absenceWindow,
@@ -65,5 +80,23 @@ public class CallParamsBean {
     /** The initial values of spec §4.1. */
     public static CallParamsBean initialValues() {
         return new CallParamsBean(60_000L, 60_000L, 66_000L, 54_000L, 5_000L, 2_000L, 10_000L, 300_000L, 50, 3);
+    }
+
+    /** [0.4] The initial values plus the two meet keys of spec §4.1 ({@code owner_timeout} 30 s, {@code era_gate} 10 s). */
+    public static CallParamsBean meetValues() {
+        CallParamsBean p = initialValues();
+        p.setOwnerTimeout(io.takamaka.messages.call.CallConstants.OWNER_TIMEOUT_MS);
+        p.setEraGate(io.takamaka.messages.call.CallConstants.ERA_GATE_MS);
+        return p;
+    }
+
+    /** [0.4] {@code owner_timeout} with the spec default when absent. */
+    public long ownerTimeoutOrDefault() {
+        return ownerTimeout == null ? io.takamaka.messages.call.CallConstants.OWNER_TIMEOUT_MS : ownerTimeout;
+    }
+
+    /** [0.4] {@code era_gate} with the spec default when absent. */
+    public long eraGateOrDefault() {
+        return eraGate == null ? io.takamaka.messages.call.CallConstants.ERA_GATE_MS : eraGate;
     }
 }

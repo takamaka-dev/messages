@@ -110,6 +110,6 @@ class CallServiceWireTest {
                 routes++;
             }
         }
-        assertEquals(15, routes, "12 of draft 0.1 + call.records [0.2] + call.text + call.grant [0.2]");
+        assertEquals(19, routes, "12 of draft 0.1 + call.records [0.2] + call.text + call.grant [0.2] + call.bkey / call.hand / call.drop / call.meetstatus [0.4]");
     }
 }

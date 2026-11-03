@@ -1,5 +1,31 @@
 package io.takamaka.messages.call;
 
+import io.takamaka.messages.call.beans.CallBkeyBean;
+import io.takamaka.messages.call.beans.CallDropBean;
+import io.takamaka.messages.call.beans.CallHandBean;
+import io.takamaka.messages.call.beans.CallMeetNoticeBean;
+import io.takamaka.messages.call.beans.CallMeetStatusBean;
+import io.takamaka.messages.call.beans.CallChannelBodyBean;
+import io.takamaka.messages.call.beans.CallCreateBean;
+import io.takamaka.messages.call.beans.CallEraBean;
+import io.takamaka.messages.call.beans.CallAnnounceBean;
+import io.takamaka.messages.call.beans.CallParamsBean;
+import io.takamaka.messages.call.beans.CallSignedObject;
+import io.takamaka.messages.call.channel.ChannelState;
+import io.takamaka.messages.call.channel.HybridChannel;
+import io.takamaka.messages.call.conv.ConvSeed;
+import io.takamaka.messages.call.epoch.Commits;
+import io.takamaka.messages.call.epoch.EpochSchedule;
+import io.takamaka.messages.call.meet.CallMeet;
+import io.takamaka.messages.call.rschat.CallRschat;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -90,14 +116,33 @@ public final class CallVectorScenario {
     CallLookupBean lookup;
     CallMuteBean mute, unmute;
     CallRecordsBean recordsD;
+
+    // ---- [0.4] the meet (group 10): owner O, speakers {O, B}, listener E (leg_index 3), moderator B
+    CallCreateBean meetCreate;
+    String meetCallId, meetEra0, meetEra1, meetEra2;
+    CallAnnounceBean annOm, annBm, annEm, annEm1;
+    HybridChannel.OpenResult chOBm, chOEm;
+    HybridChannel.AcceptResult accOBm, accOEm;
+    Commits.Built cmInitial, cmRot2, cmRot3;
+    byte[] esM0, esM1, esM2, esM3;
+    CallChannelBodyBean bodyOEm;
+    CallMeet.BuiltBkey bkey2, bkey3;
+    /** The owner→erin chain_k that sealed each bkey box, and the box's seq on that direction. */
+    byte[] bkey2Chain, bkey3Chain;
+    long bkey2Seq, bkey3Seq;
+    CallEraBean meetEraPromote, meetEraSucceed;
+    CallHandBean handE;
+    CallDropBean dropE;
+    CallMeetStatusBean statusReqE, statusAnsE;
+    CallMeetNoticeBean meetNotice;
     final Map<String, CallSignedObject> byType = new LinkedHashMap<>();
 
     public CallVectorScenario() throws Exception {
-        for (String n : List.of("owner", "bob", "carol", "dave", "service")) {
+        for (String n : List.of("owner", "bob", "carol", "dave", "service", "erin")) {
             ids.put(n, CallTestKeys.identity(n));
         }
         int idx = 0;
-        for (String n : List.of("owner", "bob", "carol")) {
+        for (String n : List.of("owner", "bob", "carol", "erin")) {
             Leg l = new Leg();
             l.name = n;
             l.identity = CallSignatures.identityOf(ids.get(n));
@@ -332,6 +377,8 @@ public final class CallVectorScenario {
         // [0.2] D, invited by era 1, fetches the records before announcing (§7.3 step 0)
         recordsD = CallRecords.request(AUD_SVC, T0 + 122_000, callId, nonce(T0 + 122_000, AUD_SVC), ids.get("dave"));
 
+        buildMeet();
+
         byType.put("create", create);
         byType.put("era", era1);
         byType.put("announce", annB);
@@ -369,6 +416,349 @@ public final class CallVectorScenario {
     /** rschat nonces are rschat's own format; fixed opaque values here. */
     static final String RSCHAT_NONCE = "00000000000000000000000000000000000000000000000000000000000000aa";
     static final String RSCHAT_NONCE_2 = "00000000000000000000000000000000000000000000000000000000000000bb";
+    static final String RSCHAT_NONCE_3 = "00000000000000000000000000000000000000000000000000000000000000cc";
+
+    /** [0.4] An announcement in any call, with a role (the meet of group 10). */
+    CallAnnounceBean announceIn(Leg l, String callIdHex, String eraHash, String role, long ts, String cap) {
+        CallAnnounceBean a = new CallAnnounceBean();
+        a.setAud(AUD_SVC);
+        a.setN(nonce(ts, AUD_SVC));
+        a.setTs(ts);
+        a.setCall(callIdHex);
+        a.setEra(eraHash);
+        a.setLeg(CallBytes.hex(l.legId));
+        a.setRole(role);
+        a.setX25519(CallBytes.hex(l.xPub));
+        a.setMlkem(CallBytes.hex(l.kemKeys.ek()));
+        a.setSuite(CallConstants.SUITE_HYBRID_1);
+        a.setCap(cap);
+        CallSignatures.sign(a, ids.get(l.name));
+        return a;
+    }
+
+    /**
+     * [0.4] Group 10 (spec draft 0.4, rulings M1–M10 of 2026-11-03): a MEET. Owner O creates a conference call
+     * (inv O, B; alist E; mods B; params with owner_timeout / era_gate) → O's initial commit (epoch 0) → B joins
+     * (step, epoch 1; O→B epoch handover) → E joins as LISTENER (no step; O→E channel whose body is the broadcast
+     * handover WITH the roster) → E raises a hand, asks the meet status (service-signed answer), B drops E's leg
+     * (objects only) → tick: rotation commit epoch 2 to {O, B} + bkey epoch 2 to E at k = 0 → tick: epoch 3 + bkey at
+     * k = 1 → era 1 "promote" E (E re-announces as speaker under era 1, same leg and keys) → era 2 "succeed" signed
+     * by B, the acting owner (the creator gone), the list re-stated verbatim. Plus the ad-hoc meet notice to rschat.
+     */
+    private void buildMeet() throws Exception {
+        Leg o = legs.get("owner"), b = legs.get("bob"), e = legs.get("erin");
+        long t = T0 + 200_000;
+        meetCreate = new CallCreateBean();
+        meetCreate.setAud(AUD_SVC);
+        meetCreate.setN(nonce(t, AUD_SVC));
+        meetCreate.setTs(t);
+        meetCreate.setExp(t + CallConstants.CREATE_MAX_LIFETIME_MS);
+        meetCreate.setNet(NET);
+        meetCreate.setSvc(SVC);
+        meetCreate.setRand(CallBytes.hex(CallTestKeys.seed("rand/meet")));
+        meetCreate.setMode(CallConstants.MODE_CONFERENCE);
+        List<String> inv = new ArrayList<>(List.of(id("owner"), id("bob")));
+        inv.sort(String::compareTo);
+        meetCreate.setInv(inv);
+        meetCreate.setApol(CallConstants.APOL_INVITED);
+        meetCreate.setAlist(List.of(id("erin")));
+        meetCreate.setMods(List.of(id("bob")));
+        meetCreate.setCseed(CallBytes.hex(ConvSeed.commitment(CallTestKeys.seed("conv_seed/meet"))));
+        meetCreate.setParams(CallParamsBean.meetValues());
+        CallSignatures.sign(meetCreate, ids.get("owner"));
+        CallMeet.checkMeetLists(meetCreate.getMode(), meetCreate.getInv(), meetCreate.getApol(), meetCreate.getAlist(),
+                meetCreate.getMods(), 50, CallConstants.ALIST_MAX);
+        meetCallId = CallHashes.callIdHex(meetCreate);
+        meetEra0 = CallHashes.eraHashHex(meetCreate);
+
+        meetNotice = CallRschat.meetNotice(meetCallId, SVC, List.of(id("erin"), id("dave")), RSCHAT_NONCE_3, AUD_RSCHAT, t + 500);
+        CallSignatures.sign(meetNotice, ids.get("owner"));
+        CallRschat.checkMeetNotice(meetNotice, CallRschat.MEETNOTICE_TO_MAX);
+
+        annOm = announceIn(o, meetCallId, meetEra0, CallConstants.ROLE_SPEAKER, t + 1_000, CallConstants.CAP_BASIC_HQ);
+        String hOm = CallHashes.annHashHex(annOm);
+        cmInitial = Commits.build(AUD_SVC, t + 2_000, meetCallId, meetEra0, 0, CallConstants.KIND_INITIAL,
+                List.of(hOm), Map.of(), CallTestKeys.seed("commit_secret/meet/0"), null, ids.get("owner"));
+        esM0 = cmInitial.epochSecret();
+
+        // B joins: step to epoch 1; O→B with the epoch handover
+        annBm = announceIn(b, meetCallId, meetEra0, CallConstants.ROLE_SPEAKER, t + 5_000, CallConstants.CAP_BASIC_HQ);
+        String hBm = CallHashes.annHashHex(annBm);
+        byte[] rhM1 = EpochSchedule.rosterHashHex(List.of(hOm, hBm), meetEra0);
+        esM1 = EpochSchedule.step(esM0, CallBytes.unhex(hBm), rhM1);
+        CallChannelBodyBean bodyOBm = Commits.epochHandover(1, meetEra0, List.of(hOm, hBm), esM1, 0, 5_500 - 2_000, t + 2_000);
+        chOBm = HybridChannel.openChannel(meetCallId, annOm, o.xPriv, annBm, kem, CallTestKeys.seed("encaps/meet/o-b"), null,
+                bodyOBm, ids.get("owner"), t + 5_500);
+        accOBm = HybridChannel.acceptChannel(chOBm.channel(), rosterOf(annOm, annBm), annBm, b.xPriv, b.kemKeys.dk(), kem);
+
+        // E joins as a listener: no step; O→E with the BROADCAST handover carrying the roster (§6.4 [0.4])
+        annEm = announceIn(e, meetCallId, meetEra0, CallConstants.ROLE_LISTENER, t + 6_000, CallConstants.CAP_BASIC);
+        byte[] bcM1 = EpochSchedule.broadcast(esM1, CallBytes.unhex(meetEra0));
+        bodyOEm = CallMeet.broadcastHandover(1, meetEra0, List.of(hOm, hBm), bcM1, 0, 6_500 - 2_000, t + 2_000);
+        chOEm = HybridChannel.openChannel(meetCallId, annOm, o.xPriv, annEm, kem, CallTestKeys.seed("encaps/meet/o-e"), null,
+                bodyOEm, ids.get("owner"), t + 6_500);
+        accOEm = HybridChannel.acceptChannel(chOEm.channel(), rosterOf(annOm, annBm, annEm), annEm, e.xPriv, e.kemKeys.dk(), kem);
+
+        // hand, meet status (request + service-signed answer), drop — objects only
+        handE = new CallHandBean();
+        handE.setAud(AUD_SVC);
+        handE.setN(nonce(t + 10_000, AUD_SVC));
+        handE.setTs(t + 10_000);
+        handE.setCall(meetCallId);
+        handE.setLeg(CallBytes.hex(e.legId));
+        handE.setUp(true);
+        CallSignatures.sign(handE, ids.get("erin"));
+
+        statusReqE = new CallMeetStatusBean();
+        statusReqE.setAud(AUD_SVC);
+        statusReqE.setN(nonce(t + 12_000, AUD_SVC));
+        statusReqE.setTs(t + 12_000);
+        statusReqE.setCall(meetCallId);
+        CallSignatures.sign(statusReqE, ids.get("erin"));
+
+        statusAnsE = new CallMeetStatusBean();
+        statusAnsE.setAud(CallConstants.AUD_ID + id("erin"));
+        statusAnsE.setTs(t + 12_001);
+        statusAnsE.setCall(meetCallId);
+        statusAnsE.setLive(true);
+        statusAnsE.setSpeakers(2);
+        statusAnsE.setListeners(1);
+        statusAnsE.setSince(t);
+        CallSignatures.sign(statusAnsE, ids.get("service"));
+
+        dropE = new CallDropBean();
+        dropE.setAud(AUD_SVC);
+        dropE.setN(nonce(t + 15_000, AUD_SVC));
+        dropE.setTs(t + 15_000);
+        dropE.setCall(meetCallId);
+        dropE.setLeg(CallBytes.hex(e.legId));
+        CallSignatures.sign(dropE, ids.get("bob"));
+
+        // tick 1: rotation commit epoch 2 to {O, B} (box to B at k = 0); bkey epoch 2 to E at k = 0
+        Map<String, ChannelState> recB = Map.of(CallBytes.hex(b.legId), chOBm.state());
+        cmRot2 = Commits.build(AUD_SVC, t + 62_000, meetCallId, meetEra0, 2, CallConstants.KIND_ROTATION,
+                List.of(hOm, hBm), recB, CallTestKeys.seed("commit_secret/meet/2"), esM1, ids.get("owner"));
+        esM2 = cmRot2.epochSecret();
+        Commits.accept(cmRot2.commit(), AUD_SVC, Set.of(id("owner")), meetEra0, 1, esM1, Set.of(hOm, hBm), hBm,
+                CallBytes.hex(b.legId), accOBm.state());
+        chOBm.state().advance();
+        accOBm.state().advance();
+        bkey2Chain = chOEm.combined().chainAB();
+        bkey2Seq = 1;
+        bkey2 = CallMeet.buildBkey(AUD_SVC, t + 62_050, meetCallId, meetEra0, 2, EpochSchedule.broadcast(esM2, CallBytes.unhex(meetEra0)),
+                Map.of(CallBytes.hex(e.legId), chOEm.state()), ids.get("owner"));
+        byte[] got2 = CallMeet.acceptBkey(bkey2.bkey(), AUD_SVC, Set.of(id("owner")), meetEra0, 1, CallBytes.hex(e.legId), accOEm.state());
+        if (!Arrays.equals(got2, EpochSchedule.broadcast(esM2, CallBytes.unhex(meetEra0)))) {
+            throw new IllegalStateException("bkey epoch 2 does not round-trip");
+        }
+        chOEm.state().advance();
+        accOEm.state().advance();
+
+        // tick 2: epoch 3; bkey at k = 1
+        cmRot3 = Commits.build(AUD_SVC, t + 122_000, meetCallId, meetEra0, 3, CallConstants.KIND_ROTATION,
+                List.of(hOm, hBm), recB, CallTestKeys.seed("commit_secret/meet/3"), esM2, ids.get("owner"));
+        esM3 = cmRot3.epochSecret();
+        Commits.accept(cmRot3.commit(), AUD_SVC, Set.of(id("owner")), meetEra0, 2, esM2, Set.of(hOm, hBm), hBm,
+                CallBytes.hex(b.legId), accOBm.state());
+        chOBm.state().advance();
+        accOBm.state().advance();
+        bkey3Chain = HybridChannel.nextChain(bkey2Chain);
+        bkey3Seq = 2;
+        bkey3 = CallMeet.buildBkey(AUD_SVC, t + 122_050, meetCallId, meetEra0, 3, EpochSchedule.broadcast(esM3, CallBytes.unhex(meetEra0)),
+                Map.of(CallBytes.hex(e.legId), chOEm.state()), ids.get("owner"));
+        byte[] got3 = CallMeet.acceptBkey(bkey3.bkey(), AUD_SVC, Set.of(id("owner")), meetEra0, 2, CallBytes.hex(e.legId), accOEm.state());
+        if (!Arrays.equals(got3, EpochSchedule.broadcast(esM3, CallBytes.unhex(meetEra0)))) {
+            throw new IllegalStateException("bkey epoch 3 does not round-trip");
+        }
+        chOEm.state().advance();
+        accOEm.state().advance();
+
+        // era 1: the owner promotes E; E re-announces as a speaker under era 1 (same leg, same keys — sameKeys)
+        meetEraPromote = new CallEraBean();
+        meetEraPromote.setAud(AUD_SVC);
+        meetEraPromote.setTs(t + 130_000);
+        meetEraPromote.setCall(meetCallId);
+        meetEraPromote.setEra(1);
+        meetEraPromote.setPrev(meetEra0);
+        meetEraPromote.setMode(CallConstants.MODE_CONFERENCE);
+        List<String> inv1 = new ArrayList<>(List.of(id("owner"), id("bob"), id("erin")));
+        inv1.sort(String::compareTo);
+        meetEraPromote.setInv(inv1);
+        meetEraPromote.setApol(CallConstants.APOL_INVITED);
+        meetEraPromote.setAlist(List.of());
+        meetEraPromote.setMods(List.of(id("bob")));
+        meetEraPromote.setReason(CallConstants.REASON_PROMOTE);
+        CallSignatures.sign(meetEraPromote, ids.get("owner"));
+        meetEra1 = CallHashes.eraHashHex(meetEraPromote);
+        annEm1 = announceIn(e, meetCallId, meetEra1, CallConstants.ROLE_SPEAKER, t + 130_500, CallConstants.CAP_BASIC);
+
+        // era 2: the creator is gone; B (lowest leg_index speaker of the last commit's roster) succeeds: list verbatim
+        meetEraSucceed = new CallEraBean();
+        meetEraSucceed.setAud(AUD_SVC);
+        meetEraSucceed.setTs(t + 400_000);
+        meetEraSucceed.setCall(meetCallId);
+        meetEraSucceed.setEra(2);
+        meetEraSucceed.setPrev(meetEra1);
+        meetEraSucceed.setMode(CallConstants.MODE_CONFERENCE);
+        meetEraSucceed.setInv(inv1);
+        meetEraSucceed.setApol(CallConstants.APOL_INVITED);
+        meetEraSucceed.setAlist(List.of());
+        meetEraSucceed.setMods(List.of(id("bob")));
+        meetEraSucceed.setReason(CallConstants.REASON_SUCCEED);
+        CallSignatures.sign(meetEraSucceed, ids.get("bob"));
+        meetEra2 = CallHashes.eraHashHex(meetEraSucceed);
+    }
+
+    void signedNode(ArrayNode a, String signer, CallSignedObject o, String expectedAud) {
+        ObjectNode n = a.addObject();
+        n.put("t", o.getT());
+        n.put("signer", signer);
+        n.put("f", o.getF());
+        n.put("expected_aud", expectedAud);
+        n.put("canonical", CallSignatures.canonical(o));
+        n.put("signing_octets", CallBytes.hex(CallSignatures.signingOctets(o)));
+        n.put("sg", o.getSg());
+        n.put("wire", wire(o));
+    }
+
+    ObjectNode bkeyNode(CallMeet.BuiltBkey built, int k, long seq, byte[] chainK, byte[] epochSecret) {
+        ObjectNode n = m.createObjectNode();
+        CallBkeyBean b = built.bkey();
+        n.put("epoch", b.getEpoch());
+        n.put("era_hash", b.getEra());
+        n.put("epoch_secret", CallBytes.hex(epochSecret));
+        byte[] bc = EpochSchedule.broadcast(epochSecret, CallBytes.unhex(b.getEra()));
+        n.put("plaintext", CallBytes.hex(bc));
+        n.put("listener_leg", b.getBoxes().get(0).getTo());
+        n.put("k", k);
+        n.put("seq", seq);
+        n.put("chain_k", CallBytes.hex(chainK));
+        n.put("k_msg_k", CallBytes.hex(HybridChannel.msgKey(chainK)));
+        n.put("nonce", CallBytes.hex(HybridChannel.nonce(k, seq)));
+        n.put("aad", built.canonicalHeader());
+        n.put("box", b.getBoxes().get(0).getBox());
+        n.put("wire", wire(b));
+        return n;
+    }
+
+    ObjectNode group10() {
+        ObjectNode g = m.createObjectNode();
+        g.put("note", "[0.4] the meet (spec draft 0.4, rulings M1-M10 of 2026-11-03): owner O, speakers {O, B}, listener E "
+                + "(leg_index 3), moderator B. signed_objects verify like group 1; the broadcast handover carries the roster "
+                + "(S-7 for listeners); each bkey box = HybridChannel.seal(chain_k of owner>erin, k, seq, aad = canonical "
+                + "header, plaintext = broadcast_e); acting_owner and era_gate are the pure rules of spec 4.4 and 6.5.");
+        g.put("create_wire", wire(meetCreate));
+        g.put("call_id", meetCallId);
+        g.put("era_hash0", meetEra0);
+        g.put("era_promote_wire", wire(meetEraPromote));
+        g.put("era_hash1", meetEra1);
+        g.put("era_succeed_wire", wire(meetEraSucceed));
+        g.put("era_hash2", meetEra2);
+        ArrayNode so = g.putArray("signed_objects");
+        signedNode(so, "owner", meetCreate, AUD_SVC);
+        signedNode(so, "owner", meetEraPromote, AUD_SVC);
+        signedNode(so, "bob", meetEraSucceed, AUD_SVC);
+        signedNode(so, "erin", annEm, AUD_SVC);
+        signedNode(so, "erin", annEm1, AUD_SVC);
+        signedNode(so, "owner", bkey2.bkey(), AUD_SVC);
+        signedNode(so, "erin", handE, AUD_SVC);
+        signedNode(so, "bob", dropE, AUD_SVC);
+        signedNode(so, "erin", statusReqE, AUD_SVC);
+        signedNode(so, "service", statusAnsE, CallConstants.AUD_ID + id("erin"));
+        signedNode(so, "owner", meetNotice, AUD_RSCHAT);
+
+        ArrayNode rc = g.putArray("role_change");
+        roleRow(rc, "listener", "speaker", meetEra0, meetEra1, id("erin"), "ok");
+        roleRow(rc, "listener", "speaker", meetEra0, meetEra0, id("erin"), "role change under an unchanged era");
+        roleRow(rc, "listener", "speaker", meetEra0, meetEra1, id("dave"), "promoted identity not in inv");
+        roleRow(rc, "speaker", "listener", meetEra0, meetEra1, id("erin"), "ok");
+        roleRow(rc, "speaker", "listener", meetEra0, meetEra1, id("owner"), "demoted identity not in alist");
+        roleRow(rc, "speaker", "speaker", meetEra0, meetEra0, id("owner"), "ok");
+
+        ObjectNode bh = g.putObject("broadcast_handover");
+        bh.put("epoch", 1);
+        bh.put("era_hash", meetEra0);
+        ArrayNode r = bh.putArray("roster");
+        bodyOEm.getRoster().forEach(r::add);
+        bh.put("epoch_secret", CallBytes.hex(esM1));
+        bh.put("broadcast", bodyOEm.getKey());
+        bh.put("body", new String(HybridChannel.bodyBytes(bodyOEm), java.nio.charset.StandardCharsets.US_ASCII));
+        bh.put("channel_open_wire", wire(chOEm.channel()));
+        ObjectNode pl = bh.putObject("per_leg");
+        for (String ln : List.of("owner", "bob")) {
+            byte[] legId = legs.get(ln).legId;
+            ObjectNode pn = pl.putObject(CallBytes.hex(legId));
+            pn.put("leg", ln);
+            byte[] bc = CallBytes.unhex(bodyOEm.getKey());
+            pn.put("sender_base", CallBytes.hex(EpochSchedule.senderBaseFromBroadcast(bc, legId)));
+            pn.put("text_key", CallBytes.hex(EpochSchedule.textKeyFromBroadcast(bc, legId)));
+        }
+
+        ArrayNode bk = g.putArray("bkey");
+        bk.add(bkeyNode(bkey2, 0, bkey2Seq, bkey2Chain, esM2));
+        bk.add(bkeyNode(bkey3, 1, bkey3Seq, bkey3Chain, esM3));
+
+        ArrayNode ao = g.putArray("acting_owner");
+        long cts = T0 + 322_000;
+        ownerRow(ao, "creator present: none", List.of(new CallMeet.RosterLeg(0, id("owner")), new CallMeet.RosterLeg(1, id("bob"))), cts, cts + 100_000, null);
+        ownerRow(ao, "creator absent, before owner_timeout: none", List.of(new CallMeet.RosterLeg(3, id("erin")), new CallMeet.RosterLeg(1, id("bob"))), cts, cts + 29_999, null);
+        ownerRow(ao, "creator absent, at owner_timeout: the lowest leg_index speaker", List.of(new CallMeet.RosterLeg(3, id("erin")), new CallMeet.RosterLeg(1, id("bob"))), cts, cts + 30_000, id("bob"));
+        ownerRow(ao, "empty roster: none", List.of(), cts, cts + 60_000, null);
+
+        ArrayNode eg = g.putArray("era_gate");
+        gateRow(eg, 0, 0);
+        gateRow(eg, 0, 3_000);
+        gateRow(eg, 0, 9_500);
+        return g;
+    }
+
+    void roleRow(ArrayNode a, String prevRole, String newRole, String prevEra, String newEra, String identity, String expect) {
+        ObjectNode n = a.addObject();
+        n.put("prev_role", prevRole);
+        n.put("new_role", newRole);
+        n.put("prev_era", prevEra);
+        n.put("new_era", newEra);
+        n.put("identity", identity);
+        ArrayNode inv = n.putArray("inv");
+        meetEraPromote.getInv().forEach(inv::add);
+        ArrayNode al = n.putArray("alist");
+        meetCreate.getAlist().forEach(al::add);
+        n.put("expect", expect);
+        String got = CallMeet.roleChangeViolation(prevRole, newRole, prevEra, newEra, identity,
+                new java.util.HashSet<>(meetEraPromote.getInv()), new java.util.HashSet<>(meetCreate.getAlist()));
+        if (!expect.equals(got == null ? "ok" : got)) {
+            throw new IllegalStateException("role_change row: expected " + expect + ", got " + got);
+        }
+    }
+
+    void ownerRow(ArrayNode a, String what, List<CallMeet.RosterLeg> roster, long commitTs, long now, String expect) {
+        ObjectNode n = a.addObject();
+        n.put("what", what);
+        n.put("creator", id("owner"));
+        ArrayNode r = n.putArray("roster");
+        for (CallMeet.RosterLeg l : roster) {
+            ObjectNode x = r.addObject();
+            x.put("leg_index", l.legIndex());
+            x.put("identity", l.identity());
+        }
+        n.put("commit_ts", commitTs);
+        n.put("owner_timeout", CallConstants.OWNER_TIMEOUT_MS);
+        n.put("now", now);
+        n.put("acting_owner", expect);
+        String got = CallMeet.actingOwner(id("owner"), roster, commitTs, CallConstants.OWNER_TIMEOUT_MS, now);
+        if (!java.util.Objects.equals(expect, got)) {
+            throw new IllegalStateException("acting_owner row: expected " + expect + ", got " + got);
+        }
+    }
+
+    void gateRow(ArrayNode a, long first, long latest) {
+        ObjectNode n = a.addObject();
+        n.put("first_era_ts", first);
+        n.put("latest_era_ts", latest);
+        n.put("era_gate", CallConstants.ERA_GATE_MS);
+        n.put("committer_timeout", 2_000);
+        n.put("slot", CallMeet.gateSlot(first, latest, CallConstants.ERA_GATE_MS, 2_000));
+    }
 
     static Map<String, CallAnnounceBean> rosterOf(CallAnnounceBean... anns) {
         Map<String, CallAnnounceBean> r = new HashMap<>();
@@ -409,6 +799,7 @@ public final class CallVectorScenario {
         root.set("group7_conv_nonce_grant", group7());
         root.set("group8_negative", group8());
         root.set("group9_text", group9());
+        root.set("group10_meet", group10());
         return root;
     }
 

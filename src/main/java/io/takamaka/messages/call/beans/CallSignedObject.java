@@ -34,7 +34,12 @@ import lombok.NoArgsConstructor;
     @JsonSubTypes.Type(value = CallManifestBean.class, name = "manifest"),
     @JsonSubTypes.Type(value = CallLookupBean.class, name = "lookup"),
     @JsonSubTypes.Type(value = CallMuteBean.class, names = {"mute", "unmute"}),
-    @JsonSubTypes.Type(value = CallRecordsBean.class, name = "records")
+    @JsonSubTypes.Type(value = CallRecordsBean.class, name = "records"),
+    @JsonSubTypes.Type(value = CallBkeyBean.class, name = "bkey"),
+    @JsonSubTypes.Type(value = CallHandBean.class, name = "hand"),
+    @JsonSubTypes.Type(value = CallDropBean.class, name = "drop"),
+    @JsonSubTypes.Type(value = CallMeetStatusBean.class, name = "meetstatus"),
+    @JsonSubTypes.Type(value = CallMeetNoticeBean.class, name = "meetnotice")
 })
 public abstract class CallSignedObject {
 

@@ -72,5 +72,11 @@ public enum NOTIFICATION_TYPES {
      * a client that knows only {@code CALL_RING} ignores it instead of ringing. Align this literal with the Flutter
      * client.
      */
-    CALL_ANSWERED
+    CALL_ANSWERED,
+    /**
+     * [0.4] tkm-call/v1 §7.11 (M9, 2026-11-03): the meet notice of an ad-hoc meet — delivered to each {@code to} of a
+     * verified {@code meetnotice}, live or as a silent push ({@code type=CALL_MEET}, {@code call_id}, {@code v=1});
+     * never rings. A client that knows only {@code CALL_RING} ignores it.
+     */
+    CALL_MEET
 }

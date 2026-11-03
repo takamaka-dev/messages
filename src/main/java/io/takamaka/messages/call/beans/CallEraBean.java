@@ -38,7 +38,11 @@ public class CallEraBean extends CallSignedObject {
     private List<String> alist;
     @JsonProperty("mods")
     private List<String> mods;
-    /** {@code add} | {@code remove} | {@code promote} | {@code demote} | {@code mode} | {@code mods}. */
+    /**
+     * {@code add} | {@code remove} | {@code promote} | {@code demote} | {@code mode} | {@code mods} | [0.4]
+     * {@code succeed} (the acting owner's first era, spec §4.4: the list re-stated verbatim, signed by the acting
+     * owner — the only reason a non-creator may use first).
+     */
     @JsonProperty("reason")
     private String reason;
 

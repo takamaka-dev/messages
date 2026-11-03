@@ -5,6 +5,7 @@ import io.takamaka.messages.call.CallConstants;
 import io.takamaka.messages.call.CallError;
 import io.takamaka.messages.call.CallProtocolException;
 import io.takamaka.messages.call.beans.CallLookupBean;
+import io.takamaka.messages.call.beans.CallMeetNoticeBean;
 import io.takamaka.messages.call.beans.CallRingBean;
 import io.takamaka.messages.chat.notification.UserNotificationJsonBean;
 import io.takamaka.messages.utils.NOTIFICATION_TYPES;
@@ -197,5 +198,51 @@ public final class CallRschat {
             return Optional.empty();
         }
         return Optional.of(r);
+    }
+    // ---- [0.4] the meet notice (spec §7.11, ruling M9 of 2026-11-03) ----
+    /** [0.4] §7.11: the notification type of a meet notice ({@link NOTIFICATION_TYPES#CALL_MEET}). */
+    public static final String NOTIFICATION_TYPE_MEET = NOTIFICATION_TYPES.CALL_MEET.name();
+    /** [0.4] §7.11: {@code to} of a meet notice, 100 — split by rschat into per-recipient deliveries. */
+    public static final int MEETNOTICE_TO_MAX = CallConstants.MEETNOTICE_TO_MAX;
+    /** The {@code limit} of the {@code rate_limited} refusal of a meet notice whose {@code to} is longer than the cap. */
+    public static final String LIMIT_MEETNOTICE_TO_MAX = "meetnotice_to_max";
+
+    /** [0.4] An unsigned meet notice ({@code mode} is always {@code conference}); sign it with the owner's key. */
+    public static CallMeetNoticeBean meetNotice(String callId, String svc, List<String> to, String nonce, String aud, long ts) {
+        CallMeetNoticeBean n = new CallMeetNoticeBean();
+        n.setAud(aud);
+        n.setN(nonce);
+        n.setTs(ts);
+        n.setCall(callId);
+        n.setSvc(svc);
+        n.setTo(List.copyOf(to));
+        n.setMode(CallConstants.MODE_CONFERENCE);
+        return n;
+    }
+
+    /**
+     * [0.4] §7.11 fields of a VERIFIED meet notice, the same checks as {@link #checkRing} with {@code mode} fixed to
+     * {@code conference} (any other value is a malformed signed field, {@code bad_signature}) and the cap
+     * {@code toMax} ({@link CallError#RATE_LIMITED} {@link #LIMIT_MEETNOTICE_TO_MAX}).
+     */
+    public static void checkMeetNotice(CallMeetNoticeBean n, int toMax) throws CallProtocolException {
+        if (n == null || !isIdentity(n.getF()) || n.getN() == null || n.getN().isEmpty()
+                || !CallBytes.isLowerHex(n.getCall(), CallConstants.HASH_LEN) || !isServiceId(n.getSvc())
+                || !CallConstants.MODE_CONFERENCE.equals(n.getMode())) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "meetnotice fields");
+        }
+        List<String> to = n.getTo();
+        if (to == null || to.isEmpty()) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "meetnotice to");
+        }
+        if (to.size() > toMax) {
+            throw new CallProtocolException(CallError.RATE_LIMITED, LIMIT_MEETNOTICE_TO_MAX);
+        }
+        Set<String> seen = new HashSet<>();
+        for (String id : to) {
+            if (!isIdentity(id) || !seen.add(id)) {
+                throw new CallProtocolException(CallError.BAD_SIGNATURE, "meetnotice to");
+            }
+        }
     }
 }

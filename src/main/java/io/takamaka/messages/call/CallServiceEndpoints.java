@@ -69,4 +69,12 @@ public final class CallServiceEndpoints {
      * connection-bound like {@link #PRESENCE}.
      */
     public static final String GRANT = "call.grant";
+    /** [0.4] §6.6: the committer's batched broadcast key, one box per present listener, relayed box by box. */
+    public static final String BKEY = "call.bkey";
+    /** [0.4] §7.8: raise / lower hand (a listener leg), relayed to the owner's and the moderators' legs. */
+    public static final String HAND = "call.hand";
+    /** [0.4] §7.9: remove a listener leg (owner, acting owner or moderator), no key change. */
+    public static final String DROP = "call.drop";
+    /** [0.4] §7.10: meet status, answered by a service-signed {@code meetstatus} to {@code id:<identity>}. */
+    public static final String MEETSTATUS = "call.meetstatus";
 }

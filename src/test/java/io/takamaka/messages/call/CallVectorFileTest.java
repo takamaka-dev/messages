@@ -446,6 +446,135 @@ class CallVectorFileTest {
         assertEquals(s(gr, "canonical"), CallSignatures.canonical(grant));
     }
 
+    // ------------------------------------------------------------------ group 10 [0.4] the meet
+
+    @Test
+    void group10MeetIsRederived() throws Exception {
+        JsonNode g = root.get("group10_meet");
+        assertNotNull(g, "group10_meet missing — regenerate");
+        // the signed objects, as group 1
+        Set<String> types = new HashSet<>();
+        for (JsonNode n : g.get("signed_objects")) {
+            CallSignedObject o = CallJson.parse(s(n, "wire"));
+            String t = s(n, "t");
+            types.add(t);
+            assertEquals(t, o.getT());
+            assertEquals(identity(s(n, "signer")), o.getF());
+            assertEquals(s(n, "canonical"), CallSignatures.canonical(o), t);
+            byte[] octets = CallBytes.concat(CallBytes.ascii("tkm-call/v1/" + t), new byte[]{0}, CallBytes.ascii(s(n, "canonical")));
+            assertEquals(s(n, "signing_octets"), CallBytes.hex(octets), t);
+            assertTrue(rawEd25519Verify(o.getF(), octets, CallBytes.unhex(o.getSg())), t + " raw Ed25519");
+            CallSignatures.verify(o, t, s(n, "expected_aud"));
+        }
+        assertEquals(Set.of("create", "era", "announce", "bkey", "hand", "drop", "meetstatus", "meetnotice"), types);
+
+        // the records: hashes, lists, params
+        io.takamaka.messages.call.beans.CallCreateBean create = CallJson.parse(s(g, "create_wire"), io.takamaka.messages.call.beans.CallCreateBean.class);
+        assertEquals(s(g, "call_id"), CallHashes.callIdHex(create));
+        assertEquals(s(g, "era_hash0"), CallHashes.eraHashHex(create));
+        assertEquals("conference", create.getMode());
+        assertEquals("invited", create.getApol());
+        io.takamaka.messages.call.meet.CallMeet.checkMeetLists(create.getMode(), create.getInv(), create.getApol(),
+                create.getAlist(), create.getMods(), 50, 200);
+        assertEquals(30_000L, create.getParams().getOwnerTimeout());
+        assertEquals(10_000L, create.getParams().getEraGate());
+        assertNull(CallParamsBounds.violation(create.getParams()));
+        io.takamaka.messages.call.beans.CallEraBean promote = CallJson.parse(s(g, "era_promote_wire"), io.takamaka.messages.call.beans.CallEraBean.class);
+        CallSignatures.verify(promote, "era", promote.getAud(), identity("owner"));
+        assertEquals("promote", promote.getReason());
+        assertEquals(s(g, "era_hash0"), promote.getPrev());
+        assertEquals(s(g, "era_hash1"), CallHashes.eraHashHex(promote));
+        assertTrue(promote.getInv().contains(identity("erin")) && promote.getAlist().isEmpty(), "erin moved alist → inv");
+        io.takamaka.messages.call.beans.CallEraBean succeed = CallJson.parse(s(g, "era_succeed_wire"), io.takamaka.messages.call.beans.CallEraBean.class);
+        CallSignatures.verify(succeed, "era", succeed.getAud(), identity("bob"));
+        assertEquals("succeed", succeed.getReason());
+        assertEquals(s(g, "era_hash1"), succeed.getPrev());
+        assertEquals(s(g, "era_hash2"), CallHashes.eraHashHex(succeed));
+        assertEquals(promote.getInv(), succeed.getInv());
+        assertEquals(promote.getMods(), succeed.getMods());
+        assertTrue(CallConstants.isEnlargingReason(succeed.getReason()));
+
+        // the sameKeys role rule
+        for (JsonNode n : g.get("role_change")) {
+            Set<String> inv = new HashSet<>();
+            n.get("inv").forEach(x -> inv.add(x.asText()));
+            Set<String> alist = new HashSet<>();
+            n.get("alist").forEach(x -> alist.add(x.asText()));
+            String got = io.takamaka.messages.call.meet.CallMeet.roleChangeViolation(s(n, "prev_role"), s(n, "new_role"),
+                    s(n, "prev_era"), s(n, "new_era"), s(n, "identity"), inv, alist);
+            assertEquals(s(n, "expect"), got == null ? "ok" : got);
+        }
+
+        // the broadcast handover with its roster: key = HKDF(epoch_secret, "broadcast" || era); listener-side keys
+        JsonNode bh = g.get("broadcast_handover");
+        byte[] era0 = hx(bh, "era_hash");
+        byte[] bc = CallCrypto.hkdf(hx(bh, "epoch_secret"), CallBytes.concat(CallBytes.ascii("tkm-call/v1/broadcast"), era0));
+        assertEquals(s(bh, "broadcast"), CallBytes.hex(bc));
+        JsonNode body = M.readTree(s(bh, "body"));
+        assertEquals("broadcast", s(body, "h"));
+        assertEquals(1, body.get("epoch").asLong());
+        assertEquals(s(bh, "broadcast"), s(body, "key"));
+        assertEquals(s(bh, "era_hash"), s(body, "era"));
+        List<String> roster = new ArrayList<>();
+        body.get("roster").forEach(x -> roster.add(x.asText()));
+        assertEquals(2, roster.size());
+        assertEquals(EpochSchedule.sortedHex(roster), roster, "roster sorted");
+        assertTrue(body.has("prev_ts") && body.has("since") && body.has("chain_idx"), "as a speaker's handover");
+        assertFalse(body.has("secret"), "a listener never receives the epoch secret");
+        Iterator<Map.Entry<String, JsonNode>> it = bh.get("per_leg").fields();
+        while (it.hasNext()) {
+            Map.Entry<String, JsonNode> p = it.next();
+            byte[] legId = CallBytes.unhex(p.getKey());
+            assertEquals(s(p.getValue(), "sender_base"), CallBytes.hex(CallCrypto.hkdf(bc, CallBytes.concat(CallBytes.ascii("tkm-call/v1/sender"), legId))));
+            assertEquals(s(p.getValue(), "text_key"), CallBytes.hex(CallCrypto.hkdf(bc, CallBytes.concat(CallBytes.ascii("tkm-call/v1/text"), legId))));
+        }
+        CallSignedObject open = CallJson.parse(s(bh, "channel_open_wire"));
+        assertEquals("channel", open.getT());
+        CallSignatures.verify(open, "channel", open.getAud(), identity("owner"));
+
+        // the bkey boxes: nonce || AES-256-GCM under k_msg_k of the owner>erin chain at k, AAD = the canonical header
+        int rows = 0;
+        for (JsonNode n : g.get("bkey")) {
+            rows++;
+            int k = n.get("k").asInt();
+            long seq = n.get("seq").asLong();
+            byte[] chainK = hx(n, "chain_k");
+            assertEquals(s(n, "k_msg_k"), CallBytes.hex(CallCrypto.hkdf(chainK, CallBytes.ascii("tkm-call/v1/msg"))));
+            assertEquals(s(n, "nonce"), CallBytes.hex(CallBytes.concat(CallBytes.be32(k), CallBytes.be64(seq))));
+            byte[] plaintext = hx(n, "plaintext");
+            assertEquals(s(n, "plaintext"), CallBytes.hex(CallCrypto.hkdf(hx(n, "epoch_secret"),
+                    CallBytes.concat(CallBytes.ascii("tkm-call/v1/broadcast"), hx(n, "era_hash")))), "plaintext = broadcast_e");
+            byte[] box = HybridChannel.seal(chainK, k, seq, CallBytes.ascii(s(n, "aad")), plaintext);
+            assertEquals(s(n, "box"), CallBytes.hex(box));
+            io.takamaka.messages.call.beans.CallBkeyBean b = CallJson.parse(s(n, "wire"), io.takamaka.messages.call.beans.CallBkeyBean.class);
+            CallSignatures.verify(b, "bkey", b.getAud(), identity("owner"));
+            assertEquals(s(n, "aad"), io.takamaka.messages.call.meet.CallMeet.canonicalHeader(b));
+            assertFalse(s(n, "aad").contains("boxes"));
+            assertEquals(n.get("epoch").asLong(), b.getEpoch());
+            assertEquals(1, b.getBoxes().size());
+            assertEquals(s(n, "listener_leg"), b.getBoxes().get(0).getTo());
+            assertEquals(k, b.getBoxes().get(0).getK());
+            assertEquals(s(n, "box"), b.getBoxes().get(0).getBox());
+            assertEquals(s(leg("erin"), "leg_id"), s(n, "listener_leg"));
+        }
+        assertEquals(2, rows);
+
+        // the acting-owner rule and the era-gate slot
+        for (JsonNode n : g.get("acting_owner")) {
+            List<io.takamaka.messages.call.meet.CallMeet.RosterLeg> r = new ArrayList<>();
+            n.get("roster").forEach(x -> r.add(new io.takamaka.messages.call.meet.CallMeet.RosterLeg(x.get("leg_index").asInt(), x.get("identity").asText())));
+            String expect = n.get("acting_owner").isNull() ? null : s(n, "acting_owner");
+            assertEquals(expect, io.takamaka.messages.call.meet.CallMeet.actingOwner(s(n, "creator"), r, n.get("commit_ts").asLong(),
+                    n.get("owner_timeout").asLong(), n.get("now").asLong()), s(n, "what"));
+        }
+        for (JsonNode n : g.get("era_gate")) {
+            assertEquals(n.get("slot").asLong(), io.takamaka.messages.call.meet.CallMeet.gateSlot(n.get("first_era_ts").asLong(),
+                    n.get("latest_era_ts").asLong(), n.get("era_gate").asLong(), n.get("committer_timeout").asLong()));
+            assertEquals(Math.max(n.get("first_era_ts").asLong() + n.get("era_gate").asLong(),
+                    n.get("latest_era_ts").asLong() + n.get("committer_timeout").asLong()), n.get("slot").asLong());
+        }
+    }
+
     // ------------------------------------------------------------------ group 8
 
     @Test
