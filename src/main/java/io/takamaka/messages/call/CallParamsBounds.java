@@ -20,7 +20,8 @@ import io.takamaka.messages.call.beans.CallParamsBean;
  *   <li>{@code grace} ∈ [{@value #GRACE_MIN_MS}, {@value #GRACE_MAX_MS}]; {@code absence_window} ∈ [0, grace];</li>
  *   <li>{@code cap} ∈ [2, {@value #CAP_MAX}]; {@code devices_per_identity} ∈ [1, {@value #DEVICES_MAX}];</li>
  *   <li>[0.4] {@code owner_timeout} (optional) ∈ [committer_timeout, {@value #OWNER_TIMEOUT_MAX_MS}];
- *   {@code era_gate} (optional) ∈ [committer_timeout, min({@value #ERA_GATE_MAX_MS}, refuse_below)] — and the meet
+ *   {@code era_gate} (optional) ∈ [committer_timeout, {@value #ERA_GATE_MAX_MS}] (the gated commit is exempt from the
+ *   budget, so no relation to refuse_below) — and the meet
  *   limits of {@link #limitsViolation}.</li>
  * </ul>
  * Checked by the owner before signing the creation record, by every joiner on the verified record (and on the
@@ -43,7 +44,7 @@ public final class CallParamsBounds {
     public static final int DEVICES_MAX = 5;
     /** [0.4] (M4) {@code owner_timeout} ≤ 300 s (and ≥ {@code committer_timeout}). */
     public static final long OWNER_TIMEOUT_MAX_MS = 300_000;
-    /** [0.4] (M5) {@code era_gate} ≤ 30 s (and ≥ {@code committer_timeout}, ≤ {@code refuse_below}). */
+    /** [0.4] (M5) {@code era_gate} ≤ 30 s (and ≥ {@code committer_timeout}). */
     public static final long ERA_GATE_MAX_MS = 30_000;
     /** [0.4] (M1) the manifest ceiling of {@code listeners_max}: 200 (served 50 until the staging gates pass). */
     public static final int LISTENERS_MAX_BOUND = 200;
@@ -109,8 +110,8 @@ public final class CallParamsBounds {
             return "owner_timeout must be in [committer_timeout, " + OWNER_TIMEOUT_MAX_MS + "] ms";
         }
         Long eg = p.getEraGate();
-        if (eg != null && (eg < ct || eg > ERA_GATE_MAX_MS || eg > rb)) {
-            return "era_gate must be in [committer_timeout, min(" + ERA_GATE_MAX_MS + ", refuse_below)] ms";
+        if (eg != null && (eg < ct || eg > ERA_GATE_MAX_MS)) {
+            return "era_gate must be in [committer_timeout, " + ERA_GATE_MAX_MS + "] ms";
         }
         return null;
     }

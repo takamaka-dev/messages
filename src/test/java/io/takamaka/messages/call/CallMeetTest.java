@@ -221,7 +221,9 @@ class CallMeetTest {
         assertEquals(10_000L, p.eraGateOrDefault());
         assertNull(CallParamsBounds.violation(CallParamsBean.initialValues()), "absent meet keys = the defaults");
         p.setEraGate(60_000L);
-        assertTrue(CallParamsBounds.violation(p).startsWith("era_gate"), "above refuse_below and the cap");
+        assertTrue(CallParamsBounds.violation(p).startsWith("era_gate"), "above the cap");
+        p.setEraGate(20_000L);
+        assertNull(CallParamsBounds.violation(p), "no relation to refuse_below: the gated commit is exempt");
         p.setEraGate(1_000L);
         assertTrue(CallParamsBounds.violation(p).startsWith("era_gate"), "below committer_timeout");
         p.setEraGate(10_000L);
