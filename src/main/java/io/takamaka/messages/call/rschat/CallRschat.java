@@ -165,6 +165,86 @@ public final class CallRschat {
         }
     }
 
+    // ---- G-6 (2026-11-03): the caller's signed ring inside the CALL_RING push ---------------------------------------
+
+    /**
+     * G-6 (ruling O-1 b, 2026-11-03): the FCM data field of a {@code CALL_RING} push that carries the caller's SIGNED
+     * ring, so a device whose app process is cold (no unlocked identity, no call service reachable from the push
+     * handler) can verify the caller's identity before naming it (N7). Value: {@link #pushRing}. Absent when the
+     * ring does not fit the push ({@link #FCM_DATA_MAX_BYTES}): the push then carries today's four fields only and
+     * the device shows a generic banner.
+     */
+    public static final String PUSH_RING_FIELD = "ring";
+
+    /** FCM refuses a data message whose payload exceeds this many bytes. */
+    public static final int FCM_DATA_MAX_BYTES = 4096;
+
+    /**
+     * A pushed ring is fresh while {@code ts} is at most this old (the caller gives up at 90 s; the push itself
+     * expires after 60 s) …
+     */
+    public static final long PUSH_RING_MAX_AGE_MS = 90_000L;
+
+    /** … and at most this far in the future (the caller's clock against this device's). */
+    public static final long PUSH_RING_MAX_SKEW_MS = 60_000L;
+
+    /**
+     * The canonical push form of a verified ring: RFC 8785 JCS of the WHOLE signed bean, {@code sg} included — the
+     * same text the signer's {@code callring} request carried, re-serialised canonically (ASCII by construction:
+     * every field of a verified ring is ASCII). The reader parses it as a call object and verifies it exactly as
+     * rschat did ({@link io.takamaka.messages.call.CallSignatures#verify}: {@code sg} removed, {@code tkm-call/v1/ring}
+     * context, audience {@code rschat:<net>}). No bean is added or changed: the field carries a {@link CallRingBean}.
+     */
+    public static String pushRing(CallRingBean r) {
+        return io.takamaka.messages.call.CallJson.canonical(r);
+    }
+
+    /**
+     * The reader's check of a pushed ring ({@link #PUSH_RING_FIELD}), the way a cold device does it: parsed strictly,
+     * verified under the ring context for {@code aud} (the audience of the network this device's PINNED call service
+     * serves — never taken from the push), shape-checked as rschat does ({@link #checkRing}), a ring and not an
+     * answered notice, and bound to the push's own four fields ({@code notice}: call_id, svc, f, mode — a signed
+     * ring of one call must not dress a push of another). {@code me} (the device's push identity) must be among
+     * {@code to} when known. Freshness is time-dependent and separate: {@link #isFreshPushRing}.
+     *
+     * @return the verified ring; the caller is {@code getF()}
+     * @throws CallProtocolException {@code bad_signature} on any failure (the reader shows the generic banner)
+     */
+    public static CallRingBean checkPushRing(String ringJson, String aud, CallRingNoticeBean notice, String me, int toMax)
+            throws CallProtocolException {
+        if (ringJson == null || notice == null || aud == null) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring absent");
+        }
+        final CallRingBean r;
+        try {
+            r = io.takamaka.messages.call.CallJson.parse(ringJson, CallRingBean.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException | IllegalArgumentException ex) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring parse");
+        }
+        io.takamaka.messages.call.CallSignatures.verify(r, CallConstants.T_RING, aud);
+        checkRing(r, toMax);
+        if (isAnswered(r)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring k");
+        }
+        if (!r.getCall().equals(notice.getCall()) || !r.getSvc().equals(notice.getSvc())
+                || !r.getF().equals(notice.getF()) || !r.getMode().equals(notice.getMode())) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring mismatch");
+        }
+        if (me != null && !r.getTo().contains(me)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring not for me");
+        }
+        return r;
+    }
+
+    /** True while {@code r.ts} is within {@link #PUSH_RING_MAX_AGE_MS} behind / {@link #PUSH_RING_MAX_SKEW_MS} ahead of {@code nowMillis}. */
+    public static boolean isFreshPushRing(CallRingBean r, long nowMillis) {
+        if (r == null || r.getTs() == null) {
+            return false;
+        }
+        long ts = r.getTs();
+        return nowMillis - ts <= PUSH_RING_MAX_AGE_MS && ts - nowMillis <= PUSH_RING_MAX_SKEW_MS;
+    }
+
     /** The notice delivered for a verified ring: call, svc, f, mode — nothing else. */
     public static CallRingNoticeBean notice(CallRingBean r) {
         return new CallRingNoticeBean(r.getCall(), r.getSvc(), r.getF(), r.getMode());
