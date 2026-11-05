@@ -279,6 +279,13 @@ public class ChatServerEndpoints {
      * <p>[0.2] (C-16): the same route takes the ANSWERED NOTICE — a {@code ring} with {@code k = "answered"} signed by
      * the callee, {@code to = [f]} — checked like a ring and charged to the ring limits of {@code f}; rschat delivers
      * {@code CALL_ANSWERED} to {@code f}'s own devices (live, else a push of {@code call_id} only), never stored.
+     *
+     * <p>P2 (caller cancel, 2026-11-05): and the CALLER'S CANCEL — a {@code ring} with {@code k = "cancelled"} signed by
+     * the caller with its ring's {@code call}, {@code svc}, {@code to}, {@code mode}. Signature, nonce, allow-list and
+     * the caller's registration are checked; no ring budget is charged. rschat relays {@code CALL_CANCELLED} (live with
+     * {@code signed_ring}, and a silent Android push with {@code data.ring}) only to the callees of a ring it admitted
+     * with the same caller and call id in the last 90 s, at most once each; anything else is dropped silently. Answer:
+     * ok (it never says what matched).
      */
     public static final String CALL_RING = "callring";
     /**

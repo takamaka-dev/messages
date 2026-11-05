@@ -33,6 +33,14 @@ import java.util.regex.Pattern;
  * {@code to = [f]}, is the answered notice (§7.1): rschat checks it as a ring and delivers {@link #NOTIFICATION_TYPE_ANSWERED}
  * to the callee's own devices; a device still ringing for that call declines {@code elsewhere} to the service (§7.6).
  *
+ * <p>P2 (caller cancel, design CALL_RING_ANY_STATE_DESIGN_2026-11-05 §5, operator Q5, Iris §7.123 I2/RA-3/RA-4/RA-5/RA-8,
+ * 2026-11-05): a {@code ring} with {@code k = "cancelled"}, signed by the CALLER with the ring's own {@code call},
+ * {@code svc}, {@code to} and {@code mode}, is the caller's cancel: the outgoing call ended before anyone answered.
+ * rschat relays {@link #NOTIFICATION_TYPE_CANCELLED} only to the callees of a ring it admitted with the same caller and
+ * call id, at most once each, live AND as a silent push, both carrying the signed cancel ({@link #pushRing}); a device
+ * acts on it only through {@link #checkCancel} (one verifier for both paths) and only to stop a ring of that call id
+ * from that verified caller that is not newer than the cancel ({@link #isNotOlderThanRing}).
+ *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 public final class CallRschat {
@@ -45,6 +53,9 @@ public final class CallRschat {
 
     /** [0.2] §7.1: the notification type of an answered notice ({@link NOTIFICATION_TYPES#CALL_ANSWERED}). */
     public static final String NOTIFICATION_TYPE_ANSWERED = NOTIFICATION_TYPES.CALL_ANSWERED.name();
+
+    /** P2: the notification type of the caller's cancel ({@link NOTIFICATION_TYPES#CALL_CANCELLED}). */
+    public static final String NOTIFICATION_TYPE_CANCELLED = NOTIFICATION_TYPES.CALL_CANCELLED.name();
 
     /**
      * Initial limit on {@code to} per ring. S-12 (Q13, 2026-10-29): 25 (interim step, operator 10-29 17:3x; was 100),
@@ -107,6 +118,23 @@ public final class CallRschat {
         return r != null && CallConstants.RING_K_ANSWERED.equals(r.getK());
     }
 
+    /**
+     * P2: the caller's unsigned cancel of its ring {@code callId} — {@code k = cancelled}, with the ring's own
+     * {@code svc}, {@code to} (the callees, never the caller) and {@code mode}; sign it with the CALLER's key (the
+     * ring's {@code f}). Send it only when the outgoing call ended before anyone answered.
+     */
+    public static CallRingBean cancelled(String callId, String svc, List<String> to, String mode, String nonce, String aud,
+            long ts) {
+        CallRingBean r = ring(callId, svc, to, mode, nonce, aud, ts);
+        r.setK(CallConstants.RING_K_CANCELLED);
+        return r;
+    }
+
+    /** P2: true for the caller's cancel ({@code k = cancelled}). */
+    public static boolean isCancelled(CallRingBean r) {
+        return r != null && CallConstants.RING_K_CANCELLED.equals(r.getK());
+    }
+
     /** An unsigned lookup of ONE identity (sign it with the service key). */
     public static CallLookupBean lookup(String identity, String nonce, String aud, long ts) {
         CallLookupBean l = new CallLookupBean();
@@ -129,6 +157,9 @@ public final class CallRschat {
      * <p>Iris §7.117 item 8m (2026-10-30): the identity and duplicate checks on {@code to} run BEFORE the length check,
      * so a junk list of any length answers {@code bad_signature} and only a well-formed over-long list is the limit; and
      * a ring whose {@code to} names its own signer is refused — the answered notice is the one object addressed to self.
+     *
+     * <p>P2 (2026-11-05): {@code k = cancelled} (the caller's cancel) has exactly a ring's shape — {@code to}
+     * 1..{@code toMax} distinct identities, never {@code f}. Any other {@code k} is still refused.
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
@@ -140,20 +171,21 @@ public final class CallRschat {
         if (to == null || to.isEmpty()) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
         }
-        boolean notice = r.getK() != null;
+        // the answered notice is the one object addressed to its own signer; a ring and a cancel never name f
+        boolean answered = isAnswered(r);
         Set<String> seen = new HashSet<>();
         for (String id : to) {
             if (!isIdentity(id) || !seen.add(id)) {
                 throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring to");
             }
-            if (!notice && id.equals(r.getF())) {
+            if (!answered && id.equals(r.getF())) {
                 throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring self");
             }
         }
         if (to.size() > toMax) {
             throw new CallProtocolException(CallError.RATE_LIMITED, LIMIT_RING_TO_MAX);
         }
-        if (notice && !(isAnswered(r) && to.size() == 1 && r.getF().equals(to.get(0)))) {
+        if (r.getK() != null && !(isCancelled(r) || (answered && to.size() == 1 && r.getF().equals(to.get(0))))) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring k");
         }
     }
@@ -279,6 +311,73 @@ public final class CallRschat {
         }
         return Optional.of(r);
     }
+    // ---- P2 (2026-11-05): the caller's cancel, read by a callee device ----------------------------------------------
+
+    /**
+     * P2 (Iris §7.123 I2): the cancel a {@code CALL_CANCELLED} notification names, if it is well formed — the notice
+     * fields only ({@code call}, {@code svc}, {@code f}, {@code mode}); a device acts on it only through
+     * {@link #checkCancel} on {@link UserNotificationJsonBean#getSignedRing()} (a notice without it is ignored).
+     */
+    public static Optional<CallRingNoticeBean> cancelledOf(UserNotificationJsonBean n) {
+        return noticeOf(n, NOTIFICATION_TYPE_CANCELLED);
+    }
+
+    /**
+     * P2: the device's check of the caller's signed cancel, the SAME for the live notice ({@code signed_ring},
+     * {@code ring.call}, {@code ring.f}) and the silent push ({@code data.ring}, {@code data.call_id}, {@code data.f}):
+     * parsed strictly, verified under the ring context for {@code aud} (the audience of this device's PINNED network,
+     * never taken from the message), shape-checked as rschat does ({@link #checkRing}), {@code k = cancelled}, bound to
+     * the message's own {@code callId} and {@code f}, and addressed to {@code me} — which MUST be known: a device that
+     * cannot say who it is never acts on a cancel (Iris F-9). Freshness is separate ({@link #isFreshPushRing}, the same
+     * window as a pushed ring), and so is the device rule: the cancel stops only a ring of {@code callId} whose
+     * VERIFIED caller is {@code r.getF()} and which is not newer than it ({@link #isNotOlderThanRing}); anything else is
+     * discarded (operator Q5: a cancel never starts anything).
+     *
+     * @return the verified cancel; its caller is {@code getF()}
+     * @throws CallProtocolException {@code bad_signature} on any failure (the device discards the cancel)
+     */
+    public static CallRingBean checkCancel(String signedJson, String aud, String callId, String f, String me, int toMax)
+            throws CallProtocolException {
+        if (signedJson == null || aud == null || callId == null || f == null) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel absent");
+        }
+        if (me == null) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel me unknown");
+        }
+        final CallRingBean r;
+        try {
+            r = io.takamaka.messages.call.CallJson.parse(signedJson, CallRingBean.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException | IllegalArgumentException ex) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel parse");
+        }
+        io.takamaka.messages.call.CallSignatures.verify(r, CallConstants.T_RING, aud);
+        try {
+            checkRing(r, toMax);
+        } catch (CallProtocolException ex) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel shape");
+        }
+        if (!isCancelled(r)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel k");
+        }
+        if (!r.getCall().equals(callId) || !r.getF().equals(f)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel mismatch");
+        }
+        if (!r.getTo().contains(me)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "cancel not for me");
+        }
+        return r;
+    }
+
+    /**
+     * P2 (Iris §7.123 RA-5): whether a verified cancel may stop (or tombstone) a ring signed at {@code ringTs} — the
+     * cancel's {@code ts} is not before it (both are the CALLER's clock). A ring whose signed {@code ts} the device
+     * does not know ({@code null}: an older rschat's live ring) is matched. A cancel older than the ring is a replay or
+     * a late copy of an earlier attempt and must not end a re-ring.
+     */
+    public static boolean isNotOlderThanRing(CallRingBean cancel, Long ringTs) {
+        return cancel != null && cancel.getTs() != null && (ringTs == null || cancel.getTs() >= ringTs);
+    }
+
     // ---- [0.4] the meet notice (spec §7.11, ruling M9 of 2026-11-03) ----
     /** [0.4] §7.11: the notification type of a meet notice ({@link NOTIFICATION_TYPES#CALL_MEET}). */
     public static final String NOTIFICATION_TYPE_MEET = NOTIFICATION_TYPES.CALL_MEET.name();
