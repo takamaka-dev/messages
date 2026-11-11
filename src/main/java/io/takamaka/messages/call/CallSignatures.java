@@ -1,6 +1,7 @@
 package io.takamaka.messages.call;
 
 import io.takamaka.messages.call.beans.CallSignedObject;
+import io.takamaka.messages.utils.ChatSignatureVerifier;
 import io.takamaka.wallet.InstanceWalletKeystoreInterface;
 import io.takamaka.wallet.TkmCypherProviderBCED25519;
 import io.takamaka.wallet.beans.TkmCypherBean;
@@ -28,6 +29,11 @@ import org.bouncycastle.util.encoders.UrlBase64;
  * <p>Because every call message starts with {@code tkm-call/} and every chat message with {@code {}, no
  * signature verifies in the other system (N13). Call code MUST NOT use the chat verify function; chat code MUST
  * NOT use this one.
+ *
+ * <p>The Ed25519 primitive itself is reached through {@link ChatSignatureVerifier#verifyEd25519} — the shared
+ * strict-spelling door, not a chat message verify: a signer key {@code f} that is not the canonical Base64URL
+ * spelling of 32 bytes (whitespace, trailing unused bits, {@code =}/{@code +}/{@code /}, extra bytes) is refused
+ * with {@link CallError#BAD_SIGNATURE}, exactly as the Dart port refuses it.
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
@@ -161,7 +167,11 @@ public final class CallSignatures {
             throw bad("non-ASCII");
         }
         String msg = signingMessage(obj.getT(), canonical);
-        TkmCypherBean res = TkmCypherProviderBCED25519.verify(obj.getF(), urlBase64(CallBytes.unhex(obj.getSg())), msg);
+        // Strict door (operator ruling 2026-11-11, "Java can be tightened to the same strict rule as Dart"): f must
+        // be the canonical Base64URL spelling of exactly 32 bytes, as in the Dart port (call_signatures.dart ->
+        // verifyBytesWithPublicKeyAsync). The signature text is rebuilt here from the 64-byte hex, so it is
+        // canonical by construction. A refused spelling is reported like any bad signature.
+        TkmCypherBean res = ChatSignatureVerifier.verifyEd25519(obj.getF(), urlBase64(CallBytes.unhex(obj.getSg())), msg);
         if (!res.isValid()) {
             throw bad("signature");
         }

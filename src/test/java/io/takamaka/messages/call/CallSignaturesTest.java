@@ -4,7 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.takamaka.messages.call.beans.*;
 import io.takamaka.messages.exception.ChatMessageException;
 import io.takamaka.messages.utils.ChatCryptoUtils;
+import io.takamaka.messages.utils.ChatSignatureVerifier;
 import io.takamaka.messages.utils.SimpleRequestHelper;
+import io.takamaka.wallet.TkmCypherProviderBCED25519;
+import io.takamaka.wallet.beans.TkmCypherBean;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,6 +95,89 @@ class CallSignaturesTest {
         CallAnnounceBean d = CallJson.parse(CallJson.toWire(s.annB), CallAnnounceBean.class);
         d.setV(2);
         assertErr(() -> CallSignatures.verify(d, "announce", d.getAud()), "version");
+    }
+
+    /** Same key bytes, different text — every one of these the lenient wallet-core provider accepts. */
+    private static Map<String, String> respellKey(String canonical) {
+        Map<String, String> v = new java.util.LinkedHashMap<>();
+        String body = canonical.replace(".", "");
+        String pad = canonical.substring(body.length());
+        String alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        char last = body.charAt(body.length() - 1);
+        v.put("noncanonical_trailing_bits", body.substring(0, body.length() - 1) + alpha.charAt(alpha.indexOf(last) + 1) + pad);
+        v.put("trailing_newline", canonical + "\n");
+        v.put("trailing_space", canonical + " ");
+        v.put("leading_space", " " + canonical);
+        v.put("embedded_space", canonical.substring(0, 8) + " " + canonical.substring(8));
+        byte[] raw = CallSignatures.urlUnBase64(canonical);
+        v.put("extra_trailing_bytes", CallSignatures.urlBase64(java.util.Arrays.copyOf(raw, raw.length + 4)));
+        return v;
+    }
+
+    /**
+     * Strict door (operator ruling 2026-11-11): {@code f} is INSIDE the signed object, so the case that matters is
+     * a signer that names ITSELF with a non-canonical spelling and signs over it. The provider verifies that (same
+     * key bytes); {@code CallSignatures.verify} refuses it, as the Dart port does.
+     */
+    @Test
+    void respelledSignerKeyIsRefused_evenWhenTheSignerSignedOverTheRespelling() throws Exception {
+        AsymmetricCipherKeyPair kp = s.ids.get("dave");
+        String identity = CallSignatures.identityOf(kp);
+        assertTrue(ChatSignatureVerifier.isCanonicalEd25519PublicKey(identity));
+        Map<String, String> respelled = respellKey(identity);
+        assertEquals(6, respelled.size());
+        for (Map.Entry<String, String> k : respelled.entrySet()) {
+            assertNotEquals(identity, k.getValue(), k.getKey());
+            CallGoodbyeBean g = new CallGoodbyeBean();
+            g.setV(CallConstants.VERSION);
+            g.setAud("svc:x");
+            g.setTs(1L);
+            g.setCall("00");
+            g.setLeg("01");
+            g.setEpoch(0L);
+            g.setF(k.getValue());
+            String msg = CallSignatures.signingMessage(g.getT(), CallSignatures.canonical(g));
+            TkmCypherBean signed = TkmCypherProviderBCED25519.sign(kp, msg);
+            assertTrue(signed.isValid(), k.getKey());
+            g.setSg(CallBytes.hex(CallSignatures.urlUnBase64(signed.getSignature())));
+            // teeth: without the strict door this object verified
+            assertTrue(TkmCypherProviderBCED25519.verify(g.getF(), signed.getSignature(), msg).isValid(), k.getKey());
+            assertErr(() -> CallSignatures.verify(g, "goodbye", "svc:x"), "signature");
+            assertFalse(CallSignatures.isValid(g, "goodbye", "svc:x"), k.getKey());
+            // and after a wire round trip
+            CallGoodbyeBean parsed = CallJson.parse(CallJson.toWire(g), CallGoodbyeBean.class);
+            assertEquals(k.getValue(), parsed.getF(), k.getKey());
+            assertErr(() -> CallSignatures.verify(parsed, "goodbye", "svc:x"), "signature");
+            // control: the same object under the canonical spelling verifies
+            CallGoodbyeBean ok = CallJson.parse(CallJson.toWire(g), CallGoodbyeBean.class);
+            ok.setF(null);
+            ok.setSg(null);
+            CallSignatures.sign(ok, kp);
+            CallSignatures.verify(ok, "goodbye", "svc:x", identity);
+        }
+    }
+
+    /** A respelled key swapped into an otherwise valid object (signed bytes change as well): refused. */
+    @Test
+    void respelledSignerKeySwappedIntoAValidObjectIsRefused() throws Exception {
+        for (Map.Entry<String, String> k : respellKey(s.annB.getF()).entrySet()) {
+            CallAnnounceBean a = CallJson.parse(CallJson.toWire(s.annB), CallAnnounceBean.class);
+            a.setF(k.getValue());
+            assertErr(() -> CallSignatures.verify(a, "announce", a.getAud()), "signature");
+        }
+    }
+
+    /** The signature is 64-byte lowercase hex on the wire: there is no second spelling of it to accept. */
+    @Test
+    void signatureHasOneSpellingOnly() throws Exception {
+        String sg = s.annB.getSg();
+        for (String bad : List.of(sg.toUpperCase(), sg + "00", sg.substring(2), " " + sg, sg + "\n",
+                sg.substring(0, 8) + " " + sg.substring(8),
+                CallSignatures.urlBase64(CallBytes.unhex(sg)))) {
+            CallAnnounceBean a = CallJson.parse(CallJson.toWire(s.annB), CallAnnounceBean.class);
+            a.setSg(bad);
+            assertErr(() -> CallSignatures.verify(a, "announce", a.getAud()), "signature encoding");
+        }
     }
 
     @Test
