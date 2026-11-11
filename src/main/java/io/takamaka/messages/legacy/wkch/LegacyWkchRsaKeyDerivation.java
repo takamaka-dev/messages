@@ -10,9 +10,13 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
@@ -24,13 +28,28 @@ import org.bouncycastle.util.encoders.UrlBase64;
  * wallet seed: scope {@code "__WKCH__"}, keyNumber {@code index + 1}, PointyCastle 3.9.1
  * {@code RSAKeyGenerator(65537, 4096, certainty 64)}.
  *
- * <p>The API is exactly two methods — {@link #derivePublicKeyHash} (for selection by {@code enc_key_hash})
- * and {@link #deriveKeyPair} (for the unwrap). There is deliberately no method that returns an encodable
- * public key for registration, encrypts, or signs.</p>
+ * <p>The key API is exactly two methods — {@link #derivePublicKeyHash} (for selection by
+ * {@code enc_key_hash}) and {@link #deriveKeyPair} (for the unwrap). There is deliberately no method that
+ * returns an encodable public key for registration, encrypts, or signs.</p>
  *
  * <p>Derivations are memoized in memory per (SHA-256 of the seed, index) — never persisted, never keyed by
- * the seed itself. Sunset: remove with the package when no invite wrapped to a WKCH key remains on any
- * server.</p>
+ * the seed itself — in a process-wide LRU of at most {@value #MAX_CACHED_KEYS} keypairs.</p>
+ *
+ * <h2>The memo holds PRIVATE keys — callers must forget them</h2>
+ * <p>The memo is static, so without help it outlives the vault session that produced it. Every client that
+ * calls this class (directly or through {@link LegacyWkchInviteKeySelector}) MUST call:</p>
+ * <ul>
+ *   <li>{@link #forgetAll()} on <b>vault lock</b> (and on logout / shutdown of the key-holding session);</li>
+ *   <li>{@link #forget(String)} — or {@link #forgetAll()} — on <b>wallet removal</b>.</li>
+ * </ul>
+ * <p>This mirrors the Dart selector's {@code clearMemory()} (rsclient-flutter
+ * {@code legacy_wkch_invite_key_selector.dart}), including its epoch rule: a derivation still running when
+ * a forget happens returns its result to its caller but is NOT memoized, so a lock during a derivation
+ * cannot leave the key behind. Forgetting drops the references; the JVM offers no way to zero the
+ * {@code BigInteger}s, so the bytes live until garbage-collected. The only cost of forgetting is one
+ * re-derivation (seconds) on the next legacy invite.</p>
+ *
+ * <p>Sunset: remove with the package when no invite wrapped to a WKCH key remains on any server.</p>
  */
 public final class LegacyWkchRsaKeyDerivation {
 
@@ -40,7 +59,14 @@ public final class LegacyWkchRsaKeyDerivation {
     static final int CERTAINTY = 64;
     static final BigInteger PUBLIC_EXPONENT = BigInteger.valueOf(65537);
 
-    private static final Map<String, Derived> CACHE = new ConcurrentHashMap<>();
+    /**
+     * Upper bound of memoized keypairs (LRU). An identity costs one entry and only identities that actually
+     * hold a legacy-wrapped invite ever derive; past the bound the least recently used pair is forgotten and
+     * re-derived on demand.
+     */
+    public static final int MAX_CACHED_KEYS = 16;
+
+    private static final Memo CACHE = new Memo(MAX_CACHED_KEYS);
 
     private LegacyWkchRsaKeyDerivation() {
     }
@@ -70,9 +96,37 @@ public final class LegacyWkchRsaKeyDerivation {
         return derived(seed, index).keyPair;
     }
 
+    /**
+     * Forgets every memoized legacy keypair. <b>Call on vault lock</b> (and logout / shutdown); see the
+     * class comment. Derivations in flight are not cancelled — their result is returned to their caller
+     * and not memoized. Idempotent, never throws.
+     */
+    public static void forgetAll() {
+        CACHE.forgetAll();
+    }
+
+    /**
+     * Forgets every memoized legacy keypair of one wallet seed (all indexes). <b>Call on wallet
+     * removal</b> when the vault stays unlocked. Derivations in flight (of any seed) are not memoized.
+     * A null or empty seed forgets nothing. Never throws.
+     *
+     * @param seed the wallet seed (the {@code KeyBean} seed string)
+     */
+    public static void forget(String seed) {
+        if (seed == null || seed.isEmpty()) {
+            return;
+        }
+        CACHE.forgetPrefix(seedPrefix(seed));
+    }
+
     /** Whether {@code (seed, index)} is already memoized. */
     static boolean isCached(String seed, int index) {
-        return CACHE.containsKey(cacheKey(seed, index));
+        return CACHE.contains(cacheKey(seed, index));
+    }
+
+    /** How many keypairs are memoized right now. */
+    static int cachedKeys() {
+        return CACHE.size();
     }
 
     /**
@@ -82,11 +136,6 @@ public final class LegacyWkchRsaKeyDerivation {
      */
     static boolean claimFirstUse(String seed, int index) {
         return derived(seed, index).firstUse.compareAndSet(false, true);
-    }
-
-    /** Test hook: forget every memoized derivation. */
-    static void clearCache() {
-        CACHE.clear();
     }
 
     /** The public key in the Takamaka wire form (X.509, Base64URL, '.' padding). Package-private. */
@@ -107,7 +156,7 @@ public final class LegacyWkchRsaKeyDerivation {
         if (index < 0) {
             throw new IllegalArgumentException("legacy WKCH: negative index " + index);
         }
-        return CACHE.computeIfAbsent(cacheKey(seed, index), k -> derive(seed, index));
+        return CACHE.get(cacheKey(seed, index), () -> derive(seed, index));
     }
 
     private static Derived derive(String seed, int index) {
@@ -121,15 +170,135 @@ public final class LegacyWkchRsaKeyDerivation {
     }
 
     private static String cacheKey(String seed, int index) {
+        return seedPrefix(seed) + index;
+    }
+
+    /** {@code hex(SHA-256(seed)) + ":"} — the part of the memo key that names the wallet. */
+    private static String seedPrefix(String seed) {
         try {
             byte[] h = MessageDigest.getInstance("SHA-256").digest(seed.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(h) + ":" + index;
+            return HexFormat.of().formatHex(h) + ":";
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException(ex);
         }
     }
 
-    private record Derived(AsymmetricCipherKeyPair keyPair, String encKeyHash, AtomicBoolean firstUse) {
+    record Derived(AsymmetricCipherKeyPair keyPair, String encKeyHash, AtomicBoolean firstUse) {
+    }
+
+    /**
+     * The bounded memo: an access-ordered LRU of at most {@code maxEntries} derivations, with one
+     * derivation per key at a time (concurrent callers of the same key wait for the one running, as the
+     * former {@code computeIfAbsent} did) and the forget epoch described in the class comment. The
+     * derivation itself runs OUTSIDE the lock: it takes seconds and must not stall lookups or a forget.
+     */
+    static final class Memo {
+
+        private final int maxEntries;
+        private final Object lock = new Object();
+        private final LinkedHashMap<String, Derived> entries;
+        private final Map<String, FutureTask<Derived>> inFlight = new ConcurrentHashMap<>();
+        /** Bumped by every forget. A derivation that started in an earlier epoch is not memoized. */
+        private long epoch;
+
+        Memo(int maxEntries) {
+            if (maxEntries < 1) {
+                throw new IllegalArgumentException("maxEntries " + maxEntries);
+            }
+            this.maxEntries = maxEntries;
+            this.entries = new LinkedHashMap<>(16, 0.75f, true) {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Derived> eldest) {
+                    return size() > Memo.this.maxEntries;
+                }
+            };
+        }
+
+        Derived get(String key, Supplier<Derived> deriver) {
+            final long startedIn;
+            synchronized (lock) {
+                Derived hit = entries.get(key);
+                if (hit != null) {
+                    return hit;
+                }
+                startedIn = epoch;
+            }
+            FutureTask<Derived> mine = new FutureTask<>(deriver::get);
+            FutureTask<Derived> running = inFlight.putIfAbsent(key, mine);
+            if (running != null) {
+                // Someone else is deriving this key: share the result, memoization is theirs to do.
+                return await(running);
+            }
+            try {
+                synchronized (lock) {
+                    // A derivation of this key may have finished between the miss and the claim.
+                    Derived hit = entries.get(key);
+                    if (hit != null && epoch == startedIn) {
+                        return hit;
+                    }
+                }
+                mine.run();
+                Derived derived = await(mine);
+                synchronized (lock) {
+                    if (epoch == startedIn) {
+                        entries.put(key, derived);
+                    }
+                }
+                return derived;
+            } finally {
+                inFlight.remove(key, mine);
+            }
+        }
+
+        boolean contains(String key) {
+            synchronized (lock) {
+                return entries.containsKey(key);
+            }
+        }
+
+        int size() {
+            synchronized (lock) {
+                return entries.size();
+            }
+        }
+
+        void forgetAll() {
+            synchronized (lock) {
+                epoch++;
+                entries.clear();
+            }
+        }
+
+        void forgetPrefix(String prefix) {
+            synchronized (lock) {
+                epoch++;
+                entries.keySet().removeIf(k -> k.startsWith(prefix));
+            }
+        }
+
+        private static Derived await(FutureTask<Derived> task) {
+            boolean interrupted = false;
+            try {
+                while (true) {
+                    try {
+                        return task.get();
+                    } catch (InterruptedException ex) {
+                        interrupted = true;
+                    } catch (ExecutionException ex) {
+                        if (ex.getCause() instanceof RuntimeException re) {
+                            throw re;
+                        }
+                        throw new IllegalStateException(ex.getCause());
+                    }
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------------------------------------------

@@ -36,6 +36,13 @@
  * made odd, +2 walk with fixed-base Miller-Rabin over the first ⌈t/2⌉ small primes, which draws NO
  * randomness). It is pinned by the known-answer test {@code LegacyWkchRsaKeyDerivationVectorTest}.</p>
  *
+ * <h2>Lifetime of the regenerated key — the caller's duty</h2>
+ * <p>The regenerated keypairs are memoized in a static, bounded (LRU) in-memory cache. They are PRIVATE keys:
+ * a client must call {@link io.takamaka.messages.legacy.wkch.LegacyWkchRsaKeyDerivation#forgetAll()} on
+ * vault lock and {@link io.takamaka.messages.legacy.wkch.LegacyWkchRsaKeyDerivation#forget(String)} (or
+ * {@code forgetAll()}) on wallet removal, exactly as the Dart selector's {@code clearMemory()} is called on
+ * app lock.</p>
+ *
  * <h2>Sunset</h2>
  * <p>Remove this package when no invite wrapped to a WKCH key remains on any server (every conversation
  * created before the wallet app's build 47 has been deleted or retention-swept on TEST and PROD).</p>
