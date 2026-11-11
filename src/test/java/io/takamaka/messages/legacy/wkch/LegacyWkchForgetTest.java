@@ -192,4 +192,75 @@ class LegacyWkchForgetTest {
         assertFalse(memo.contains("bad:0"));
         assertEquals("ok", memo.get("bad:0", () -> fake("ok")).encKeyHash(), "a failure is retried, not cached");
     }
+
+    @Test
+    @DisplayName("a forget landing INSIDE select / unwrap / select+unwrap is not undone: one lookup per operation")
+    void forgetBetweenTheStepsLeavesTheMemoEmpty() throws Exception {
+        com.fasterxml.jackson.databind.JsonNode root;
+        try (InputStream in = LegacyWkchForgetTest.class.getResourceAsStream("/legacy_wkch_rsa_vectors.json")) {
+            root = new ObjectMapper().readTree(in);
+        }
+        String seed = root.get("seed").asText();
+        String legacy0 = null;
+        String parity0 = null;
+        for (com.fasterxml.jackson.databind.JsonNode v : root.get("vectors")) {
+            if (v.get("index").asInt() == 0 && "legacy_wkch".equals(v.get("scheme").asText())) {
+                legacy0 = v.get("public_key_url64").asText();
+            }
+            if (v.get("index").asInt() == 0 && "java_parity".equals(v.get("scheme").asText())) {
+                parity0 = v.get("public_key_url64").asText();
+            }
+        }
+        String conversationKey = "F340-forget-mid-operation-key";
+        io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean invite =
+                new io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean();
+        invite.setEncryptionKeyHash(io.takamaka.wallet.utils.TkmSignUtils.Hash256B64URL(legacy0));
+        invite.setEncryptedTopicKey(
+                io.takamaka.wallet.TkmCypherProviderBCRSA4096ENC256.encrypt(legacy0, conversationKey));
+
+        AtomicInteger locks = new AtomicInteger();
+        try {
+            // the vault locks right after the operation's memo lookup, before hash / key pair / flag are used
+            LegacyWkchInviteKeySelector.afterLookupForTest = () -> {
+                locks.incrementAndGet();
+                LegacyWkchRsaKeyDerivation.forgetAll();
+            };
+
+            LegacyWkchRsaKeyDerivation.deriveKeyPair(seed, 0); // memoized (hit path)
+            assertTrue(LegacyWkchRsaKeyDerivation.isCached(seed, 0));
+            assertEquals(conversationKey, LegacyWkchInviteKeySelector.unwrapLegacy(invite, seed, 0));
+            assertEquals(0, LegacyWkchRsaKeyDerivation.cachedKeys(), "unwrapLegacy put the key back after the lock");
+
+            // miss path: the operation derives, the lock lands, nothing may come back
+            assertEquals(conversationKey, LegacyWkchInviteKeySelector.unwrapLegacy(invite, seed, 0));
+            assertEquals(0, LegacyWkchRsaKeyDerivation.cachedKeys());
+
+            assertEquals(LegacyWkchInviteKeySelector.Selection.LEGACY_WKCH,
+                    LegacyWkchInviteKeySelector.select(invite, parity0, seed, 0));
+            assertEquals(0, LegacyWkchRsaKeyDerivation.cachedKeys());
+
+            // select + unwrap as ONE operation: one lookup, so one lock, and the memo stays empty
+            int before = locks.get();
+            LegacyWkchInviteKeySelector.Unwrapped u =
+                    LegacyWkchInviteKeySelector.selectAndUnwrapLegacy(invite, parity0, seed, 0);
+            assertEquals(LegacyWkchInviteKeySelector.Selection.LEGACY_WKCH, u.selection());
+            assertEquals(conversationKey, u.conversationKey());
+            assertEquals(before + 1, locks.get(), "exactly one memo lookup for select + unwrap");
+            assertEquals(0, LegacyWkchRsaKeyDerivation.cachedKeys(), "select+unwrap put the key back after the lock");
+            assertFalse(u.toString().contains(conversationKey));
+        } finally {
+            LegacyWkchInviteKeySelector.afterLookupForTest = null;
+            LegacyWkchRsaKeyDerivation.forgetAll();
+        }
+
+        // no lookup at all for a parity / hashless invite
+        io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean parityInvite =
+                new io.takamaka.messages.chat.conversation.TopicKeyDistributionItemBean();
+        parityInvite.setEncryptionKeyHash(io.takamaka.wallet.utils.TkmSignUtils.Hash256B64URL(parity0));
+        LegacyWkchInviteKeySelector.Unwrapped p =
+                LegacyWkchInviteKeySelector.selectAndUnwrapLegacy(parityInvite, parity0, seed, 0);
+        assertEquals(LegacyWkchInviteKeySelector.Selection.PARITY, p.selection());
+        assertEquals(null, p.conversationKey());
+        assertEquals(0, LegacyWkchRsaKeyDerivation.cachedKeys());
+    }
 }

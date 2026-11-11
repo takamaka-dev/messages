@@ -149,7 +149,12 @@ public final class LegacyWkchRsaKeyDerivation {
         }
     }
 
-    private static Derived derived(String seed, int index) {
+    /**
+     * The ONE memo lookup of an operation. A caller that needs more than one of {hash, key pair, first-use
+     * flag} takes the record once and uses it throughout: a second lookup after a {@link #forgetAll()}
+     * would miss, re-derive in the NEW epoch and put the private key back in the memo after the lock.
+     */
+    static Derived derived(String seed, int index) {
         if (seed == null || seed.isEmpty()) {
             throw new IllegalArgumentException("legacy WKCH: empty seed");
         }
