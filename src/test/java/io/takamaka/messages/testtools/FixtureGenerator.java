@@ -52,21 +52,33 @@ import org.junit.jupiter.api.Test;
  * per run (no seeded RNG — see §2.11), so byte-equality across runs is
  * neither expected nor required. The cross-platform contract is
  * agreement on <em>validation outcome</em> for the frozen corpus, verified by
- * {@code CrossPlatformVectorTest} (Java).</p>
+ * {@code CrossPlatformVectorTest} (Java) and by its Dart mirror (below).</p>
  *
- * <p>🔴 <b>There is NO Dart mirror. This javadoc claimed one until 2026-09-02.</b>
- * Searched across {@code rsclient-flutter}, {@code tkmChat}, {@code wallet-core-flutter}
- * and {@code wallet-extra-flutter}: <b>zero</b> references to this corpus. So the
- * cross-platform half of the contract above is asserted by this comment and
- * checked by nobody — which is exactly how a Java-side drift sat unnoticed until
- * the validator was corrected (N-29: five vectors had been minted with the stale
- * hash expression, and they agreed with the stale validator and with nothing
- * else). A javadoc asserting a control that does not exist is worse than
- * silence, because it stops the next reader looking.</p>
+ * <p><b>The Dart mirror</b> is
+ * {@code rsclient-flutter/test/message_action_parity_test.dart} (commit
+ * {@code 90038fa}, 2026-10-14, C152–C155). It consumes every fixture
+ * {@code V01}–{@code V19} / {@code I01}–{@code I18}, copied verbatim under
+ * {@code rsclient-flutter/test/fixtures/message_actions/}: it decrypts each
+ * signed wire envelope and compares the result with
+ * {@code expected_inner_plaintext.json}, validates it and compares the verdict
+ * with {@code expected_validation.json} code by code, and rebuilds
+ * {@code V05}–{@code V19} with the Dart builders. Its {@code fixture drift}
+ * group compares the copy with this module's tree when the two repositories
+ * are checked out side by side.</p>
  *
- * <p>Tracked as <b>C61</b> in {@code rschat-docs/HANDOFF.md} §3.10. Either build
- * the mirror or delete the claim — do not restore this sentence without the
- * test that makes it true.</p>
+ * <p><b>So regenerating here is half of the job:</b> after a run, copy the
+ * fixture tree to {@code rsclient-flutter/test/fixtures/message_actions/} and
+ * run that Dart test. A corpus regenerated on the Java side only leaves the
+ * Dart copy stale.</p>
+ *
+ * <p>History (C61, {@code rschat-docs/HANDOFF.md} §3.10): until 2026-09-02 this
+ * javadoc claimed a Dart mirror that did not exist, and from then until
+ * 2026-10-14 it said there was none. In that gap a Java-side drift sat
+ * unnoticed until the validator was corrected (N-29: five vectors had been
+ * minted with the stale hash expression, and agreed with the stale validator
+ * and with nothing else). If the Dart test is ever removed or renamed, correct
+ * this paragraph in the same change: a javadoc asserting a control that does
+ * not exist stops the next reader looking.</p>
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
