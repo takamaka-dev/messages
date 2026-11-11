@@ -1,0 +1,228 @@
+{
+  "generator" : "rsclient-flutter/tool/vectors/ConversationCreatorMemberVector.java",
+  "creator" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
+  "member" : "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI.",
+  "outsider" : "z4jUraqYnBfPuAGBA72YBGyMl4_NWkO3aEhiKQ5BGfc.",
+  "conversation_hash_name" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+  "cases" : [ {
+    "name" : "genuine",
+    "why" : "signed by a roster identity; creator = from",
+    "requested_hash" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+    "expected" : "verified",
+    "expected_creator" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
+    "expected_title" : "ok",
+    "symmetric_key" : "q4hHdtj0rLFgs5OO2QiKFg2cicKfVpdedqnoq9dvl5g4mjbD5qqmXNk4BaOsvShkxD78ac0eJyxH1sqPGXqYAmz4SxoksV2Gv2Vr0bH5S9oDybJDU2vaY6PRoS8ZGgCkkgIZrOSeEX3Q58MOC8QqTNuka8eFOutyXDyXImEMqg8j4Ar5wf70dDsurAkAAnRqg2GKl7peSy7ZN9TnfB7WnZbYWGWUK0DoyZyLET8eKdeNgzhlMFi58ZVNO3HsWxurKZAotTdAgf2DsX8SZSiDyLQ6oP84ochASaoQtZkbcOdK3jN1NAmYX5nghORpen5s7c2uLJfwJt6vG2tsKCE2mRP50emZ3yBOGTVSEDzIpTTw0zo9e4n3ma7PxOQdRlJQw3eXHzZzElnbXVTO",
+    "create_conversation_request" : {
+      "from" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
+      "signature" : "11QDyAb4te__m_0nDsE4F9g2Aq7cVKb1fNCL6Pnr9sZkeFdZjwb79XKOEdWJ5erK7R0aOuz4Dvy0NwO0iDirAg..",
+      "message_type" : "TOPIC_CREATION",
+      "signature_type" : "Ed25519BC",
+      "topic" : {
+        "topic_title_hash" : "uM77fGnY_UpsIKKGphj2zJrQ4PHDUVGZz6dJ6B95rGw.",
+        "topic_symmetric_key_signature" : "X3exo_lB5jjLU8B-1Rp05pjqgGlWRNkQRemgORIxyCo.",
+        "topic_description" : {
+          "pa" : "PBKDF2WithHmacSHA512",
+          "it" : 20000,
+          "tr" : "AES/CBC/PKCS5Padding",
+          "ka" : "AES",
+          "tv" : "v0_1_a",
+          "kl" : 256,
+          "ec" : "UTF-8",
+          "em" : [ "ZkiW-3H16R7M81kCV_CQRw..", "AeCy0jmtrIhxLHn3bBcQqtNCZPOvuUxVgZF3F1owERBH0NK5rKadH-iLtRnyv4Ql68avyMpGqjTkWxnx2vacnqsl2mrQ1jFJvRHMICP1qdsigGfSOUqmeclSFijgVh80ooqq3QNd-0k5d6pt8mb06UfTxT_2hRMC4t-u9IkboaAp2hF4NwjDyLkUC03AQNT8N7CExw1Aps56ZdPNpE1JkviSleU9VJRY9OEnzZjbJ9umOTGJkEMyPfCulyAOHTKvpQ0xsgBGJ_bYBejYMNoVOxulVnKrFgQCi-ga0w56Y3sqO_IvdcKza2gkOohUlbFx_Rjcihuzvx-3-J2IgCc0LrSGK1IDCU9sSd7dNhQJPlyYbKnljhVS_ZvxPk7JoqWrJ9N4OVwZxP_FK-X_g_S4Y76i-EQ7a9Caeq_i-Gy_wgR3ODZ8qMfmE3Uyfbr29Nm_4O2sg7ckIBp-OYYZmHIRU-kvmPuOf8ws7TBuuZA_0fAJhzIREeBknbK7m46bboU2bakTwfSy87TE54UKnl6I6vt1u5sSt4gXSQ-23-5DKWYncjMBSsfbMGl5ImFR-0mgax2EMvNFwGjODUyCfjLze3kmkG8187Rod1d_YOCM4O1W_dKFSFyiTDCAhCzzZwWtF5mWU9MreWdzKXBR31Ckb87-JxeMwWJUHqL9Lhb4WOs." ]
+        },
+        "topic_members_map" : {
+          "topic_invitation_list" : {
+            "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-9xIs",
+              "enc_key" : "placeholder-enc-key-9xIs"
+            },
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-AAAA",
+              "enc_key" : "placeholder-enc-key-AAAA"
+            },
+            "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-HZ5S",
+              "enc_key" : "placeholder-enc-key-HZ5S"
+            }
+          }
+        }
+      }
+    }
+  }, {
+    "name" : "resigned_by_non_member",
+    "why" : "the genuine topic re-signed by an outsider key: signature and hash both hold, from is not a roster identity",
+    "requested_hash" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+    "expected" : "signerNotMember",
+    "expected_creator" : null,
+    "expected_title" : "ok",
+    "symmetric_key" : "q4hHdtj0rLFgs5OO2QiKFg2cicKfVpdedqnoq9dvl5g4mjbD5qqmXNk4BaOsvShkxD78ac0eJyxH1sqPGXqYAmz4SxoksV2Gv2Vr0bH5S9oDybJDU2vaY6PRoS8ZGgCkkgIZrOSeEX3Q58MOC8QqTNuka8eFOutyXDyXImEMqg8j4Ar5wf70dDsurAkAAnRqg2GKl7peSy7ZN9TnfB7WnZbYWGWUK0DoyZyLET8eKdeNgzhlMFi58ZVNO3HsWxurKZAotTdAgf2DsX8SZSiDyLQ6oP84ochASaoQtZkbcOdK3jN1NAmYX5nghORpen5s7c2uLJfwJt6vG2tsKCE2mRP50emZ3yBOGTVSEDzIpTTw0zo9e4n3ma7PxOQdRlJQw3eXHzZzElnbXVTO",
+    "create_conversation_request" : {
+      "from" : "z4jUraqYnBfPuAGBA72YBGyMl4_NWkO3aEhiKQ5BGfc.",
+      "signature" : "mbxoiZTYGMlGcWlH0gqHi-Hc-yHrqTeh-9ncWwNNGhQz5rjABtVb6Yg_NEZVXDQViJoVN2RwaMsxYLX0fZffDw..",
+      "message_type" : "TOPIC_CREATION",
+      "signature_type" : "Ed25519BC",
+      "topic" : {
+        "topic_title_hash" : "uM77fGnY_UpsIKKGphj2zJrQ4PHDUVGZz6dJ6B95rGw.",
+        "topic_symmetric_key_signature" : "X3exo_lB5jjLU8B-1Rp05pjqgGlWRNkQRemgORIxyCo.",
+        "topic_description" : {
+          "pa" : "PBKDF2WithHmacSHA512",
+          "it" : 20000,
+          "tr" : "AES/CBC/PKCS5Padding",
+          "ka" : "AES",
+          "tv" : "v0_1_a",
+          "kl" : 256,
+          "ec" : "UTF-8",
+          "em" : [ "ZkiW-3H16R7M81kCV_CQRw..", "AeCy0jmtrIhxLHn3bBcQqtNCZPOvuUxVgZF3F1owERBH0NK5rKadH-iLtRnyv4Ql68avyMpGqjTkWxnx2vacnqsl2mrQ1jFJvRHMICP1qdsigGfSOUqmeclSFijgVh80ooqq3QNd-0k5d6pt8mb06UfTxT_2hRMC4t-u9IkboaAp2hF4NwjDyLkUC03AQNT8N7CExw1Aps56ZdPNpE1JkviSleU9VJRY9OEnzZjbJ9umOTGJkEMyPfCulyAOHTKvpQ0xsgBGJ_bYBejYMNoVOxulVnKrFgQCi-ga0w56Y3sqO_IvdcKza2gkOohUlbFx_Rjcihuzvx-3-J2IgCc0LrSGK1IDCU9sSd7dNhQJPlyYbKnljhVS_ZvxPk7JoqWrJ9N4OVwZxP_FK-X_g_S4Y76i-EQ7a9Caeq_i-Gy_wgR3ODZ8qMfmE3Uyfbr29Nm_4O2sg7ckIBp-OYYZmHIRU-kvmPuOf8ws7TBuuZA_0fAJhzIREeBknbK7m46bboU2bakTwfSy87TE54UKnl6I6vt1u5sSt4gXSQ-23-5DKWYncjMBSsfbMGl5ImFR-0mgax2EMvNFwGjODUyCfjLze3kmkG8187Rod1d_YOCM4O1W_dKFSFyiTDCAhCzzZwWtF5mWU9MreWdzKXBR31Ckb87-JxeMwWJUHqL9Lhb4WOs." ]
+        },
+        "topic_members_map" : {
+          "topic_invitation_list" : {
+            "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-9xIs",
+              "enc_key" : "placeholder-enc-key-9xIs"
+            },
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-AAAA",
+              "enc_key" : "placeholder-enc-key-AAAA"
+            },
+            "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-HZ5S",
+              "enc_key" : "placeholder-enc-key-HZ5S"
+            }
+          }
+        }
+      }
+    }
+  }, {
+    "name" : "from_is_not_the_signer",
+    "why" : "genuine signature, from rewritten to another member",
+    "requested_hash" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+    "expected" : "badSignature",
+    "expected_creator" : null,
+    "expected_title" : "ok",
+    "symmetric_key" : "q4hHdtj0rLFgs5OO2QiKFg2cicKfVpdedqnoq9dvl5g4mjbD5qqmXNk4BaOsvShkxD78ac0eJyxH1sqPGXqYAmz4SxoksV2Gv2Vr0bH5S9oDybJDU2vaY6PRoS8ZGgCkkgIZrOSeEX3Q58MOC8QqTNuka8eFOutyXDyXImEMqg8j4Ar5wf70dDsurAkAAnRqg2GKl7peSy7ZN9TnfB7WnZbYWGWUK0DoyZyLET8eKdeNgzhlMFi58ZVNO3HsWxurKZAotTdAgf2DsX8SZSiDyLQ6oP84ochASaoQtZkbcOdK3jN1NAmYX5nghORpen5s7c2uLJfwJt6vG2tsKCE2mRP50emZ3yBOGTVSEDzIpTTw0zo9e4n3ma7PxOQdRlJQw3eXHzZzElnbXVTO",
+    "create_conversation_request" : {
+      "from" : "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI.",
+      "signature" : "11QDyAb4te__m_0nDsE4F9g2Aq7cVKb1fNCL6Pnr9sZkeFdZjwb79XKOEdWJ5erK7R0aOuz4Dvy0NwO0iDirAg..",
+      "message_type" : "TOPIC_CREATION",
+      "signature_type" : "Ed25519BC",
+      "topic" : {
+        "topic_title_hash" : "uM77fGnY_UpsIKKGphj2zJrQ4PHDUVGZz6dJ6B95rGw.",
+        "topic_symmetric_key_signature" : "X3exo_lB5jjLU8B-1Rp05pjqgGlWRNkQRemgORIxyCo.",
+        "topic_description" : {
+          "pa" : "PBKDF2WithHmacSHA512",
+          "it" : 20000,
+          "tr" : "AES/CBC/PKCS5Padding",
+          "ka" : "AES",
+          "tv" : "v0_1_a",
+          "kl" : 256,
+          "ec" : "UTF-8",
+          "em" : [ "ZkiW-3H16R7M81kCV_CQRw..", "AeCy0jmtrIhxLHn3bBcQqtNCZPOvuUxVgZF3F1owERBH0NK5rKadH-iLtRnyv4Ql68avyMpGqjTkWxnx2vacnqsl2mrQ1jFJvRHMICP1qdsigGfSOUqmeclSFijgVh80ooqq3QNd-0k5d6pt8mb06UfTxT_2hRMC4t-u9IkboaAp2hF4NwjDyLkUC03AQNT8N7CExw1Aps56ZdPNpE1JkviSleU9VJRY9OEnzZjbJ9umOTGJkEMyPfCulyAOHTKvpQ0xsgBGJ_bYBejYMNoVOxulVnKrFgQCi-ga0w56Y3sqO_IvdcKza2gkOohUlbFx_Rjcihuzvx-3-J2IgCc0LrSGK1IDCU9sSd7dNhQJPlyYbKnljhVS_ZvxPk7JoqWrJ9N4OVwZxP_FK-X_g_S4Y76i-EQ7a9Caeq_i-Gy_wgR3ODZ8qMfmE3Uyfbr29Nm_4O2sg7ckIBp-OYYZmHIRU-kvmPuOf8ws7TBuuZA_0fAJhzIREeBknbK7m46bboU2bakTwfSy87TE54UKnl6I6vt1u5sSt4gXSQ-23-5DKWYncjMBSsfbMGl5ImFR-0mgax2EMvNFwGjODUyCfjLze3kmkG8187Rod1d_YOCM4O1W_dKFSFyiTDCAhCzzZwWtF5mWU9MreWdzKXBR31Ckb87-JxeMwWJUHqL9Lhb4WOs." ]
+        },
+        "topic_members_map" : {
+          "topic_invitation_list" : {
+            "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-9xIs",
+              "enc_key" : "placeholder-enc-key-9xIs"
+            },
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-AAAA",
+              "enc_key" : "placeholder-enc-key-AAAA"
+            },
+            "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-HZ5S",
+              "enc_key" : "placeholder-enc-key-HZ5S"
+            }
+          }
+        }
+      }
+    }
+  }, {
+    "name" : "another_conversation",
+    "why" : "a genuine creation of a different conversation",
+    "requested_hash" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+    "expected" : "hashMismatch",
+    "expected_creator" : null,
+    "expected_title" : "ok",
+    "symmetric_key" : "YHqe8zR8tyg8rWyfHdotM7HgZa6M3TE5PhmrqZBkcDOU1AtVNJhgluHwdgcDOj30Vp2BkKatz3vRTV80t7Spk5i1HBfFvJbVYnwLGO9hKFXNaw7BMHrXs1hnfDjqx9GAWxSZA3CMKIZMEja8tdl43eHxnukR1zSoPZUL57I6sXYF5xqGnaaFr0bDLZtC5hFg0nC0dBNdHfAc5IIqA7zaCDRn5HDFvHSsA1kAf03owgZEWjQmJQErGzctGnTzwfUNhPrINpVlDbGewGJKuw1PnBpq5GqrkruwvtFuRM2oa9huHjT4U08iH4qeyZEOxowsvMpQpWoqyXFDPVAbiuc7OPN7PYKjtSHtsawoZwbYKA6WlZVT8FjFxzW2mswn2hGLHq483cUNO5aHsgTF",
+    "create_conversation_request" : {
+      "from" : "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo.",
+      "signature" : "EfWmasbkzoFPQ6oqaxTdp7cUZ2YAOvg6UoWD3tODUy2CPVScoCxxVEKVAkcSbyKifzrfqbzExoOdwpIb8FUcAw..",
+      "message_type" : "TOPIC_CREATION",
+      "signature_type" : "Ed25519BC",
+      "topic" : {
+        "topic_title_hash" : "a21S3SZH-7sUbz3k46Mw1r7y-d65BFBJgYCB1BsDwTM.",
+        "topic_symmetric_key_signature" : "4Jh9sVyKTk8-gDEWSnhUkzDLsgCQQDdUm-e2SmGJzEs.",
+        "topic_description" : {
+          "pa" : "PBKDF2WithHmacSHA512",
+          "it" : 20000,
+          "tr" : "AES/CBC/PKCS5Padding",
+          "ka" : "AES",
+          "tv" : "v0_1_a",
+          "kl" : 256,
+          "ec" : "UTF-8",
+          "em" : [ "L-8Eo2ibBSp-Ex4F-NRHdQ..", "xw-0EezoSADt0G4SZakuUzcvzCagsSO1z_agxhb9hbZDR4jF6gUuKZsiJfM3IYiG3NcO45mM2u4XzHq13LI27-mCkgRacFrWQPAICQualF6allW9AEJcCZmvbZItzQSxiJ3UCU4-gx-E9wI5JMfoQotx32K3NQzV-bHj42Zwjfw7I7cSI3SJmWEc5nIhDh2hXAGdO_gTTlW68w2jgnGHDsyDzMmi4HrtSIa4fclGnAVGTP2XIsPGsNhHLn-KTBSW4w8iRSXQ-kDyPD7X9mzUkunOtdsBvxX4Vd6-07bqLWrBP6Ll7n53zXV-0LzVM21yagoCVKeyRoshdZzptt3tgOebbTe8fYsZTm0peVD-DVypFFxSINtsjnme_-f4cR-jECo25SzAIZ9DdgSGVBwrdu_fTR6MPoPx1VjlgJKsC7odKWrr4mPNgRhJVUxsQ_sapJxCpD0nQmh_UX7d4QwmDXX2MncPnTWgp4200XB4v8asbofll5paZKiyLoN_OI5oM4UT29ySR_KyXYEnNdR6bP9Im7Mt7oVkt1WiAKGfK8m9k0r9ZPEYfaJASgNeHKISCCwRosGQnc0eZ0WTxoc61wt7h1O8wzc64JCP89PB8UK_PkOc8JFL7fs-3f0o-vJWdaN2_bj025IG3A7G74ltZCoSRO3eFzt6ajeZLp0aa3Y." ]
+        },
+        "topic_members_map" : {
+          "topic_invitation_list" : {
+            "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-9xIs",
+              "enc_key" : "placeholder-enc-key-9xIs"
+            },
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-AAAA",
+              "enc_key" : "placeholder-enc-key-AAAA"
+            },
+            "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-HZ5S",
+              "enc_key" : "placeholder-enc-key-HZ5S"
+            }
+          }
+        }
+      }
+    }
+  }, {
+    "name" : "title_not_bound_to_key",
+    "why" : "the genuine roster and topic_title_hash copied, a different key and title, signed by a member: signature, hash, membership and key commitment all hold; the decrypted title+salt does not hash to topic_title_hash",
+    "requested_hash" : "b28abc48bb8065b680ff4dfb75ea47e1e0fb3cca09935d4e6a2deda88255bde2",
+    "expected" : "verified",
+    "expected_creator" : "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI.",
+    "expected_title" : "titleHashMismatch",
+    "symmetric_key" : "FZymzvAw0yB3nBrAgP5bSwD52PUXW752mZjg4fmgAGe4e60JlzXaIdaQqd3DXNcp6kYjVa7Be6hEZVdQYPMmXk22I9Y95VbwJ0yg5uOuNavyjZcg5kHVD8Zu2f05x6M1by2azL87UKduTWPAIA4cQ2R9u70E2cBUaONIQE8BPKaqfKmHzkgqslQSeZyPNAiaE4mKLKIuLQBLnLwlUYQJmUTt18wk36N5IAYru1k90XjedcA5F02IpOh0Ss6sV3ii9ZZ1An3PTLrsjoy6GsQHlqafcJjvzld0MDSld7grsQNQ6a2d3YIzbmOxdew5CImzj1QjkapaGHXrrD90vFW4weReuner0eqggdSp1whWQPl67bdFQZQSHwFKs6KdwOxLvfx0gwLB6AgxZ5K3",
+    "create_conversation_request" : {
+      "from" : "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI.",
+      "signature" : "FZM1D7bCQzkfImvLN2ZZ5Hxp_Vd9e8Vu81h2QXTjbJQkOJmlvG8JStqwjupaB7sA5_ov7RQuWPHcD6rFjTRBAQ..",
+      "message_type" : "TOPIC_CREATION",
+      "signature_type" : "Ed25519BC",
+      "topic" : {
+        "topic_title_hash" : "uM77fGnY_UpsIKKGphj2zJrQ4PHDUVGZz6dJ6B95rGw.",
+        "topic_symmetric_key_signature" : "Iw5hVzQGyn1EQuzU34wWzPCEyr_4Ne3m9F2-7IFnteY.",
+        "topic_description" : {
+          "pa" : "PBKDF2WithHmacSHA512",
+          "it" : 20000,
+          "tr" : "AES/CBC/PKCS5Padding",
+          "ka" : "AES",
+          "tv" : "v0_1_a",
+          "kl" : 256,
+          "ec" : "UTF-8",
+          "em" : [ "jq8okjbROzJhF989TUqIcw..", "hmf6-HgAY7nGhe7ZJEQZVQqmZ14pgCsMBnewiOzBVdYQpZs2J1eq9UADiYmFsyFNAGr38f1UL3Gv5zpxRjhe7pROrkFmLvxPB4E2Ma_ZiyVFK-SMiTiZL-8PJjROWqc9cYSqF2fHL-IkkuB3-VyvAdar8fXnS4GUMcNSOewqi3LsqcsYyC8MhUAfrX6b47P3bK60H0CS0j7W6-EPCFWxFjJD7QoJG89kAKaAdjfBBaxijJBvj2EGbkbB0TEuybS9v0pC5QQRME60yNKxZvJlS54gm5PnHymXBaKryBQ_HovzL3MQ97riCE5Mgn3ki-CPscYCOF0AVgWQxCTysoA7SSKSAoYtScYiZfDnAB9fnSYCYsSCLysFbVNxc4u1a60jV9ktnbjjzQkQOeYaubDKWauii9do-4dxDGqi_qMWEZ508zyq2qDf1PE3r_JaqE_VPd407eHjvtfqcK7ztGae3zJ0lLRR1ES_iNT5viprADLrVDi5hAAEbDuS91InaIMumz_jiE0d0AIuCvKiKrpKRpnqQP2CTM4U0-ri-sIuFdaSQtwL77KyIv6GUGJtbvce7eD2jYQt9HrTGx6vrZL_Jft-hURv63pxq3bt8jFXpmFAlHREEwBAMy9AOt-EyHrgji7eHLgrav0TBCOOpp35FNlxfY8X_5z1SvIZmv8UKF4." ]
+        },
+        "topic_members_map" : {
+          "topic_invitation_list" : {
+            "9xIsD_XELYretqJPxcXdDD1qIFGe5v-2mOktmIjRaTo." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-9xIs",
+              "enc_key" : "placeholder-enc-key-9xIs"
+            },
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-AAAA",
+              "enc_key" : "placeholder-enc-key-AAAA"
+            },
+            "HZ5S5E6yhZzIPp_nNmmcB0GaSYr0Toxfox_HOhrsAkI." : {
+              "enc_key_hash" : "placeholder-enc-key-hash-HZ5S",
+              "enc_key" : "placeholder-enc-key-HZ5S"
+            }
+          }
+        }
+      }
+    }
+  } ]
+}

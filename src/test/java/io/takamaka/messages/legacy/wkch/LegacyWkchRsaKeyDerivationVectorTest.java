@@ -41,7 +41,7 @@ class LegacyWkchRsaKeyDerivationVectorTest {
             seed = root.get("seed").asText();
             vectors = root.get("vectors");
         }
-        LegacyWkchRsaKeyDerivation.clearCache();
+        LegacyWkchRsaKeyDerivation.forgetAll();
     }
 
     private static JsonNode vector(String scheme, int index) {
@@ -133,7 +133,7 @@ class LegacyWkchRsaKeyDerivationVectorTest {
         TopicKeyDistributionItemBean legacyInvite = invite(legacy0,
                 TkmCypherProviderBCRSA4096ENC256.encrypt(legacy0, conversationKey));
 
-        LegacyWkchRsaKeyDerivation.clearCache();
+        LegacyWkchRsaKeyDerivation.forgetAll();
         assertFalse(LegacyWkchRsaKeyDerivation.isCached(seed, 0));
         // the hook's order: select (derives) then unwrap — the first unwrap still reports "regenerated"
         assertEquals(LegacyWkchInviteKeySelector.Selection.LEGACY_WKCH,

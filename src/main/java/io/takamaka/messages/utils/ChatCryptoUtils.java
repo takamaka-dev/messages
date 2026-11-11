@@ -1568,7 +1568,7 @@ public class ChatCryptoUtils {
             //java 17 limitation...
             switch (fromJsonToSignedMessageBean.getSignatureType()) {
                 case "Ed25519BC":
-                    verifyResult = TkmCypherProviderBCED25519.verify(pk, fromJsonToSignedMessageBean.getSignature(), jsonCanonical);
+                    verifyResult = ChatSignatureVerifier.verifyEd25519(pk, fromJsonToSignedMessageBean.getSignature(), jsonCanonical);
                     break;
                 default:
                     throw new UnsupportedSignatureCypherException("unsupported message type" + fromJsonToSignedMessageBean.getSignatureType());
@@ -2050,7 +2050,7 @@ public class ChatCryptoUtils {
             throws InvalidEmbeddedEnvelopeException {
         try {
             String canonical = SimpleRequestHelper.getCanonicalJson(originalEnvelope.getBasicMessageSignedContentBean());
-            TkmCypherBean verify = TkmCypherProviderBCED25519.verify(
+            TkmCypherBean verify = ChatSignatureVerifier.verifyEd25519(
                     originalEnvelope.getFrom(), originalEnvelope.getSignature(), canonical);
             if (!verify.isValid()) {
                 throw new InvalidEmbeddedEnvelopeException(
