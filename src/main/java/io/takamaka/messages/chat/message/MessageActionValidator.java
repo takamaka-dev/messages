@@ -27,7 +27,7 @@ import io.takamaka.messages.exception.MalformedProtocolVersionException;
 import io.takamaka.messages.exception.MissingVersionWithFeaturesException;
 import io.takamaka.messages.exception.UnknownActionException;
 import io.takamaka.messages.utils.SimpleRequestHelper;
-import io.takamaka.wallet.TkmCypherProviderBCED25519;
+import io.takamaka.messages.utils.ChatSignatureVerifier;
 import io.takamaka.wallet.beans.TkmCypherBean;
 import io.takamaka.wallet.utils.FixedParameters;
 import io.takamaka.wallet.utils.TkmSignUtils;
@@ -389,7 +389,7 @@ public final class MessageActionValidator {
             String outerConversationHash, String senderPk) throws InnerSignatureFailureException {
         try {
             String canonical = SimpleRequestHelper.getCanonicalJson(original.getBasicMessageSignedContentBean());
-            TkmCypherBean verify = TkmCypherProviderBCED25519.verify(
+            TkmCypherBean verify = ChatSignatureVerifier.verifyEd25519(
                     original.getFrom(), original.getSignature(), canonical);
             if (!verify.isValid()) {
                 throw new InnerSignatureFailureException(original.getSignature(), outerConversationHash, senderPk);
