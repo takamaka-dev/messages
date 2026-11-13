@@ -754,6 +754,218 @@
       "expected" : "SIGNATURE_ERROR"
     }
   ],
+  "server_refusal_vectors" : [
+    {
+      "name" : "apns_off",
+      "desc" : "the server's APNs sender is off: never a success that stores nothing",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : false,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_DISABLED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "apns_off_unregister_still_works",
+      "desc" : "unregister works whatever the switch says",
+      "envelope_of_positive_vector" : "unregister",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : false,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "OK",
+      "nonce_consumed" : true
+    },
+    {
+      "name" : "topic_not_on_the_allow_list",
+      "desc" : "tp is a bundle id the operator did not list",
+      "envelope_of_positive_vector" : "register_did_sha256_hex",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_TOPIC_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "env_not_accepted_by_this_server",
+      "desc" : "a sandbox token on a server that accepts production only",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_ENV_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "env_without_a_key_for_the_topics_team",
+      "desc" : "the server accepts sandbox, but the team that owns this topic has a production key only (another team holds the sandbox key): the row could never be pushed to",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          },
+          {
+            "team_id" : "TEAMB",
+            "environments" : [
+              "sandbox"
+            ],
+            "topics" : [
+              "io.takamaka.wallet"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_ENV_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "from_not_registered",
+      "desc" : "from is not a registered user: checked before the nonce is consumed",
+      "envelope_of_positive_vector" : "register_production",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : false,
+        "nonce_is_usable" : true
+      },
+      "expected" : "USER_NOT_REGISTERED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "nonce_unknown_or_spent",
+      "desc" : "the nonce is unknown, expired or already used",
+      "envelope_of_positive_vector" : "register_production",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : false
+      },
+      "expected" : "NONCE_INVALID",
+      "nonce_consumed" : false
+    }
+  ],
   "token_hash_vectors" : [
     {
       "env" : "sandbox",

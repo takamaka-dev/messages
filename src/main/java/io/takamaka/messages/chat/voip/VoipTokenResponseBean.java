@@ -41,6 +41,15 @@ public class VoipTokenResponseBean {
     @JsonProperty("registration_time")
     private Long registrationTime;
 
+    /**
+     * True when the refusal is {@code RATE_LIMIT_EXCEEDED}: the request was not judged and its nonce was not spent.
+     * Retry later with a fresh nonce; never treat it as a final failure. Not a wire member.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isRetryLater() {
+        return !success && VoipTokenRules.isRetryLater(errorCode);
+    }
+
     public static VoipTokenResponseBean success(String message, Long registrationTime) {
         return new VoipTokenResponseBean(true, message, null, registrationTime);
     }

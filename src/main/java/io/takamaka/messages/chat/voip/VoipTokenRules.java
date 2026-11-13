@@ -57,7 +57,19 @@ public final class VoipTokenRules {
     public static final String TOKEN_HASH_DOMAIN = "tkm-voip-token-v1";
 
     // ---- error codes of VoipTokenResponseBean.error_code (§5.4) ----
+    /**
+     * A <b>retry-later</b> code, on the VoIP-token routes and on the four FCM token routes alike: a bucket was empty
+     * (the connection's, taken before the signature, or the verified identity's). The request was NOT judged and its
+     * nonce was NOT spent. A client retries after a pause (a bucket refills within a minute) with a fresh nonce, and
+     * must not read it as «the release failed for good» (DR-069 point 13 counts FAILED releases, not delayed ones).
+     * See {@link #isRetryLater(String)}.
+     */
     public static final String RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED";
+
+    /** True for the one error code of the token routes that means «not judged, try again later». */
+    public static boolean isRetryLater(String errorCode) {
+        return RATE_LIMIT_EXCEEDED.equals(errorCode);
+    }
     public static final String VALIDATION_ERROR = "VALIDATION_ERROR";
     public static final String SIGNATURE_ERROR = "SIGNATURE_ERROR";
     public static final String NONCE_INVALID = "NONCE_INVALID";

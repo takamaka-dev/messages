@@ -190,6 +190,40 @@ public final class VoipTokenVectorGenerator {
         return caseNode(out, name, desc, route, routeOp, canon, envelope(content, sign(canon), VOIP_TYPE, CONTENT_KEY), stage);
     }
 
+    /** One server-state case: {@code keys} rows are {team id, comma-separated environments, comma-separated topics}. */
+    private static void serverCase(ArrayNode out, String name, String desc, String positiveVector, boolean apnsEnabled,
+            String[] acceptedEnvironments, String[][] keys, boolean fromRegistered, boolean nonceUsable, String expected,
+            boolean nonceConsumed) {
+        ObjectNode c = out.addObject();
+        c.put("name", name);
+        c.put("desc", desc);
+        c.put("envelope_of_positive_vector", positiveVector);
+        ObjectNode s = c.putObject("server");
+        s.put("audience", AUDIENCE);
+        s.put("apns_enabled", apnsEnabled);
+        ArrayNode envs = s.putArray("accepted_environments");
+        for (String e : acceptedEnvironments) {
+            envs.add(e);
+        }
+        ArrayNode ks = s.putArray("keys");
+        for (String[] k : keys) {
+            ObjectNode kn = ks.addObject();
+            kn.put("team_id", k[0]);
+            ArrayNode ke = kn.putArray("environments");
+            for (String e : k[1].split(",")) {
+                ke.add(e);
+            }
+            ArrayNode kt = kn.putArray("topics");
+            for (String t : k[2].split(",")) {
+                kt.add(t);
+            }
+        }
+        s.put("from_is_registered", fromRegistered);
+        s.put("nonce_is_usable", nonceUsable);
+        c.put("expected", expected);
+        c.put("nonce_consumed", nonceConsumed);
+    }
+
     public static String render() throws Exception {
         initKey();
         final String reg = ChatServerEndpoints.REGISTER_VOIP_TOKEN;
@@ -349,6 +383,34 @@ public final class VoipTokenVectorGenerator {
         ObjectNode x2e = envelope(good, goodSig, CHAT_MESSAGE_TYPES.FCM_TOKEN_REGISTRATION.name(), CONTENT_KEY);
         x2.set("envelope_json", x2e);
         x2.put("expected", fcmVerdict(x2e));
+
+        // ---- refusals that depend on the SERVER's state (steps 10 to 12 of 5.5), declared here, run by rschat ----
+        // Each names a positive vector's envelope, a server state, and the code the route must answer. Messages
+        // cannot compute these (they need the server); rschat's VoipTokenServiceOrderTest executes every one.
+        ArrayNode srv = root.putArray("server_refusal_vectors");
+        serverCase(srv, "apns_off", "the server's APNs sender is off: never a success that stores nothing",
+                "register_sandbox", false, new String[]{SB, PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                true, true, VoipTokenRules.VOIP_DISABLED, false);
+        serverCase(srv, "apns_off_unregister_still_works", "unregister works whatever the switch says",
+                "unregister", false, new String[]{SB, PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                true, true, "OK", true);
+        serverCase(srv, "topic_not_on_the_allow_list", "tp is a bundle id the operator did not list",
+                "register_did_sha256_hex", true, new String[]{SB, PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                true, true, VoipTokenRules.VOIP_TOPIC_REFUSED, false);
+        serverCase(srv, "env_not_accepted_by_this_server", "a sandbox token on a server that accepts production only",
+                "register_sandbox", true, new String[]{PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                true, true, VoipTokenRules.VOIP_ENV_REFUSED, false);
+        serverCase(srv, "env_without_a_key_for_the_topics_team", "the server accepts sandbox, but the team that owns "
+                + "this topic has a production key only (another team holds the sandbox key): the row could never be "
+                + "pushed to", "register_sandbox", true, new String[]{SB, PR},
+                new String[][]{{"TEAMA", PR, TOPIC}, {"TEAMB", SB, "io.takamaka.wallet"}},
+                true, true, VoipTokenRules.VOIP_ENV_REFUSED, false);
+        serverCase(srv, "from_not_registered", "from is not a registered user: checked before the nonce is consumed",
+                "register_production", true, new String[]{SB, PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                false, true, VoipTokenRules.USER_NOT_REGISTERED, false);
+        serverCase(srv, "nonce_unknown_or_spent", "the nonce is unknown, expired or already used",
+                "register_production", true, new String[]{SB, PR}, new String[][]{{"TEAMA", SB + "," + PR, TOPIC}},
+                true, false, VoipTokenRules.NONCE_INVALID, false);
 
         // ---- token_hash ----
         ArrayNode th = root.putArray("token_hash_vectors");

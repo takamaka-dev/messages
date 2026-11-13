@@ -173,6 +173,42 @@ class VoipTokenVectorFileTest {
     }
 
     @Test
+    void serverRefusalVectors_nameAnExistingEnvelope_andASingleCode() {
+        Map<String, JsonNode> pos = byName("positive_vectors");
+        Map<String, JsonNode> srv = byName("server_refusal_vectors");
+        assertEquals(java.util.Set.of("apns_off", "apns_off_unregister_still_works", "topic_not_on_the_allow_list",
+                "env_not_accepted_by_this_server", "env_without_a_key_for_the_topics_team", "from_not_registered",
+                "nonce_unknown_or_spent"), srv.keySet());
+        for (JsonNode c : srv.values()) {
+            assertTrue(pos.containsKey(c.get("envelope_of_positive_vector").asText()), c.get("name").asText());
+            assertEquals("rschat:rig1", c.get("server").get("audience").asText());
+            // the nonce is spent only by the one case that reaches the action
+            assertEquals("OK".equals(c.get("expected").asText()), c.get("nonce_consumed").asBoolean(), c.get("name").asText());
+        }
+        // L-3: an env the server accepts, but for which the topic's team has no key, is VOIP_ENV_REFUSED
+        assertEquals(VoipTokenRules.VOIP_ENV_REFUSED, srv.get("env_without_a_key_for_the_topics_team").get("expected").asText());
+    }
+
+    @Test
+    void rateLimitExceeded_isTheRetryLaterCode_onEveryTokenRouteBean() throws Exception {
+        assertTrue(VoipTokenRules.isRetryLater("RATE_LIMIT_EXCEEDED"));
+        assertFalse(VoipTokenRules.isRetryLater("NONCE_INVALID"));
+        assertFalse(VoipTokenRules.isRetryLater(null));
+        VoipTokenResponseBean v = VoipTokenResponseBean.error(VoipTokenRules.RATE_LIMIT_EXCEEDED, "later");
+        assertTrue(v.isRetryLater());
+        assertFalse(VoipTokenResponseBean.error(VoipTokenRules.VOIP_DISABLED, "off").isRetryLater());
+        assertFalse(VoipTokenResponseBean.success("ok", 1L).isRetryLater());
+        assertTrue(io.takamaka.messages.chat.fcm.FcmTokenRegistrationResponseBean.error("RATE_LIMIT_EXCEEDED", "later").isRetryLater());
+        assertTrue(io.takamaka.messages.chat.fcm.FcmTokenDeletionResponseBean.error("RATE_LIMIT_EXCEEDED", "later").isRetryLater());
+        assertFalse(io.takamaka.messages.chat.fcm.FcmTokenDeletionResponseBean.error("DELETION_ERROR", "x").isRetryLater());
+        // a helper, not a wire member: the JSON of the beans is unchanged
+        for (Object bean : new Object[]{v, io.takamaka.messages.chat.fcm.FcmTokenRegistrationResponseBean.success(1L),
+            io.takamaka.messages.chat.fcm.FcmTokenDeletionResponseBean.success(1L)}) {
+            assertFalse(M.writeValueAsString(bean).toLowerCase().contains("retry"), M.writeValueAsString(bean));
+        }
+    }
+
+    @Test
     void tokenHashVectors_preimageAndHash() throws Exception {
         JsonNode th = root.get("token_hash_vectors");
         assertEquals(3, th.size());

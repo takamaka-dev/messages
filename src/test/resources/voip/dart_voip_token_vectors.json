@@ -1,0 +1,95 @@
+{
+  "version": "1.0.0",
+  "generated_by": "rsclient-flutter test/voip_token_parity_test.dart",
+  "source": "rsclient-flutter (Dart port)",
+  "decision": "DR-074 revision 3: Dart-generated envelopes, verified by Java",
+  "server_audience": "rschat:rig1",
+  "signer_identity": {
+    "mnemonic": "sample half mammal radar hold fit era dilemma manage movie razor saddle point dial sadness north item naive gate hockey sample script embark purse myth",
+    "key_index": 7,
+    "signer_public_key": "B7GWNidQI7tH1J2m596pzThqGTpzoxXUdOKzyqEfqMs."
+  },
+  "vectors": [
+    {
+      "name": "dart_register_production",
+      "route": "registervoiptoken",
+      "signed_canonical_jcs": "{\"aud\":\"rschat:rig1\",\"did\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"env\":\"production\",\"nonce\":{\"liveness\":300000,\"nonce\":\"99999999-8888-4777-8666-555555555555\",\"timestamp\":1800000000000},\"op\":\"register\",\"tp\":\"io.takamaka.wallet\",\"vt\":\"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210\"}",
+      "signature_b64url": "0i9At9iSt-AOCUC0GFyhd7QaPfawf11xmrfohs9ry9HWpbzVi_9xoIHrx_UY9QtAdQgcHJvzVEdu4DCYqEvsBw..",
+      "token_hash": "767eab50c51c46b3ba99ab862ee747a6c4c3476766369308a186e9b9f340dd88",
+      "envelope_json": {
+        "from": "B7GWNidQI7tH1J2m596pzThqGTpzoxXUdOKzyqEfqMs.",
+        "signature": "0i9At9iSt-AOCUC0GFyhd7QaPfawf11xmrfohs9ry9HWpbzVi_9xoIHrx_UY9QtAdQgcHJvzVEdu4DCYqEvsBw..",
+        "message_type": "VOIP_TOKEN_REGISTRATION",
+        "signature_type": "Ed25519BC",
+        "voip_token_signed_content": {
+          "nonce": {
+            "nonce": "99999999-8888-4777-8666-555555555555",
+            "timestamp": 1800000000000,
+            "liveness": 300000
+          },
+          "op": "register",
+          "aud": "rschat:rig1",
+          "vt": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          "env": "production",
+          "tp": "io.takamaka.wallet",
+          "did": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      },
+      "expected": "OK"
+    },
+    {
+      "name": "dart_register_sandbox_token_100",
+      "route": "registervoiptoken",
+      "signed_canonical_jcs": "{\"aud\":\"rschat:rig1\",\"did\":\"A1b2-C3d4_E5f6.7890\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":300000,\"nonce\":\"99999999-8888-4777-8666-555555555555\",\"timestamp\":1800000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e\"}",
+      "signature_b64url": "dG9xRbUMW3_uIIRceYckDeuARggqVj2pR1BaCUjTEBPZYgPLx8jP8k_ky9WR7WTq81a4ZiJy23Gbejj1qbPvDQ..",
+      "token_hash": "f6c703443cbcc4199fed6a45679cf7083d5c6c2668ed3370c1c55f263e8fc8b2",
+      "envelope_json": {
+        "from": "B7GWNidQI7tH1J2m596pzThqGTpzoxXUdOKzyqEfqMs.",
+        "signature": "dG9xRbUMW3_uIIRceYckDeuARggqVj2pR1BaCUjTEBPZYgPLx8jP8k_ky9WR7WTq81a4ZiJy23Gbejj1qbPvDQ..",
+        "message_type": "VOIP_TOKEN_REGISTRATION",
+        "signature_type": "Ed25519BC",
+        "voip_token_signed_content": {
+          "nonce": {
+            "nonce": "99999999-8888-4777-8666-555555555555",
+            "timestamp": 1800000000000,
+            "liveness": 300000
+          },
+          "op": "register",
+          "aud": "rschat:rig1",
+          "vt": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e",
+          "env": "sandbox",
+          "tp": "io.takamaka.tkmchat.test",
+          "did": "A1b2-C3d4_E5f6.7890"
+        }
+      },
+      "expected": "OK"
+    },
+    {
+      "name": "dart_unregister",
+      "route": "unregistervoiptoken",
+      "signed_canonical_jcs": "{\"aud\":\"rschat:rig1\",\"did\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"env\":\"production\",\"nonce\":{\"liveness\":300000,\"nonce\":\"99999999-8888-4777-8666-555555555555\",\"timestamp\":1800000000000},\"op\":\"unregister\",\"tp\":\"io.takamaka.wallet\",\"vt\":\"fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210\"}",
+      "signature_b64url": "gH1DaRVPKeaMpMO_eEgrXsJsiQaRkQ61pMGlo-FeuXDfTOEnUFMW8ofkNUDVlOnQf8THi7PVFlS0Qe7mWsHsCw..",
+      "token_hash": "767eab50c51c46b3ba99ab862ee747a6c4c3476766369308a186e9b9f340dd88",
+      "envelope_json": {
+        "from": "B7GWNidQI7tH1J2m596pzThqGTpzoxXUdOKzyqEfqMs.",
+        "signature": "gH1DaRVPKeaMpMO_eEgrXsJsiQaRkQ61pMGlo-FeuXDfTOEnUFMW8ofkNUDVlOnQf8THi7PVFlS0Qe7mWsHsCw..",
+        "message_type": "VOIP_TOKEN_REGISTRATION",
+        "signature_type": "Ed25519BC",
+        "voip_token_signed_content": {
+          "nonce": {
+            "nonce": "99999999-8888-4777-8666-555555555555",
+            "timestamp": 1800000000000,
+            "liveness": 300000
+          },
+          "op": "unregister",
+          "aud": "rschat:rig1",
+          "vt": "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210",
+          "env": "production",
+          "tp": "io.takamaka.wallet",
+          "did": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      },
+      "expected": "OK"
+    }
+  ]
+}
