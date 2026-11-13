@@ -370,6 +370,11 @@ public final class VoipTokenVectorGenerator {
         ObjectNode si = root.putObject("serverinfo_vectors");
         ServerInfoResponseBean s17 = new ServerInfoResponseBean();
         s17.setServerVersion("0.11.0-SNAPSHOT");
+        // the members a real server always sends (a port's bean may require them)
+        s17.setProtocolCurrent("1.2");
+        s17.setProtocolMajor(1);
+        s17.setProtocolMinMinor(0);
+        s17.setProtocolMaxMinor(2);
         s17.setManifestVersion(ServerInfoResponseBean.MANIFEST_VERSION_CURRENT);
         s17.setAudience(AUDIENCE);
         si.put("manifest_version_current", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT);
