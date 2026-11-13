@@ -49,6 +49,7 @@ import io.takamaka.messages.chat.core.SignedTimestampRequestBean;
 import io.takamaka.messages.chat.attachment.SignedUploadRequestBean;
 import io.takamaka.messages.chat.notification.UserNotificationRequestBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
+import io.takamaka.messages.chat.voip.VoipTokenRequestBean;
 import io.takamaka.messages.chat.profile.ClearUserProfileRequestBean;
 import io.takamaka.messages.chat.profile.GetProfileDigestsRequestBean;
 import io.takamaka.messages.chat.profile.GetUserProfilePeerRequestBean;
@@ -174,6 +175,10 @@ public class ChatUtils {
 
     public static final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean(String jsonMessage) throws JsonProcessingException {
         return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, FcmTokenRegistrationRequestBean.class);
+    }
+
+    public static final VoipTokenRequestBean fromJsonToVoipTokenRequestBean(String jsonMessage) throws JsonProcessingException {
+        return TkmTextUtils.getJacksonMapper().readValue(jsonMessage, VoipTokenRequestBean.class);
     }
 
     public static final RetrieveAllConversationsRequestBean fromJsonToRetrieveAllConversationsRequestBean(String jsonMessage) throws JsonProcessingException {

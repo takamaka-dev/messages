@@ -62,6 +62,12 @@ public enum CHAT_MESSAGE_TYPES {
      * constant {@code ChatServerEndpoints.fcmTokenRegistration}.
      */
     FCM_TOKEN_REGISTRATION,
+    /**
+     * DR-074: the envelope of {@code registervoiptoken} and {@code unregistervoiptoken} (the PushKit token of an iOS
+     * install). One literal for both routes: the operation is the signed {@code op} inside the content. Its own
+     * verifier case reads {@code voip_token_signed_content} only.
+     */
+    VOIP_TOKEN_REGISTRATION,
     // ===== User profile channel (USER_PROFILE_DESIGN.md D4, DR-032) =====
     // Each arm below needs THREE things to work, and a missing one fails at a
     // different layer: this enum value, a ChatCryptoUtils.verifySignedMessage

@@ -29,7 +29,8 @@ class ServerInfoManifestTest {
     void manifestVersionIsCurrent() {
         // 1.5 adds maxEncryptedContentSizeBytes (§PREVIEW-CONFORMANCE W5).
         // 1.6 adds the nested `profile` limits object (DR-032).
-        assertEquals("1.6", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
+        // 1.7 adds `audience` (DR-074 §5.8).
+        assertEquals("1.7", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
                 "bump this when a field is ADDED — clients gate optional fields on it");
     }
 
