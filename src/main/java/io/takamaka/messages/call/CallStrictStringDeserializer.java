@@ -13,6 +13,10 @@ import java.io.IOException;
  * object (the channel body) nothing else would catch the difference, so the fields added by audio-only S0
  * ({@code media} of the ring and of the channel body) use this deserializer: Java and Dart refuse the same inputs.
  *
+ * <p>Since the strict mapper refuses number/boolean → {@code String} coercion mapper-wide (the
+ * {@code LogicalType.Textual} coercion config of {@link CallJson}), this deserializer is belt-and-braces: it keeps
+ * the two {@code media} fields strict even under a mapper that lacks that config.
+ *
  * @author Giovanni Antino giovanni.antino@takamaka.io
  */
 public class CallStrictStringDeserializer extends StdDeserializer<String> {

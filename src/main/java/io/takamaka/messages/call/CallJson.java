@@ -6,8 +6,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import io.takamaka.messages.call.beans.CallSignedObject;
 import io.takamaka.messages.utils.SimpleRequestHelper;
 import java.util.Arrays;
@@ -20,6 +23,12 @@ import java.util.Arrays;
  * removed.
  *
  * <p>The parser is strict: unknown fields, duplicate keys, floats for integers and scalar coercions are refused.
+ * Scalar coercions are refused in BOTH directions, mapper-wide: a JSON string is never read into a number or a
+ * boolean ({@code ALLOW_COERCION_OF_SCALARS} off), and a JSON number or boolean is never read into a {@code String}
+ * (the {@link LogicalType#Textual} coercion config below; Jackson's {@code String} deserializer would otherwise turn
+ * {@code true} into {@code "true"} and {@code 1} into {@code "1"}, which the Dart port refuses as {@code not a
+ * string}). This matters most for the UNSIGNED objects (the channel body, the service wire): on a signed object a
+ * coerced value would not match the signature anyway.
  * A verifier rebuilds the signed octets from the parsed bean, so any field it does not know could not be covered
  * anyway.
  *
@@ -33,6 +42,10 @@ public final class CallJson {
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
             .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
+            .withCoercionConfig(LogicalType.Textual, cfg -> cfg
+                    .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+                    .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail))
             .disable(SerializationFeature.INDENT_OUTPUT)
             .build();
 
