@@ -539,5 +539,35 @@
       "error" : "key_refused",
       "reason" : "body"
     }
+  }, {
+    "name" : "no_value_empty",
+    "note" : "the empty text: no JSON value",
+    "body" : "",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "no_value_spaces",
+    "note" : "spaces only: no JSON value",
+    "body" : "   ",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "no_value_newline",
+    "note" : "a newline only: no JSON value",
+    "body" : "\n",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
   } ]
 }
