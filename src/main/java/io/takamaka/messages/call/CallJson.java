@@ -1,7 +1,9 @@
 package io.takamaka.messages.call;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +37,12 @@ import java.util.Arrays;
  * and stays accepted. One string is one call object: nothing parses a stream of concatenated objects through here.
  * Every {@code long} / {@code Long} read into a bean is within ±(2^53−1), the I-JSON / RFC 8785 interoperable range
  * the Dart port enforces ({@link CallSafeLongDeserializer}); the raw tree ({@code readTree}) is not range-checked here.
+ * Nesting is capped at {@value #MAX_NESTING_DEPTH} containers ({@code StreamReadConstraints}, readValue and readTree
+ * alike; a {@code StreamConstraintsException}): a RESOURCE CAP, well above any call bean's real depth and below
+ * Jackson's default of 1000. It is not Dart's depth rule (a VALUE enclosed by more than 64 containers is refused):
+ * that rule is enforced on the unknown-kind channel-body path by
+ * {@code CallChannelBodyBean.parseChannelBody}'s whole-tree walk, and a known kind is refused by its bean schema long
+ * before {@value #MAX_NESTING_DEPTH}.
  * A verifier rebuilds the signed octets from the parsed bean, so any field it does not know could not be covered
  * anyway.
  *
@@ -42,7 +50,17 @@ import java.util.Arrays;
  */
 public final class CallJson {
 
-    private static final ObjectMapper STRICT = JsonMapper.builder()
+    /**
+     * N4: a resource cap on nested containers, well above any call bean's real depth and below Jackson's default of
+     * 1000. Dart's exact rule (no value deeper than 64 containers) lives in {@code CallChannelBodyBean}'s walk.
+     */
+    public static final int MAX_NESTING_DEPTH = 66;
+
+    private static final ObjectMapper STRICT = JsonMapper.builder(JsonFactory.builder()
+                    .streamReadConstraints(StreamReadConstraints.builder()
+                            .maxNestingDepth(MAX_NESTING_DEPTH)
+                            .build())
+                    .build())
             .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
