@@ -135,6 +135,15 @@ public final class CallRschat {
         return r != null && CallConstants.RING_K_CANCELLED.equals(r.getK());
     }
 
+    /**
+     * Audio-only S0 (design AUDIO_ONLY_CALLS §7): true when the ring declares the caller's intent as audio-only
+     * ({@code media = audio}); false for a ring without {@code media} (a video ring). Meaningful only on a VERIFIED,
+     * shape-checked ring ({@link #checkRing}, {@link #checkPushRing}) — never read it from a notice or a push field.
+     */
+    public static boolean isAudioRing(CallRingBean r) {
+        return r != null && r.getK() == null && CallConstants.RING_MEDIA_AUDIO.equals(r.getMedia());
+    }
+
     /** An unsigned lookup of ONE identity (sign it with the service key). */
     public static CallLookupBean lookup(String identity, String nonce, String aud, long ts) {
         CallLookupBean l = new CallLookupBean();
@@ -160,12 +169,22 @@ public final class CallRschat {
      *
      * <p>P2 (2026-11-05): {@code k = cancelled} (the caller's cancel) has exactly a ring's shape — {@code to}
      * 1..{@code toMax} distinct identities, never {@code f}. Any other {@code k} is still refused.
+     *
+     * <p>Audio-only S0 (2026-11-19, design AUDIO_ONLY_CALLS §7): {@code media} is absent (a video ring) or exactly
+     * {@code audio} ({@link CallConstants#RING_MEDIA_AUDIO}), and only a ring carries it — any other value, or
+     * {@code media} together with any {@code k} ({@code answered}, {@code cancelled}), is refused
+     * {@code bad_signature} with reason {@code ring media}, like a bad {@code mode}. The check runs right after the
+     * scalar fields and BEFORE the {@code to} checks, so it never comes back as the {@code ring_to_max} limit.
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
                 || !CallBytes.isLowerHex(r.getCall(), CallConstants.HASH_LEN) || !isServiceId(r.getSvc())
                 || !(CallConstants.MODE_STANDARD.equals(r.getMode()) || CallConstants.MODE_CONFERENCE.equals(r.getMode()))) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring fields");
+        }
+        // S0: media is absent or exactly "audio", and only on a ring (no k)
+        if (r.getMedia() != null && !(CallConstants.RING_MEDIA_AUDIO.equals(r.getMedia()) && r.getK() == null)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring media");
         }
         List<String> to = r.getTo();
         if (to == null || to.isEmpty()) {
