@@ -153,7 +153,11 @@ public class CallChannelBodyBean {
      * {@code conv_seed} and drops every other member silently (unknown ones and known ones of other kinds, such as
      * {@code secret}, {@code roster}, {@code media}). The kept members stay strictly typed: {@code epoch} is a JSON
      * integer in the safe range ±(2^53 − 1) (a string, a fraction or a float form is refused), {@code conv_seed} is a
-     * JSON string (a number is refused); JSON {@code null} means absent.</li>
+     * JSON string (a number is refused); JSON {@code null} means absent. Before anything is dropped, the WHOLE tree
+     * (dropped members, nested objects and arrays included) must also pass what the Dart reader ({@code StrictJson})
+     * refuses anywhere while reading, so both ports refuse the same bodies: every JSON integer lies within
+     * ±(2^53 − 1) (the I-JSON / JCS number rule; a fraction or an exponent form in a dropped member stays allowed, as
+     * in Dart) and no value is nested deeper than {@value #MAX_DEPTH} containers.</li>
      * <li>A known {@code h}, an absent {@code h} and a non-string {@code h} (JSON {@code null} included): the full strict
      * schema, unchanged ({@code CallJson.parse(json, CallChannelBodyBean.class)}).</li>
      * </ol>
@@ -189,11 +193,40 @@ public class CallChannelBodyBean {
             }
             b.setConvSeed(s.textValue());
         }
+        checkWholeTree(tree, 0);
         return b;
     }
 
     /** 2^53 − 1: the integer range every port reads exactly (Dart {@code CallBytes.maxSafeInt}). */
     private static final long MAX_SAFE_INTEGER = (1L << 53) - 1;
+
+    /**
+     * The deepest nesting a body may carry: a value nested inside more than this many containers is refused (Dart
+     * {@code StrictJson._maxDepth}; the root object is depth 0, its members depth 1).
+     */
+    public static final int MAX_DEPTH = 64;
+
+    /** The prefix of every refusal by {@link #checkWholeTree}: a rule on ANY member, dropped ones included. */
+    public static final String ANY_MEMBER_REFUSAL = "channel body (unknown kind), any member: ";
+
+    /**
+     * Refuses, anywhere under {@code node} (at {@code depth}), what Dart {@code StrictJson} refuses while reading: an
+     * integral number outside ±(2^53 − 1) and a value deeper than {@link #MAX_DEPTH}.
+     */
+    private static void checkWholeTree(JsonNode node, int depth) throws JsonMappingException {
+        if (depth > MAX_DEPTH) {
+            throw refusal(ANY_MEMBER_REFUSAL + "nested deeper than " + MAX_DEPTH);
+        }
+        if (node.isIntegralNumber()) {
+            if (!node.canConvertToLong() || node.longValue() > MAX_SAFE_INTEGER || node.longValue() < -MAX_SAFE_INTEGER) {
+                throw refusal(ANY_MEMBER_REFUSAL + "an integer outside +-(2^53-1)");
+            }
+        } else if (node.isContainerNode()) {
+            for (JsonNode child : node) {
+                checkWholeTree(child, depth + 1);
+            }
+        }
+    }
 
     private static JsonMappingException refusal(String message) {
         return new JsonMappingException((Closeable) null, message);

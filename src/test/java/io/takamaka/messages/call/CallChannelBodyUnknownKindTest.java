@@ -164,8 +164,14 @@ class CallChannelBodyUnknownKindTest {
 
     // ---- the vector file ----------------------------------------------------------------------------------------
 
-    /** Where THIS reference refuses: json (strict JSON / not an object), kept_member (unknown kind), schema (strict bean). */
-    static String refusalStage(String body) {
+    /**
+     * Where THIS reference refuses: json (strict JSON / not an object), kept_member (unknown kind: a kept member's
+     * type), any_member (unknown kind: the whole-tree rule on any member, dropped ones included), schema (strict bean).
+     */
+    static String refusalStage(String body, Exception refusal) {
+        if (refusal.getMessage() != null && refusal.getMessage().startsWith(CallChannelBodyBean.ANY_MEMBER_REFUSAL)) {
+            return "any_member";
+        }
         JsonNode tree;
         try {
             tree = CallJson.mapper().readTree(body);
@@ -186,7 +192,7 @@ class CallChannelBodyUnknownKindTest {
             b = CallChannelBodyBean.parseChannelBody(body);
         } catch (JsonProcessingException | IllegalArgumentException ex) {
             e.put("ok", false);
-            e.put("stage", refusalStage(body));
+            e.put("stage", refusalStage(body, ex));
             // what HybridChannel.acceptChannel throws for such an open
             e.put("error", CallError.KEY_REFUSED.code());
             e.put("reason", "body");
@@ -223,9 +229,12 @@ class CallChannelBodyUnknownKindTest {
                 + "Strict JSON first (duplicate keys and a non-object refused); then an `h` that is a JSON string and not one "
                 + "of `known_kinds` (case-sensitive) is an UNKNOWN kind: only `h`, `epoch`, `conv_seed` are kept, every other "
                 + "member is dropped before any schema check; `epoch` must be a JSON integer within ±(2^53-1), `conv_seed` a "
-                + "JSON string, JSON null = absent. A known, absent or non-string `h` keeps the full strict schema. "
+                + "JSON string, JSON null = absent; and the WHOLE body, dropped members included, must pass what the Dart "
+                + "reader (StrictJson) refuses anywhere while reading: every JSON integer within ±(2^53-1) (a fraction or "
+                + "an exponent form in a dropped member stays allowed) and no value nested deeper than `max_depth` "
+                + "containers (the root object is depth 0). A known, absent or non-string `h` keeps the full strict schema. "
                 + "`expect.ok`: accepted or refused; a port must agree on `ok` and, when accepted, on every other member. "
-                + "`stage` is where THIS reference refuses (json | kept_member | schema), `error`/`reason` what "
+                + "`stage` is where THIS reference refuses (json | kept_member | any_member | schema), `error`/`reason` what "
                 + "HybridChannel.acceptChannel throws for such an open (key_refused / body). Accepted: `canonical` = JCS of "
                 + "the parsed body (for an unknown kind: of the kept members only), `plaintext_hex` = its ASCII, "
                 + "`known_kind` = h is a known kind, `ignored_kind` = h is a string and not a known kind (on an open: a "
@@ -235,6 +244,7 @@ class CallChannelBodyUnknownKindTest {
                 CallConstants.H_MEDIA));
         root.put("unknown_kind_keeps", List.of("h", "epoch", "conv_seed"));
         root.put("max_safe_integer", (1L << 53) - 1);
+        root.put("max_depth", CallChannelBodyBean.MAX_DEPTH);
         List<Map<String, Object>> cases = new ArrayList<>();
         // unknown kinds: accepted, reduced to the kept members
         cases.add(bodyCase("unknown_extra_field", "an unknown kind drops an unknown member", "{\"h\":\"future\",\"x\":1}"));
@@ -254,6 +264,14 @@ class CallChannelBodyUnknownKindTest {
         cases.add(bodyCase("unknown_case_sensitive_media", "kinds are case-sensitive: Media is unknown", "{\"h\":\"Media\"}"));
         cases.add(bodyCase("unknown_upper_case", "an upper-case kind", "{\"h\":\"FUTURE\"}"));
         cases.add(bodyCase("unknown_empty_string", "the empty string is a string and not a known kind", "{\"h\":\"\"}"));
+        cases.add(bodyCase("unknown_epoch_min_safe", "epoch = -(2^53-1) is in the safe range",
+                "{\"h\":\"future\",\"epoch\":-9007199254740991}"));
+        cases.add(bodyCase("unknown_dropped_integer_max_safe", "a dropped integer = 2^53-1 is in the safe range",
+                "{\"h\":\"future\",\"x\":9007199254740991}"));
+        cases.add(bodyCase("unknown_dropped_fraction", "a fraction in a dropped member is allowed (as in Dart)",
+                "{\"h\":\"future\",\"x\":1.5}"));
+        cases.add(bodyCase("unknown_dropped_depth_max", "a dropped member nested to max_depth (innermost value at depth 64)",
+                "{\"h\":\"future\",\"x\":" + "[".repeat(64) + "]".repeat(64) + "}"));
         // unknown kinds: refused
         cases.add(bodyCase("unknown_epoch_string", "a kept member stays strictly typed: epoch as a string",
                 "{\"h\":\"future\",\"epoch\":\"7\"}"));
@@ -262,6 +280,16 @@ class CallChannelBodyUnknownKindTest {
         cases.add(bodyCase("unknown_epoch_unsafe", "epoch = 2^53 is outside the safe range",
                 "{\"h\":\"future\",\"epoch\":9007199254740992}"));
         cases.add(bodyCase("unknown_conv_seed_number", "conv_seed as a number", "{\"h\":\"future\",\"conv_seed\":1}"));
+        cases.add(bodyCase("unknown_epoch_unsafe_negative", "epoch = -2^53 is outside the safe range",
+                "{\"h\":\"future\",\"epoch\":-9007199254740992}"));
+        cases.add(bodyCase("unknown_dropped_integer_unsafe", "every integer, dropped ones included: 2^53 is outside the safe range",
+                "{\"h\":\"future\",\"x\":9007199254740992}"));
+        cases.add(bodyCase("unknown_dropped_integer_unsafe_negative", "a dropped integer = -2^53",
+                "{\"h\":\"future\",\"x\":-9007199254740992}"));
+        cases.add(bodyCase("unknown_dropped_nested_integer_unsafe", "an unsafe integer nested inside a dropped member",
+                "{\"h\":\"future\",\"x\":{\"y\":[1,9007199254740993]}}"));
+        cases.add(bodyCase("unknown_dropped_too_deep", "a dropped member nested past max_depth (a value at depth 65)",
+                "{\"h\":\"future\",\"x\":" + "[".repeat(65) + "]".repeat(65) + "}"));
         cases.add(bodyCase("unknown_duplicate_dropped_key", "strict JSON first: a duplicate key, even of a dropped member",
                 "{\"h\":\"future\",\"x\":1,\"x\":2}"));
         cases.add(bodyCase("unknown_duplicate_h", "h twice", "{\"h\":\"future\",\"h\":\"other\"}"));
@@ -335,11 +363,20 @@ class CallChannelBodyUnknownKindTest {
         want.put("unknown_case_sensitive_media", "{\"h\":\"Media\"} | ignored | <none>");
         want.put("unknown_upper_case", "{\"h\":\"FUTURE\"} | ignored | <none>");
         want.put("unknown_empty_string", "{\"h\":\"\"} | ignored | <none>");
+        want.put("unknown_epoch_min_safe", "{\"epoch\":-9007199254740991,\"h\":\"future\"} | ignored | <none>");
+        want.put("unknown_dropped_integer_max_safe", "{\"h\":\"future\"} | ignored | <none>");
+        want.put("unknown_dropped_fraction", "{\"h\":\"future\"} | ignored | <none>");
+        want.put("unknown_dropped_depth_max", "{\"h\":\"future\"} | ignored | <none>");
         want.put("unknown_epoch_string", "refused:kept_member");
         want.put("unknown_epoch_fraction", "refused:kept_member");
         want.put("unknown_epoch_float_form", "refused:kept_member");
         want.put("unknown_epoch_unsafe", "refused:kept_member");
         want.put("unknown_conv_seed_number", "refused:kept_member");
+        want.put("unknown_epoch_unsafe_negative", "refused:kept_member");
+        want.put("unknown_dropped_integer_unsafe", "refused:any_member");
+        want.put("unknown_dropped_integer_unsafe_negative", "refused:any_member");
+        want.put("unknown_dropped_nested_integer_unsafe", "refused:any_member");
+        want.put("unknown_dropped_too_deep", "refused:any_member");
         want.put("unknown_duplicate_dropped_key", "refused:json");
         want.put("unknown_duplicate_h", "refused:json");
         want.put("known_media_extra_field", "refused:schema");

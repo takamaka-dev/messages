@@ -1,8 +1,9 @@
 {
-  "_origin" : "Messages CallChannelBodyUnknownKindTest (audio-only calls S1, Iris §7.189 F1; design AUDIO_ONLY_CALLS_DESIGN_2026-11-19 §6 «The exact parse spec»; Java CallChannelBodyBean.parseChannelBody, Dart CallChannelBody.parse). `body` is the plaintext of a channel box as received (an open or a message). Strict JSON first (duplicate keys and a non-object refused); then an `h` that is a JSON string and not one of `known_kinds` (case-sensitive) is an UNKNOWN kind: only `h`, `epoch`, `conv_seed` are kept, every other member is dropped before any schema check; `epoch` must be a JSON integer within ±(2^53-1), `conv_seed` a JSON string, JSON null = absent. A known, absent or non-string `h` keeps the full strict schema. `expect.ok`: accepted or refused; a port must agree on `ok` and, when accepted, on every other member. `stage` is where THIS reference refuses (json | kept_member | schema), `error`/`reason` what HybridChannel.acceptChannel throws for such an open (key_refused / body). Accepted: `canonical` = JCS of the parsed body (for an unknown kind: of the kept members only), `plaintext_hex` = its ASCII, `known_kind` = h is a known kind, `ignored_kind` = h is a string and not a known kind (on an open: a non-handover open that still applies O-7 with `epoch` and §10.1 with `conv_seed`; on a message: ignored, no refusal), `declared_media` = CallChannelBodyBean.declaredMedia (null for any non-media kind).",
+  "_origin" : "Messages CallChannelBodyUnknownKindTest (audio-only calls S1, Iris §7.189 F1; design AUDIO_ONLY_CALLS_DESIGN_2026-11-19 §6 «The exact parse spec»; Java CallChannelBodyBean.parseChannelBody, Dart CallChannelBody.parse). `body` is the plaintext of a channel box as received (an open or a message). Strict JSON first (duplicate keys and a non-object refused); then an `h` that is a JSON string and not one of `known_kinds` (case-sensitive) is an UNKNOWN kind: only `h`, `epoch`, `conv_seed` are kept, every other member is dropped before any schema check; `epoch` must be a JSON integer within ±(2^53-1), `conv_seed` a JSON string, JSON null = absent; and the WHOLE body, dropped members included, must pass what the Dart reader (StrictJson) refuses anywhere while reading: every JSON integer within ±(2^53-1) (a fraction or an exponent form in a dropped member stays allowed) and no value nested deeper than `max_depth` containers (the root object is depth 0). A known, absent or non-string `h` keeps the full strict schema. `expect.ok`: accepted or refused; a port must agree on `ok` and, when accepted, on every other member. `stage` is where THIS reference refuses (json | kept_member | any_member | schema), `error`/`reason` what HybridChannel.acceptChannel throws for such an open (key_refused / body). Accepted: `canonical` = JCS of the parsed body (for an unknown kind: of the kept members only), `plaintext_hex` = its ASCII, `known_kind` = h is a known kind, `ignored_kind` = h is a string and not a known kind (on an open: a non-handover open that still applies O-7 with `epoch` and §10.1 with `conv_seed`; on a message: ignored, no refusal), `declared_media` = CallChannelBodyBean.declaredMedia (null for any non-media kind).",
   "known_kinds" : [ "epoch", "broadcast", "catchup", "media" ],
   "unknown_kind_keeps" : [ "h", "epoch", "conv_seed" ],
   "max_safe_integer" : 9007199254740991,
+  "max_depth" : 64,
   "body_cases" : [ {
     "name" : "unknown_extra_field",
     "note" : "an unknown kind drops an unknown member",
@@ -169,6 +170,66 @@
       "plaintext_hex" : "7b2268223a22227d"
     }
   }, {
+    "name" : "unknown_epoch_min_safe",
+    "note" : "epoch = -(2^53-1) is in the safe range",
+    "body" : "{\"h\":\"future\",\"epoch\":-9007199254740991}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : -9007199254740991,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"epoch\":-9007199254740991,\"h\":\"future\"}",
+      "plaintext_hex" : "7b2265706f6368223a2d393030373139393235343734303939312c2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_dropped_integer_max_safe",
+    "note" : "a dropped integer = 2^53-1 is in the safe range",
+    "body" : "{\"h\":\"future\",\"x\":9007199254740991}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_dropped_fraction",
+    "note" : "a fraction in a dropped member is allowed (as in Dart)",
+    "body" : "{\"h\":\"future\",\"x\":1.5}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_dropped_depth_max",
+    "note" : "a dropped member nested to max_depth (innermost value at depth 64)",
+    "body" : "{\"h\":\"future\",\"x\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
     "name" : "unknown_epoch_string",
     "note" : "a kept member stays strictly typed: epoch as a string",
     "body" : "{\"h\":\"future\",\"epoch\":\"7\"}",
@@ -215,6 +276,56 @@
     "expect" : {
       "ok" : false,
       "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_epoch_unsafe_negative",
+    "note" : "epoch = -2^53 is outside the safe range",
+    "body" : "{\"h\":\"future\",\"epoch\":-9007199254740992}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_dropped_integer_unsafe",
+    "note" : "every integer, dropped ones included: 2^53 is outside the safe range",
+    "body" : "{\"h\":\"future\",\"x\":9007199254740992}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "any_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_dropped_integer_unsafe_negative",
+    "note" : "a dropped integer = -2^53",
+    "body" : "{\"h\":\"future\",\"x\":-9007199254740992}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "any_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_dropped_nested_integer_unsafe",
+    "note" : "an unsafe integer nested inside a dropped member",
+    "body" : "{\"h\":\"future\",\"x\":{\"y\":[1,9007199254740993]}}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "any_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_dropped_too_deep",
+    "note" : "a dropped member nested past max_depth (a value at depth 65)",
+    "body" : "{\"h\":\"future\",\"x\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "any_member",
       "error" : "key_refused",
       "reason" : "body"
     }
