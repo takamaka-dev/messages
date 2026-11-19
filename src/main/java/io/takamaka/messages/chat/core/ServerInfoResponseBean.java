@@ -83,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.6";
+    public static final String MANIFEST_VERSION_CURRENT = "1.7";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -212,5 +212,15 @@ public class ServerInfoResponseBean {
      * SMALLER of this and the compiled-in constant.</p>
      */
     private io.takamaka.messages.chat.profile.ProfileLimitsBean profile;
+
+    /**
+     * The server audience, the ASCII string {@code rschat:<net>} ({@code CallRschat.audience}): the value the signed
+     * {@code aud} of the VoIP-token routes (DR-074 §5.8) and of the call beans is compared with, byte for byte.
+     * Manifest {@code 1.7+}: always present, never empty, whatever the calls switch and the APNs switch say, so a
+     * client can sign {@code unregistervoiptoken} when {@code callnonce} refuses. {@code null} &rArr; a server older
+     * than 1.7 (it has no VoIP route either). Unsigned, like the whole manifest: a client with a pinned audience for
+     * this server prefers the pin.
+     */
+    private String audience;
 
 }

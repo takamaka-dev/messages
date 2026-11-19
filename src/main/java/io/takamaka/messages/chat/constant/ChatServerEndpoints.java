@@ -128,6 +128,21 @@ public class ChatServerEndpoints {
     public static final String DELETE_ALL_FCM_TOKENS = "deleteallfcmtokens";
 
     /**
+     * DR-074: registers the PushKit (VoIP) token of one iOS install for the signing identity. Request-response;
+     * envelope {@code VOIP_TOKEN_REGISTRATION} with {@code op = register}; the server-issued nonce is consumed.
+     * Answers {@code VoipTokenResponseBean}; {@code VOIP_DISABLED} when the server's APNs sender is off (never a
+     * success that stores nothing).
+     */
+    public static final String REGISTER_VOIP_TOKEN = "registervoiptoken";
+
+    /**
+     * DR-074: hard-deletes the signing identity's row for one PushKit token. Same envelope with
+     * {@code op = unregister}. Idempotent. Works whatever the state of the calls switch and of the APNs switch: a
+     * row is always removable by the identity that owns it.
+     */
+    public static final String UNREGISTER_VOIP_TOKEN = "unregistervoiptoken";
+
+    /**
      * The relative path for the server capabilities endpoint. Public and
      * unauthenticated (no nonce, no signature): returns the server build
      * version and the supported wire-protocol range so clients can negotiate

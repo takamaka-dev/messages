@@ -66,6 +66,16 @@ public class FcmTokenDeletionResponseBean {
     private Long deletedCount;
 
     /**
+     * True when the refusal is {@code RATE_LIMIT_EXCEEDED} (a bucket of the connection or of the identity was empty):
+     * the request was not judged and its nonce was not spent. Retry later with a fresh nonce; a release answered
+     * this way has NOT failed for good. Not a wire member.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isRetryLater() {
+        return !success && "RATE_LIMIT_EXCEEDED".equals(errorCode);
+    }
+
+    /**
      * Create a success response carrying the number of rows removed.
      */
     public static FcmTokenDeletionResponseBean success(long deletedCount) {

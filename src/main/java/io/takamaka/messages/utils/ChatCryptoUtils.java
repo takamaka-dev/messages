@@ -79,6 +79,8 @@ import io.takamaka.messages.chat.typing.TypingSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationSignedContentBean;
+import io.takamaka.messages.chat.voip.VoipTokenRequestBean;
+import io.takamaka.messages.chat.voip.VoipTokenSignedContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
 import io.takamaka.messages.chat.attachment.InlineContentLimits;
@@ -883,6 +885,34 @@ public class ChatCryptoUtils {
         }
     }
 
+    /**
+     * DR-074 §5.3: builds a signed {@code registervoiptoken} / {@code unregistervoiptoken} request. Nothing is
+     * validated or normalised here (the server refuses what breaks {@code VoipTokenRules}); tests and vectors build
+     * refused contents through this same method.
+     *
+     * @param nonceResponseBean the nonce of the {@code nonce} route
+     * @param op {@code register} or {@code unregister}
+     * @param aud the server audience, from {@code serverinfo.audience}
+     * @param vt the PushKit token, lowercase hex
+     * @param env {@code sandbox} or {@code production}
+     * @param tp the bundle id, without {@code .voip}
+     * @param did the per-install id (the FCM {@code device_id})
+     */
+    public static final VoipTokenRequestBean getSignedVoipTokenRequest(NonceResponseBean nonceResponseBean, String op, String aud, String vt, String env, String tp, String did, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            VoipTokenSignedContentBean content = new VoipTokenSignedContentBean(nonceResponseBean, op, aud, vt, env, tp, did);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(content), signIwk, sigIwkIndex);
+            return new VoipTokenRequestBean(
+                    content,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.VOIP_TOKEN_REGISTRATION.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (JsonProcessingException | WalletException ex) {
+            throw new MessageException("voip token request error ", ex);
+        }
+    }
+
     public static final TopicKeyDistributionItemBean getInviteForUser(RegisterUserRequestBean registerUserRequestBean, String topicSymmetricKey) throws CryptoMessageException {
         try {
             String encryptionPublicKey = registerUserRequestBean.getRegisterUserRequestSignedContentBean().getEncryptionPublicKey();
@@ -1560,6 +1590,16 @@ public class ChatCryptoUtils {
                     final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean = ChatUtils.fromJsonToFcmTokenRegistrationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToFcmTokenRegistrationRequestBean.getFcmTokenRegistrationSignedContentBean());
                     returnObj = fromJsonToFcmTokenRegistrationRequestBean;
+                }
+                case "VOIP_TOKEN_REGISTRATION" -> {
+                    // DR-074 §5.3: its OWN case — the canonical form is derived from voip_token_signed_content only,
+                    // so an FCM content sent under this type (or the reverse) has no content to verify and is refused.
+                    final VoipTokenRequestBean voipTokenRequestBean = ChatUtils.fromJsonToVoipTokenRequestBean(messageJson);
+                    if (voipTokenRequestBean.getVoipTokenSignedContentBean() == null) {
+                        throw new InvalidChatMessageSignatureException("missing voip_token_signed_content");
+                    }
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(voipTokenRequestBean.getVoipTokenSignedContentBean());
+                    returnObj = voipTokenRequestBean;
                 }
 
                 default ->
