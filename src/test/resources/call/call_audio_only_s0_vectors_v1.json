@@ -191,6 +191,16 @@
       "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"38ac69b58cad276dfb7b7cafd6846f1e640e7ed4e72d35ce14b8a345ffeca788d6759d08a2bbb4b390b128354da05ba60faaba6bf5b2bdaf13b859676a180f09\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
     }
   }, {
+    "name" : "unknown_k_no_media",
+    "note" : "k:\"hungup\" without media: refused by checkRing as \"ring k\" on both sides (pins the unknown-k refusal by a shared vector, not only by Java asserts; 83, 11-19)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"hungup\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"0dc46a27297d49185285db55dcde0ca88fed68720152509e9f241f281b75d234bd1c264320505baecef6f842f815073774b127d88f00a6ca7fded9c783716303\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring k"
+    }
+  }, {
     "name" : "unknown_extra_field",
     "note" : "audio_ring plus an unknown member: the schema stays closed",
     "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1,\"x\":\"1\"}",

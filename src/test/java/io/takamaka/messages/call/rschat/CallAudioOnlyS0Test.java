@@ -505,6 +505,9 @@ class CallAudioOnlyS0Test {
                 CallRschat.pushRing(signed(callee(1), List.of(me), std, CallConstants.RING_K_ANSWERED, null))));
         rings.add(ringCase("k_cancelled_no_media", "control: the same cancel without media is accepted",
                 CallRschat.pushRing(signed(CALLER, one, std, CallConstants.RING_K_CANCELLED, null))));
+        rings.add(ringCase("unknown_k_no_media", "k:\"hungup\" without media: refused by checkRing as \"ring k\" on both "
+                + "sides (pins the unknown-k refusal by a shared vector, not only by Java asserts; 83, 11-19)",
+                CallRschat.pushRing(signed(CALLER, one, std, "hungup", null))));
         rings.add(ringCase("unknown_extra_field", "audio_ring plus an unknown member: the schema stays closed",
                 withExtra(audio, "\"x\":\"1\"")));
         rings.add(ringCase("unknown_extra_field_video", "audio_ring plus \"video\":true: no sibling field exists",
@@ -600,6 +603,7 @@ class CallAudioOnlyS0Test {
         want.put("media_with_unknown_k", "shape:bad_signature:ring media");
         want.put("k_answered_no_media", "ok:-");
         want.put("k_cancelled_no_media", "ok:-");
+        want.put("unknown_k_no_media", "shape:bad_signature:ring k");
         want.put("unknown_extra_field", "parse");
         want.put("unknown_extra_field_video", "parse");
         want.put("duplicate_media", "parse");
