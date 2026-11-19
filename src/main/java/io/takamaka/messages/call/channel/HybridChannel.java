@@ -245,7 +245,9 @@ public final class HybridChannel {
         }
         CallChannelBodyBean body;
         try {
-            body = CallJson.parse(new String(bodyBytes, java.nio.charset.StandardCharsets.US_ASCII), CallChannelBodyBean.class);
+            // Audio-only S1 (§6 «The exact parse spec»): an unknown body kind keeps h/epoch/conv_seed and is otherwise
+            // ignored, so the caller still aligns the channel (O-7) and takes conv_seed (§10.1) as a non-handover open.
+            body = CallChannelBodyBean.parseChannelBody(new String(bodyBytes, java.nio.charset.StandardCharsets.US_ASCII));
         } catch (JsonProcessingException ex) {
             throw refused("body");
         }

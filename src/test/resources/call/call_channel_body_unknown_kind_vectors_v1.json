@@ -1,0 +1,432 @@
+{
+  "_origin" : "Messages CallChannelBodyUnknownKindTest (audio-only calls S1, Iris §7.189 F1; design AUDIO_ONLY_CALLS_DESIGN_2026-11-19 §6 «The exact parse spec»; Java CallChannelBodyBean.parseChannelBody, Dart CallChannelBody.parse). `body` is the plaintext of a channel box as received (an open or a message). Strict JSON first (duplicate keys and a non-object refused); then an `h` that is a JSON string and not one of `known_kinds` (case-sensitive) is an UNKNOWN kind: only `h`, `epoch`, `conv_seed` are kept, every other member is dropped before any schema check; `epoch` must be a JSON integer within ±(2^53-1), `conv_seed` a JSON string, JSON null = absent. A known, absent or non-string `h` keeps the full strict schema. `expect.ok`: accepted or refused; a port must agree on `ok` and, when accepted, on every other member. `stage` is where THIS reference refuses (json | kept_member | schema), `error`/`reason` what HybridChannel.acceptChannel throws for such an open (key_refused / body). Accepted: `canonical` = JCS of the parsed body (for an unknown kind: of the kept members only), `plaintext_hex` = its ASCII, `known_kind` = h is a known kind, `ignored_kind` = h is a string and not a known kind (on an open: a non-handover open that still applies O-7 with `epoch` and §10.1 with `conv_seed`; on a message: ignored, no refusal), `declared_media` = CallChannelBodyBean.declaredMedia (null for any non-media kind).",
+  "known_kinds" : [ "epoch", "broadcast", "catchup", "media" ],
+  "unknown_kind_keeps" : [ "h", "epoch", "conv_seed" ],
+  "max_safe_integer" : 9007199254740991,
+  "body_cases" : [ {
+    "name" : "unknown_extra_field",
+    "note" : "an unknown kind drops an unknown member",
+    "body" : "{\"h\":\"future\",\"x\":1}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_keeps_epoch_conv_seed",
+    "note" : "epoch and conv_seed are kept, secret is dropped",
+    "body" : "{\"h\":\"future\",\"epoch\":7,\"conv_seed\":\"ab\",\"secret\":\"zz\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : 7,
+      "conv_seed" : "ab",
+      "declared_media" : null,
+      "canonical" : "{\"conv_seed\":\"ab\",\"epoch\":7,\"h\":\"future\"}",
+      "plaintext_hex" : "7b22636f6e765f73656564223a226162222c2265706f6368223a372c2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_drops_members_of_known_kinds",
+    "note" : "the members of the known kinds are dropped too",
+    "body" : "{\"h\":\"future\",\"media\":\"audio\",\"roster\":[\"aa\"],\"secret\":\"zz\",\"key\":\"00\",\"req\":\"r\",\"era\":\"e\",\"chain_idx\":1,\"since\":2,\"prev_ts\":3}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_with_media_is_no_declaration",
+    "note" : "media on an unknown kind: dropped, declared_media null",
+    "body" : "{\"h\":\"future\",\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_nested_extra",
+    "note" : "dropped members may be of any JSON type",
+    "body" : "{\"h\":\"future\",\"x\":{\"y\":[1,2.5,null]},\"z\":true,\"w\":null}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_epoch_null",
+    "note" : "epoch:null = absent",
+    "body" : "{\"h\":\"future\",\"epoch\":null}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_conv_seed_null",
+    "note" : "conv_seed:null = absent",
+    "body" : "{\"h\":\"future\",\"conv_seed\":null}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"future\"}",
+      "plaintext_hex" : "7b2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_epoch_max_safe",
+    "note" : "epoch = 2^53-1 is in the safe range",
+    "body" : "{\"h\":\"future\",\"epoch\":9007199254740991}",
+    "expect" : {
+      "ok" : true,
+      "h" : "future",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : 9007199254740991,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"epoch\":9007199254740991,\"h\":\"future\"}",
+      "plaintext_hex" : "7b2265706f6368223a393030373139393235343734303939312c2268223a22667574757265227d"
+    }
+  }, {
+    "name" : "unknown_case_sensitive_media",
+    "note" : "kinds are case-sensitive: Media is unknown",
+    "body" : "{\"h\":\"Media\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "Media",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"Media\"}",
+      "plaintext_hex" : "7b2268223a224d65646961227d"
+    }
+  }, {
+    "name" : "unknown_upper_case",
+    "note" : "an upper-case kind",
+    "body" : "{\"h\":\"FUTURE\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "FUTURE",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"FUTURE\"}",
+      "plaintext_hex" : "7b2268223a22465554555245227d"
+    }
+  }, {
+    "name" : "unknown_empty_string",
+    "note" : "the empty string is a string and not a known kind",
+    "body" : "{\"h\":\"\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "",
+      "known_kind" : false,
+      "ignored_kind" : true,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"h\":\"\"}",
+      "plaintext_hex" : "7b2268223a22227d"
+    }
+  }, {
+    "name" : "unknown_epoch_string",
+    "note" : "a kept member stays strictly typed: epoch as a string",
+    "body" : "{\"h\":\"future\",\"epoch\":\"7\"}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_epoch_fraction",
+    "note" : "epoch as a fraction",
+    "body" : "{\"h\":\"future\",\"epoch\":1.5}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_epoch_float_form",
+    "note" : "epoch in a float form",
+    "body" : "{\"h\":\"future\",\"epoch\":7.0}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_epoch_unsafe",
+    "note" : "epoch = 2^53 is outside the safe range",
+    "body" : "{\"h\":\"future\",\"epoch\":9007199254740992}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_conv_seed_number",
+    "note" : "conv_seed as a number",
+    "body" : "{\"h\":\"future\",\"conv_seed\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "kept_member",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_duplicate_dropped_key",
+    "note" : "strict JSON first: a duplicate key, even of a dropped member",
+    "body" : "{\"h\":\"future\",\"x\":1,\"x\":2}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "unknown_duplicate_h",
+    "note" : "h twice",
+    "body" : "{\"h\":\"future\",\"h\":\"other\"}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "known_media_extra_field",
+    "note" : "a known kind keeps the strict schema: ms is refused",
+    "body" : "{\"h\":\"media\",\"media\":\"audio\",\"ms\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "h_number",
+    "note" : "a non-string h keeps the strict schema",
+    "body" : "{\"h\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "h_boolean",
+    "note" : "h as a boolean",
+    "body" : "{\"h\":true}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "h_object",
+    "note" : "h as an object",
+    "body" : "{\"h\":{\"k\":\"v\"}}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "h_null_extra_field",
+    "note" : "h:null = absent h: the strict schema refuses x",
+    "body" : "{\"h\":null,\"x\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "h_null",
+    "note" : "h:null = absent: the empty body",
+    "body" : "{\"h\":null}",
+    "expect" : {
+      "ok" : true,
+      "h" : null,
+      "known_kind" : false,
+      "ignored_kind" : false,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{}",
+      "plaintext_hex" : "7b7d"
+    }
+  }, {
+    "name" : "no_h_extra_field",
+    "note" : "no h: the strict schema refuses x",
+    "body" : "{\"x\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "empty_body",
+    "note" : "control: the empty body",
+    "body" : "{}",
+    "expect" : {
+      "ok" : true,
+      "h" : null,
+      "known_kind" : false,
+      "ignored_kind" : false,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{}",
+      "plaintext_hex" : "7b7d"
+    }
+  }, {
+    "name" : "no_h_conv_seed",
+    "note" : "control: an era-0 inv open without a handover",
+    "body" : "{\"conv_seed\":\"ab\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : null,
+      "known_kind" : false,
+      "ignored_kind" : false,
+      "epoch" : null,
+      "conv_seed" : "ab",
+      "declared_media" : null,
+      "canonical" : "{\"conv_seed\":\"ab\"}",
+      "plaintext_hex" : "7b22636f6e765f73656564223a226162227d"
+    }
+  }, {
+    "name" : "known_media",
+    "note" : "control: the S0 media notice",
+    "body" : "{\"h\":\"media\",\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "known_kind" : true,
+      "ignored_kind" : false,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : "audio",
+      "canonical" : "{\"h\":\"media\",\"media\":\"audio\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "known_media_escaped_h",
+    "note" : "a JSON escape decodes to the known kind media",
+    "body" : "{\"h\":\"\\u006dedia\",\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "known_kind" : true,
+      "ignored_kind" : false,
+      "epoch" : null,
+      "conv_seed" : null,
+      "declared_media" : "audio",
+      "canonical" : "{\"h\":\"media\",\"media\":\"audio\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "known_catchup",
+    "note" : "control: the catch-up request",
+    "body" : "{\"h\":\"catchup\",\"req\":\"r\",\"epoch\":3}",
+    "expect" : {
+      "ok" : true,
+      "h" : "catchup",
+      "known_kind" : true,
+      "ignored_kind" : false,
+      "epoch" : 3,
+      "conv_seed" : null,
+      "declared_media" : null,
+      "canonical" : "{\"epoch\":3,\"h\":\"catchup\",\"req\":\"r\"}",
+      "plaintext_hex" : "7b2265706f6368223a332c2268223a2263617463687570222c22726571223a2272227d"
+    }
+  }, {
+    "name" : "known_catchup_epoch_string",
+    "note" : "control: a known kind with a wrongly typed epoch",
+    "body" : "{\"h\":\"catchup\",\"epoch\":\"3\"}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "schema",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "not_an_object_array",
+    "note" : "a JSON array",
+    "body" : "[]",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "not_an_object_string",
+    "note" : "a JSON string",
+    "body" : "\"future\"",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  }, {
+    "name" : "not_an_object_null",
+    "note" : "JSON null",
+    "body" : "null",
+    "expect" : {
+      "ok" : false,
+      "stage" : "json",
+      "error" : "key_refused",
+      "reason" : "body"
+    }
+  } ]
+}

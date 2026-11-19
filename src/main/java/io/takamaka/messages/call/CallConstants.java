@@ -155,6 +155,14 @@ public final class CallConstants {
      * §6.4 step 4 handover. The spec names the request, not its object: resolution C-1 of the X-1/X-2 fix report.
      */
     public static final String H_CATCHUP = "catchup";
+    /**
+     * §6.4: the {@code h} of the epoch handover body. Audio-only S1 named it for the known-kind set of
+     * {@link io.takamaka.messages.call.beans.CallChannelBodyBean#parseChannelBody(String)}; the code that builds and
+     * checks the handover keeps its literal.
+     */
+    public static final String H_EPOCH = "epoch";
+    /** [0.4] §6.4: the {@code h} of a listener's broadcast handover body (named in S1, like {@link #H_EPOCH}). */
+    public static final String H_BROADCAST = "broadcast";
 
     // ---- audio-only calls, slice S0 (design AUDIO_ONLY_CALLS_DESIGN_2026-11-19; spec §5.3, §7.1, §8.6) ----
     /**
