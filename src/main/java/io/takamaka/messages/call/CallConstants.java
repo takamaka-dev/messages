@@ -84,6 +84,13 @@ public final class CallConstants {
     public static final String MODE_CONFERENCE = "conference";
     /** [0.2] §7.1 (C-16): {@code k} of the answered notice — a {@code ring} signed by the callee to its own devices. */
     public static final String RING_K_ANSWERED = "answered";
+    /**
+     * P2 (caller cancel, design CALL_RING_ANY_STATE §5 + Iris §7.123 I2/RA-4/RA-5, 2026-11-05): {@code k} of the caller's
+     * CANCEL — a {@code ring} signed by the CALLER with the ring's own {@code call}, {@code svc}, {@code to} and
+     * {@code mode}: the outgoing call ended before anyone answered, so a callee device still ringing for that call from
+     * that caller stops. A termination request only: it never starts anything on a device.
+     */
+    public static final String RING_K_CANCELLED = "cancelled";
     public static final String ROLE_SPEAKER = "speaker";
     public static final String ROLE_LISTENER = "listener";
     public static final String CAP_BASIC = "basic";

@@ -32,7 +32,10 @@ public class CallRingBean extends CallSignedObject {
     private List<String> to;
     @JsonProperty("mode")
     private String mode;
-    /** [0.2] §7.1: absent (a ring) or {@code answered} (the answered notice). */
+    /**
+     * [0.2] §7.1: absent (a ring) or {@code answered} (the answered notice); P2 (2026-11-05) also {@code cancelled}
+     * (the caller's cancel of its unanswered ring).
+     */
     @JsonProperty("k")
     private String k;
 
