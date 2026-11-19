@@ -253,8 +253,8 @@ public final class CallRschat {
     /**
      * The reader's check of a pushed ring ({@link #PUSH_RING_FIELD}), the way a cold device does it: parsed strictly,
      * verified under the ring context for {@code aud} (the audience of the network this device's PINNED call service
-     * serves — never taken from the push), shape-checked as rschat does ({@link #checkRing}), a ring and not an
-     * answered notice, and bound to the push's own four fields ({@code notice}: call_id, svc, f, mode — a signed
+     * serves — never taken from the push), shape-checked as rschat does ({@link #checkRing}), a ring — no {@code k} of any
+     * kind: neither an answered notice nor the caller's cancel ({@code push ring k}) — and bound to the push's own four fields ({@code notice}: call_id, svc, f, mode — a signed
      * ring of one call must not dress a push of another). {@code me} (the device's push identity) must be among
      * {@code to} when known. Freshness is time-dependent and separate: {@link #isFreshPushRing}.
      *
@@ -274,7 +274,9 @@ public final class CallRschat {
         }
         io.takamaka.messages.call.CallSignatures.verify(r, CallConstants.T_RING, aud);
         checkRing(r, toMax);
-        if (isAnswered(r)) {
+        // a push ring carries no k of ANY kind (as the Dart PushRingVerifier): checkRing admits k = answered and
+        // k = cancelled, and a signed cancel is not a ring — it is read only through checkCancel
+        if (r.getK() != null) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring k");
         }
         if (!r.getCall().equals(notice.getCall()) || !r.getSvc().equals(notice.getSvc())

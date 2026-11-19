@@ -132,6 +132,37 @@ class CallRingPushTest {
         refused(good, null, noticeOf(r), me);
     }
 
+    @Test
+    void aPushRingCarriesNoKOfAnyKind() throws Exception {
+        // Java matches Dart (tkm_calls PushRingVerifier): any k makes the object something other than a ring
+        String me = callees(2).get(0);
+        // the caller's signed cancel: a valid cancel (checkRing and checkCancel accept it), never a push ring
+        CallRingBean cancel = signed(callees(2), AUD, TS, CallConstants.RING_K_CANCELLED);
+        CallRschat.checkRing(cancel, CallRschat.RING_TO_MAX);
+        CallRschat.checkCancel(CallRschat.pushRing(cancel), AUD, CALL, id(OWNER), me, CallRschat.RING_TO_MAX);
+        assertEquals("push ring k", refusedReason(CallRschat.pushRing(cancel), noticeOf(cancel), me));
+        assertEquals("push ring k", refusedReason(CallRschat.pushRing(cancel), noticeOf(cancel), null));
+        // the answered notice: unchanged
+        CallRingBean a = CallRschat.answered(CALL, SVC, CallConstants.MODE_STANDARD, id(OWNER), NONCE, AUD, TS);
+        CallSignatures.sign(a, OWNER);
+        assertEquals("push ring k", refusedReason(CallRschat.pushRing(a), noticeOf(a), id(OWNER)));
+        // an unknown k (validly signed) is already refused by the shape check
+        for (String k : List.of("hungup", "", "Cancelled", "ring")) {
+            CallRingBean unknown = signed(callees(2), AUD, TS, k);
+            assertEquals("ring k", refusedReason(CallRschat.pushRing(unknown), noticeOf(unknown), me), k);
+        }
+        // the same ring without k verifies
+        CallRingBean ring = signed(callees(2), AUD, TS, null);
+        assertEquals(id(OWNER), CallRschat.checkPushRing(CallRschat.pushRing(ring), AUD, noticeOf(ring), me, CallRschat.RING_TO_MAX).getF());
+    }
+
+    static String refusedReason(String ring, CallRingNoticeBean n, String me) {
+        CallProtocolException ex = assertThrows(CallProtocolException.class,
+                () -> CallRschat.checkPushRing(ring, AUD, n, me, CallRschat.RING_TO_MAX));
+        assertEquals(CallError.BAD_SIGNATURE, ex.getError());
+        return ex.getReason();
+    }
+
     static void refused(String ring, String aud, CallRingNoticeBean n, String me) {
         CallProtocolException ex = assertThrows(CallProtocolException.class,
                 () -> CallRschat.checkPushRing(ring, aud, n, me, CallRschat.RING_TO_MAX));
