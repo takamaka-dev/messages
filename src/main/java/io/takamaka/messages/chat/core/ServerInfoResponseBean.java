@@ -83,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.7";
+    public static final String MANIFEST_VERSION_CURRENT = "1.8";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -222,5 +222,23 @@ public class ServerInfoResponseBean {
      * this server prefers the pin.
      */
     private String audience;
+
+    /**
+     * Manifest {@code 1.8+} (DR-074 amendment 1, A-17): the {@code cap} values this server VALIDATES, STORES and
+     * HONOURS at {@code registerfcmtoken}, e.g. {@code ["calls"]} ({@code FcmCapabilities.CALLS}). A wire and storage
+     * capability, advertised whatever the calls, FCM and APNs switches say.
+     *
+     * <p><b>It is NOT «calls are available».</b> A client must never read it so: that is the job of the call-service
+     * pin and the call manifest. A client sends {@code cap} = (its own capabilities) &cap; (this set, read on this
+     * connection), never more (A-18). {@code null} or empty &rArr; the server knows no value (a server older than
+     * 1.8 refuses any {@code cap} with {@code SIGNATURE_ERROR}): send no {@code cap}. Unsigned, like the whole
+     * manifest: a relay that removes a value costs the device that capability; one that adds a value makes the server
+     * refuse ({@code INVALID_CAP}) and the client retry once without {@code cap} (A-19, A-22).</p>
+     *
+     * <p><b>A set: the order on the wire is not significant.</b> Servers send it sorted (a {@code TreeSet}); a client
+     * reads it as a set and never relies on the order. (The order of the SIGNED {@code cap} is a different rule:
+     * strictly ascending, refused otherwise.)</p>
+     */
+    private java.util.Set<String> fcmTokenCapabilities;
 
 }

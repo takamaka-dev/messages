@@ -429,6 +429,9 @@ public final class VoipTokenVectorGenerator {
         }
 
         // ---- serverinfo (manifest 1.7) ----
+        // FROZEN at 1.7, the manifest that introduced `audience` (this file is mirrored byte for byte by the Dart
+        // port). Manifest 1.8 (DR-074 amendment 1, fcmTokenCapabilities) is covered by java_fcm_cap_vectors.json;
+        // a 1.7 server has no such member, so it is removed here rather than written as null.
         ObjectNode si = root.putObject("serverinfo_vectors");
         ServerInfoResponseBean s17 = new ServerInfoResponseBean();
         s17.setServerVersion("0.11.0-SNAPSHOT");
@@ -437,13 +440,15 @@ public final class VoipTokenVectorGenerator {
         s17.setProtocolMajor(1);
         s17.setProtocolMinMinor(0);
         s17.setProtocolMaxMinor(2);
-        s17.setManifestVersion(ServerInfoResponseBean.MANIFEST_VERSION_CURRENT);
+        s17.setManifestVersion("1.7");
         s17.setAudience(AUDIENCE);
-        si.put("manifest_version_current", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT);
+        si.put("manifest_version_current", "1.7");
         si.put("audience_member", "audience");
-        si.set("manifest_1_7_json", M.valueToTree(s17));
+        ObjectNode j17 = M.valueToTree(s17);
+        j17.remove("fcmTokenCapabilities");
+        si.set("manifest_1_7_json", j17);
         si.put("manifest_1_7_expected_audience", AUDIENCE);
-        ObjectNode s16 = M.valueToTree(s17);
+        ObjectNode s16 = j17.deepCopy();
         s16.remove("audience");
         s16.put("manifestVersion", "1.6");
         si.set("manifest_1_6_json", s16);
