@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.type.LogicalType;
 import io.takamaka.messages.call.beans.CallSignedObject;
@@ -32,6 +33,8 @@ import java.util.Arrays;
  * Trailing content after the top-level value ({@code {"h":"future"} x}, {@code {}{}}) is refused
  * ({@code FAIL_ON_TRAILING_TOKENS}, on {@code readValue} and {@code readTree} alike); surrounding whitespace is JSON
  * and stays accepted. One string is one call object: nothing parses a stream of concatenated objects through here.
+ * Every {@code long} / {@code Long} read into a bean is within ±(2^53−1), the I-JSON / RFC 8785 interoperable range
+ * the Dart port enforces ({@link CallSafeLongDeserializer}); the raw tree ({@code readTree}) is not range-checked here.
  * A verifier rebuilds the signed octets from the parsed bean, so any field it does not know could not be covered
  * anyway.
  *
@@ -52,6 +55,11 @@ public final class CallJson {
                     .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
                     .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
                     .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail))
+            // N3: every long / Long (fields, nested beans, collection elements) within ±(2^53-1), as the Dart
+            // StrictJson / _Kind.int64 ('out of the safe range'). Deserialisation only; serialisation untouched.
+            .addModule(new SimpleModule("call-safe-integers")
+                    .addDeserializer(Long.class, CallSafeLongDeserializer.WRAPPER)
+                    .addDeserializer(Long.TYPE, CallSafeLongDeserializer.PRIMITIVE))
             .disable(SerializationFeature.INDENT_OUTPUT)
             .build();
 
