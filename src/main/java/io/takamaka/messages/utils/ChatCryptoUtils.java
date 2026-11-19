@@ -77,6 +77,7 @@ import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeSignedContentBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
+import io.takamaka.messages.chat.fcm.FcmCapabilities;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationSignedContentBean;
 import io.takamaka.messages.chat.voip.VoipTokenRequestBean;
@@ -866,8 +867,26 @@ public class ChatCryptoUtils {
     }
 
     public static final FcmTokenRegistrationRequestBean getSignedFcmTokenRegistrationRequest(NonceResponseBean nonceResponseBean, String fcmToken, String platform, String deviceId, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        return getSignedFcmTokenRegistrationRequest(nonceResponseBean, fcmToken, platform, deviceId, null, signIwk, sigIwkIndex);
+    }
+
+    /**
+     * DR-074 amendment 1: the FCM registration with the capabilities this install declares ({@code cap}). The list
+     * is checked with {@link FcmCapabilities#validate} (shape only) BEFORE signing: a list the server would refuse
+     * is never signed. Nothing is sorted or normalised; a {@code null} or empty list is sent as no {@code cap} at all
+     * (the canonical form is then byte-identical to the 6-argument overload's). The list is copied, so a later
+     * change to the caller's list cannot alter the signed content.
+     *
+     * @param cap the capabilities, already in canonical form (e.g. {@code List.of(FcmCapabilities.CALLS)}), or null
+     * @throws MessageException with a message starting {@code INVALID_CAP} when {@code cap} is not canonical
+     */
+    public static final FcmTokenRegistrationRequestBean getSignedFcmTokenRegistrationRequest(NonceResponseBean nonceResponseBean, String fcmToken, String platform, String deviceId, List<String> cap, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        if (FcmCapabilities.validate(cap, null) != null) {
+            throw new MessageException(FcmCapabilities.ERROR_INVALID_CAP + ": " + FcmCapabilities.refusalReason(cap, null));
+        }
+        final List<String> signedCap = (cap == null || cap.isEmpty()) ? null : List.copyOf(cap);
         try {
-            FcmTokenRegistrationSignedContentBean fcmTokenRegistrationSignedContentBean = new FcmTokenRegistrationSignedContentBean(nonceResponseBean, fcmToken, platform, deviceId);
+            FcmTokenRegistrationSignedContentBean fcmTokenRegistrationSignedContentBean = new FcmTokenRegistrationSignedContentBean(nonceResponseBean, fcmToken, platform, deviceId, signedCap);
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(fcmTokenRegistrationSignedContentBean), signIwk, sigIwkIndex);
             FcmTokenRegistrationRequestBean fcmTokenRegistrationRequestBean = new FcmTokenRegistrationRequestBean(
                     fcmTokenRegistrationSignedContentBean,

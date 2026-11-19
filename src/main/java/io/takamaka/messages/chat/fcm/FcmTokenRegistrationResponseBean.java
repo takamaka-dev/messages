@@ -62,6 +62,17 @@ public class FcmTokenRegistrationResponseBean {
     }
 
     /**
+     * True when the refusal is {@link FcmCapabilities#ERROR_INVALID_CAP} (DR-074 amendment 1, A-13): the signed
+     * {@code cap} broke the canonical form or named a value this server does not advertise. The nonce was not
+     * spent. A client retries ONCE without {@code cap} (A-22) and never rotates its token on this code. Not a wire
+     * member.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isCapRefused() {
+        return !success && FcmCapabilities.ERROR_INVALID_CAP.equals(errorCode);
+    }
+
+    /**
      * Create a success response.
      */
     public static FcmTokenRegistrationResponseBean success(Long registrationTime) {

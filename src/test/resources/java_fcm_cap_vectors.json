@@ -1,0 +1,385 @@
+{
+  "version" : "1.0.0",
+  "generated_by" : "FcmCapVectorGenerator.java",
+  "source" : "Messages (Java reference)",
+  "decision" : "DR-074 amendment 1 (draft 3): the calls capability 'cap' at FCM registration; serverinfo.fcmTokenCapabilities (manifest 1.8)",
+  "cap_constants" : {
+    "endpoint" : "registerfcmtoken",
+    "message_type" : "FCM_TOKEN_REGISTRATION",
+    "content_key" : "fcm_token_registration_signed_content",
+    "cap_key" : "cap",
+    "calls" : "calls",
+    "error_invalid_cap" : "INVALID_CAP",
+    "max_values" : 8,
+    "max_value_length" : 32,
+    "value_regex" : "[a-z0-9-]{1,32}",
+    "storage_check_regex" : "^[a-z0-9-]{1,32}(,[a-z0-9-]{1,32}){0,7}$",
+    "max_stored_length" : 263,
+    "note" : "cap is absent, or 1 to max_values strings, each matching value_regex over the WHOLE string (Java matches(), never find(); no lower-casing or other normalisation first), in strictly ascending code-point order (so unique). An empty list is absent and is never sent: the canonical form omits the key (NON_EMPTY on the cap field only; device_id keeps its explicit null). 'expect' is the signer's verdict (shape only): OK, or INVALID_CAP refused BEFORE signing, never a throw. 'canonical' and 'stored_form' are given only when expect is OK. 'expect_server' is the registerfcmtoken verdict on a server advertising 'server_known' (unknown values are refused, never dropped); an INVALID_CAP refusal spends no nonce. Rows of kind 'normative' must give the same verdict (and canonical) in Java and Dart; the others are builder, server and boundary checks."
+  },
+  "server_known" : [
+    "calls"
+  ],
+  "fixed_input" : {
+    "nonce" : {
+      "nonce" : "11111111-2222-3333-4444-555555555555",
+      "timestamp" : 1700000000000,
+      "liveness" : 60000
+    },
+    "fcm_token" : "fixed-fcm-token-XYZ",
+    "platform" : "android",
+    "device_id" : "device-01"
+  },
+  "vectors" : [
+    {
+      "id" : "V1",
+      "kind" : "normative",
+      "description" : "cap absent: canonical byte-identical to FcmCanonicalVectorTest.VECTOR_WITH_DEVICE",
+      "cap_present" : false,
+      "expect" : "OK",
+      "canonical" : "{\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : null,
+      "expect_server" : "OK"
+    },
+    {
+      "id" : "V2",
+      "kind" : "normative",
+      "description" : "the calls capability",
+      "cap_present" : true,
+      "cap" : [
+        "calls"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"calls\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "calls",
+      "expect_server" : "OK"
+    },
+    {
+      "id" : "V3",
+      "kind" : "normative",
+      "description" : "unsorted: refused, never sorted",
+      "cap_present" : true,
+      "cap" : [
+        "calls",
+        "a"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V4",
+      "kind" : "normative",
+      "description" : "duplicate: refused, never de-duplicated",
+      "cap_present" : true,
+      "cap" : [
+        "calls",
+        "calls"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V5",
+      "kind" : "builder",
+      "description" : "empty list: the same value as absent, omitted (canonical = V1), never sent as []",
+      "cap_present" : true,
+      "cap" : [ ],
+      "expect" : "OK",
+      "canonical" : "{\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : null,
+      "expect_server" : "OK"
+    },
+    {
+      "id" : "V7",
+      "kind" : "normative",
+      "description" : "upper-case: refused, never lower-cased",
+      "cap_present" : true,
+      "cap" : [
+        "Calls"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V8a",
+      "kind" : "server",
+      "description" : "9 values: more than max_values",
+      "cap_present" : true,
+      "cap" : [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V8b",
+      "kind" : "server",
+      "description" : "a 33-character value: longer than max_value_length",
+      "cap_present" : true,
+      "cap" : [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V9",
+      "kind" : "server",
+      "description" : "a well-formed value this server does not advertise: shape OK, the server refuses",
+      "cap_present" : true,
+      "cap" : [
+        "calls-2"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"calls-2\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "calls-2",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V12",
+      "kind" : "normative",
+      "description" : "a null element: refused with INVALID_CAP, never a throw (Java List<String>, Dart List<String?>)",
+      "cap_present" : true,
+      "cap" : [
+        null
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "V13",
+      "kind" : "normative",
+      "description" : "a trailing line feed: refused (pins matches(), not find())",
+      "cap_present" : true,
+      "cap" : [
+        "calls\n"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B1",
+      "kind" : "boundary",
+      "description" : "max_values values of max_value_length characters: the longest stored form",
+      "cap_present" : true,
+      "cap" : [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "cccccccccccccccccccccccccccccccc",
+        "dddddddddddddddddddddddddddddddd",
+        "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "ffffffffffffffffffffffffffffffff",
+        "gggggggggggggggggggggggggggggggg",
+        "hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"cccccccccccccccccccccccccccccccc\",\"dddddddddddddddddddddddddddddddd\",\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"ffffffffffffffffffffffffffffffff\",\"gggggggggggggggggggggggggggggggg\",\"hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,cccccccccccccccccccccccccccccccc,dddddddddddddddddddddddddddddddd,eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ffffffffffffffffffffffffffffffff,gggggggggggggggggggggggggggggggg,hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B2",
+      "kind" : "boundary",
+      "description" : "a one-character value",
+      "cap_present" : true,
+      "cap" : [
+        "a"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"a\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "a",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B3",
+      "kind" : "boundary",
+      "description" : "hyphen-only values are well-formed (A-12.1)",
+      "cap_present" : true,
+      "cap" : [
+        "-",
+        "--"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"-\",\"--\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "-,--",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B4",
+      "kind" : "boundary",
+      "description" : "a prefix sorts first: calls < calls-2",
+      "cap_present" : true,
+      "cap" : [
+        "calls",
+        "calls-2"
+      ],
+      "expect" : "OK",
+      "canonical" : "{\"cap\":[\"calls\",\"calls-2\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}",
+      "stored_form" : "calls,calls-2",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B5",
+      "kind" : "boundary",
+      "description" : "the reverse order of B4",
+      "cap_present" : true,
+      "cap" : [
+        "calls-2",
+        "calls"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B6",
+      "kind" : "boundary",
+      "description" : "an empty string value",
+      "cap_present" : true,
+      "cap" : [
+        ""
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B7",
+      "kind" : "boundary",
+      "description" : "a trailing space",
+      "cap_present" : true,
+      "cap" : [
+        "calls "
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B8",
+      "kind" : "boundary",
+      "description" : "a comma inside a value (the stored separator)",
+      "cap_present" : true,
+      "cap" : [
+        "calls,x"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B9",
+      "kind" : "boundary",
+      "description" : "a non-ASCII letter (Turkish dotless i)",
+      "cap_present" : true,
+      "cap" : [
+        "cal\u0131s"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    },
+    {
+      "id" : "B10",
+      "kind" : "boundary",
+      "description" : "an underscore",
+      "cap_present" : true,
+      "cap" : [
+        "calls_2"
+      ],
+      "expect" : "INVALID_CAP",
+      "expect_server" : "INVALID_CAP"
+    }
+  ],
+  "has_value_vectors" : [
+    {
+      "stored" : "calls",
+      "value" : "calls",
+      "expect" : true
+    },
+    {
+      "stored" : "calls-2",
+      "value" : "calls",
+      "expect" : false
+    },
+    {
+      "stored" : "calls,other",
+      "value" : "calls",
+      "expect" : true
+    },
+    {
+      "stored" : "a,calls",
+      "value" : "calls",
+      "expect" : true
+    },
+    {
+      "stored" : "calls-2,callsx",
+      "value" : "calls",
+      "expect" : false
+    },
+    {
+      "stored" : "xcalls",
+      "value" : "calls",
+      "expect" : false
+    },
+    {
+      "stored" : null,
+      "value" : "calls",
+      "expect" : false
+    },
+    {
+      "stored" : "",
+      "value" : "calls",
+      "expect" : false
+    }
+  ],
+  "serverinfo_vectors" : {
+    "manifest_version_current" : "1.8",
+    "member" : "fcmTokenCapabilities",
+    "manifest_1_8_json" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.8",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1",
+      "fcmTokenCapabilities" : [
+        "calls"
+      ]
+    },
+    "manifest_1_8_expected_fcm_token_capabilities" : [
+      "calls"
+    ],
+    "manifest_1_7_json" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.7",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1"
+    },
+    "manifest_1_7_expected_fcm_token_capabilities" : null,
+    "note" : "fcmTokenCapabilities means 'this server validates, stores and honours cap', NOT 'calls are available'. A client sends cap = (its own capabilities) intersected with this set; a 1.7 server has no member: read it as no capability (null), send no cap."
+  }
+}
