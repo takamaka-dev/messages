@@ -93,7 +93,7 @@ class CallChannelBodyUnknownKindTest {
     @Test
     void strictJsonComesFirst() {
         for (String bad : List.of("{\"h\":\"future\",\"x\":1,\"x\":2}", "{\"h\":\"future\",\"h\":\"other\"}", "[]", "\"future\"",
-                "null", "{\"h\":\"future\"", "")) {
+                "null", "{\"h\":\"future\"", "", "   ", "\n")) {
             assertThrows(JsonProcessingException.class, () -> CallChannelBodyBean.parseChannelBody(bad), bad);
         }
     }
@@ -314,6 +314,10 @@ class CallChannelBodyUnknownKindTest {
         cases.add(bodyCase("not_an_object_array", "a JSON array", "[]"));
         cases.add(bodyCase("not_an_object_string", "a JSON string", "\"future\""));
         cases.add(bodyCase("not_an_object_null", "JSON null", "null"));
+        // no JSON value at all
+        cases.add(bodyCase("no_value_empty", "the empty text: no JSON value", ""));
+        cases.add(bodyCase("no_value_spaces", "spaces only: no JSON value", "   "));
+        cases.add(bodyCase("no_value_newline", "a newline only: no JSON value", "\n"));
         root.put("body_cases", cases);
         return new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).writeValueAsString(root) + "\n";
     }
@@ -395,6 +399,9 @@ class CallChannelBodyUnknownKindTest {
         want.put("not_an_object_array", "refused:json");
         want.put("not_an_object_string", "refused:json");
         want.put("not_an_object_null", "refused:json");
+        want.put("no_value_empty", "refused:json");
+        want.put("no_value_spaces", "refused:json");
+        want.put("no_value_newline", "refused:json");
         assertEquals(want, got);
     }
 
