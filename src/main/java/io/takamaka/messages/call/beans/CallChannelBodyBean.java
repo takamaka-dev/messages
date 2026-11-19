@@ -2,6 +2,8 @@ package io.takamaka.messages.call.beans;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.takamaka.messages.call.CallStrictStringDeserializer;
 import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,7 +23,11 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CallChannelBodyBean {
 
-    /** Handover kind: {@code epoch} | {@code broadcast}; absent when the body carries no handover. */
+    /**
+     * Body kind: the handovers {@code epoch} | {@code broadcast}, the catch-up request {@code catchup}
+     * ({@link io.takamaka.messages.call.CallConstants#H_CATCHUP}) and, from protocol 1.1, the media notice
+     * {@code media} ({@link io.takamaka.messages.call.CallConstants#H_MEDIA}); absent when the body carries none.
+     */
     @JsonProperty("h")
     private String h;
     @JsonProperty("epoch")
@@ -64,4 +70,33 @@ public class CallChannelBodyBean {
     /** conv_seed, hex (spec §10.1). */
     @JsonProperty("conv_seed")
     private String convSeed;
+    /**
+     * Audio-only calls S0 (design AUDIO_ONLY_CALLS_DESIGN_2026-11-19 §5/§6, ruling R-1; spec §5.3; protocol 1.1): the
+     * field of the media notice {@code {"h":"media","media":"video"|"audio"}} — the SENDER's own declared media
+     * intent ({@link io.takamaka.messages.call.CallConstants#MEDIA_VIDEO} /
+     * {@link io.takamaka.messages.call.CallConstants#MEDIA_AUDIO}).
+     *
+     * <p>LABELLING ONLY: a receiver uses it to say why no video arrives («by choice»); it never gates rendering,
+     * decryption or any key-plane step. Speakers only: a listener never sends it and never receives one, and a
+     * receiver clears a leg's declaration on a role change. It is a string so that other values can come later: this
+     * bean does NOT refuse an unknown value, and a receiver treats one as «unknown cause». No counter: the channel's
+     * own {@code seq} orders and de-duplicates the notices.
+     */
+    @JsonProperty("media")
+    @JsonDeserialize(using = CallStrictStringDeserializer.class)
+    private String media;
+
+    /**
+     * The media declaration a RECEIVER takes from this body (audio-only S0, ruling of 2026-11-19): {@code media} is
+     * read ONLY when {@code h} is exactly {@code "media"} ({@link io.takamaka.messages.call.CallConstants#H_MEDIA}).
+     *
+     * @return the declared value as received — {@code "audio"}, {@code "video"}, or any other string (an unknown
+     * value, the empty string included: «unknown cause») — and {@code null} when the body declares nothing: any body
+     * whose {@code h} is not {@code "media"} (absent, {@code catchup}, a handover, … — a {@code media} member there is
+     * ignored), and an {@code h:"media"} body without {@code media} (absent or JSON {@code null}; «no declaration» =
+     * unknown cause). Not a bean property: it is never serialised.
+     */
+    public String declaredMedia() {
+        return io.takamaka.messages.call.CallConstants.H_MEDIA.equals(h) ? media : null;
+    }
 }

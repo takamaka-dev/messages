@@ -135,6 +135,15 @@ public final class CallRschat {
         return r != null && CallConstants.RING_K_CANCELLED.equals(r.getK());
     }
 
+    /**
+     * Audio-only S0 (design AUDIO_ONLY_CALLS §7): true when the ring declares the caller's intent as audio-only
+     * ({@code media = audio}); false for a ring without {@code media} (a video ring). Meaningful only on a VERIFIED,
+     * shape-checked ring ({@link #checkRing}, {@link #checkPushRing}) — never read it from a notice or a push field.
+     */
+    public static boolean isAudioRing(CallRingBean r) {
+        return r != null && r.getK() == null && CallConstants.RING_MEDIA_AUDIO.equals(r.getMedia());
+    }
+
     /** An unsigned lookup of ONE identity (sign it with the service key). */
     public static CallLookupBean lookup(String identity, String nonce, String aud, long ts) {
         CallLookupBean l = new CallLookupBean();
@@ -160,12 +169,22 @@ public final class CallRschat {
      *
      * <p>P2 (2026-11-05): {@code k = cancelled} (the caller's cancel) has exactly a ring's shape — {@code to}
      * 1..{@code toMax} distinct identities, never {@code f}. Any other {@code k} is still refused.
+     *
+     * <p>Audio-only S0 (2026-11-19, design AUDIO_ONLY_CALLS §7): {@code media} is absent (a video ring) or exactly
+     * {@code audio} ({@link CallConstants#RING_MEDIA_AUDIO}), and only a ring carries it — any other value, or
+     * {@code media} together with any {@code k} ({@code answered}, {@code cancelled}), is refused
+     * {@code bad_signature} with reason {@code ring media}, like a bad {@code mode}. The check runs right after the
+     * scalar fields and BEFORE the {@code to} checks, so it never comes back as the {@code ring_to_max} limit.
      */
     public static void checkRing(CallRingBean r, int toMax) throws CallProtocolException {
         if (r == null || !isIdentity(r.getF()) || r.getN() == null || r.getN().isEmpty()
                 || !CallBytes.isLowerHex(r.getCall(), CallConstants.HASH_LEN) || !isServiceId(r.getSvc())
                 || !(CallConstants.MODE_STANDARD.equals(r.getMode()) || CallConstants.MODE_CONFERENCE.equals(r.getMode()))) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring fields");
+        }
+        // S0: media is absent or exactly "audio", and only on a ring (no k)
+        if (r.getMedia() != null && !(CallConstants.RING_MEDIA_AUDIO.equals(r.getMedia()) && r.getK() == null)) {
+            throw new CallProtocolException(CallError.BAD_SIGNATURE, "ring media");
         }
         List<String> to = r.getTo();
         if (to == null || to.isEmpty()) {
@@ -234,8 +253,8 @@ public final class CallRschat {
     /**
      * The reader's check of a pushed ring ({@link #PUSH_RING_FIELD}), the way a cold device does it: parsed strictly,
      * verified under the ring context for {@code aud} (the audience of the network this device's PINNED call service
-     * serves — never taken from the push), shape-checked as rschat does ({@link #checkRing}), a ring and not an
-     * answered notice, and bound to the push's own four fields ({@code notice}: call_id, svc, f, mode — a signed
+     * serves — never taken from the push), shape-checked as rschat does ({@link #checkRing}), a ring — no {@code k} of any
+     * kind: neither an answered notice nor the caller's cancel ({@code push ring k}) — and bound to the push's own four fields ({@code notice}: call_id, svc, f, mode — a signed
      * ring of one call must not dress a push of another). {@code me} (the device's push identity) must be among
      * {@code to} when known. Freshness is time-dependent and separate: {@link #isFreshPushRing}.
      *
@@ -255,7 +274,9 @@ public final class CallRschat {
         }
         io.takamaka.messages.call.CallSignatures.verify(r, CallConstants.T_RING, aud);
         checkRing(r, toMax);
-        if (isAnswered(r)) {
+        // a push ring carries no k of ANY kind (as the Dart PushRingVerifier): checkRing admits k = answered and
+        // k = cancelled, and a signed cancel is not a ring — it is read only through checkCancel
+        if (r.getK() != null) {
             throw new CallProtocolException(CallError.BAD_SIGNATURE, "push ring k");
         }
         if (!r.getCall().equals(notice.getCall()) || !r.getSvc().equals(notice.getSvc())

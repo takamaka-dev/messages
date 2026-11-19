@@ -1,0 +1,412 @@
+{
+  "_origin" : "Messages CallAudioOnlyS0Test (audio-only calls S0, design AUDIO_ONLY_CALLS_DESIGN_2026-11-19 §5-§7, rulings R-1/R-2/R-3). `ring_cases`: `ring` is the text a verifier receives (the callring request, the push field `ring`, the live `signed_ring`); `expect.ok` = strict parse (unknown field / duplicate key refused), then the call signature under tkm-call/v1/ring for `aud`, then CallRschat.checkRing with `ring_to_max`. `expect.stage` is where THIS reference refuses (parse | signature | shape); a port must agree on `ok` and, for the shape cases, on `error` and `reason`. For an accepted ring: `canonical` = JCS of the object without sg, `signing_octets_hex` = ASCII(\"tkm-call/v1/ring\") || 00 || canonical, `sg` = Ed25519 (deterministic) over them, `push_ring` = JCS of the whole bean (CallRschat.pushRing), `media` = the verified field (null = a video ring). `body_cases`: `body` is the plaintext of a pairwise channel box as received; `expect.ok` = strict parse of CallChannelBodyBean; `canonical` / `plaintext_hex` = the bytes a sender seals (JCS, ASCII); `media` = the parsed field; `declaration` = what a RECEIVER takes (CallChannelBodyBean.declaredMedia): the media value ONLY when h == \"media\", else null — null also for h:\"media\" without media (no declaration = unknown cause); `known_value` is emitted only when h == \"media\" (else null): true for video/audio, false = the receiver shows «unknown cause». In `ring_cases` a JSON \"media\":null is the absent field (same canonical and push_ring as the ring without it). Keys: seeds are SHA3-256(ASCII(\"tkm-call/v1/vectors/identity/\" + name)) (CallTestKeys.identity).",
+  "protocol_version" : "1.1",
+  "aud" : "rschat:test",
+  "ring_to_max" : 25,
+  "ring_media_audio" : "audio",
+  "h_media" : "media",
+  "media_values" : [ "video", "audio" ],
+  "keys" : {
+    "s0-caller" : {
+      "seed_hex" : "0c80496ff45a6e60b1fdc33b5ee285145438da186319c1ecbfb228d5b8ee3bcf",
+      "identity" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0."
+    },
+    "s0-callee-1" : {
+      "seed_hex" : "85ecb28f8c50bead8878b7c66c174b5344f243d69f6ae2ada02bf77ef1235ef5",
+      "identity" : "h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI."
+    },
+    "s0-callee-2" : {
+      "seed_hex" : "2b66b6682e304870746bbb2a1d3b2cf2c48d52adaf0a2ecac9ea96724a7598b8",
+      "identity" : "ukNb4viO7fP-V25TErS-nZ9ziRhSeeRBKP5vRcb5T2E."
+    },
+    "s0-callee-3" : {
+      "seed_hex" : "f65d7005a4efd85c929f36e2784153347119d719cd884376aa30723c918c07d7",
+      "identity" : "98vXJeD2lsS8-ES-BcJERZ8v0wuAq_rW0lygsLqmbrM."
+    }
+  },
+  "ring_cases" : [ {
+    "name" : "audio_ring",
+    "note" : "media:\"audio\" on a ring, one callee: accepted",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.",
+      "k" : null,
+      "media" : "audio",
+      "audio_ring" : true,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a226c57656545696a54337a4d6c583466323662316134714f32446b586676555269326261785a3975666749302e222c226d65646961223a22617564696f222c226d6f6465223a227374616e64617264222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "audio_ring_conference_three_callees",
+    "note" : "mode conference, three callees: accepted",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"conference\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"f9bfd6e66ed5c85307e81bd28d6ab1fdd6bb763210a707b2e55289092bb16853c95f98e5b11d19e7f8f24b4c15da91f793730dfdee5eeb54b4d3910f1de57301\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"ukNb4viO7fP-V25TErS-nZ9ziRhSeeRBKP5vRcb5T2E.\",\"98vXJeD2lsS8-ES-BcJERZ8v0wuAq_rW0lygsLqmbrM.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.",
+      "k" : null,
+      "media" : "audio",
+      "audio_ring" : true,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"conference\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"ukNb4viO7fP-V25TErS-nZ9ziRhSeeRBKP5vRcb5T2E.\",\"98vXJeD2lsS8-ES-BcJERZ8v0wuAq_rW0lygsLqmbrM.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a226c57656545696a54337a4d6c583466323662316134714f32446b586676555269326261785a3975666749302e222c226d65646961223a22617564696f222c226d6f6465223a22636f6e666572656e6365222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e222c22756b4e623476694f3766502d563235544572532d6e5a397a69526853656552424b503576526362355432452e222c22393876584a6544326c7353382d45532d42634a45525a387630777541715f7257306c7967734c716d62724d2e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "f9bfd6e66ed5c85307e81bd28d6ab1fdd6bb763210a707b2e55289092bb16853c95f98e5b11d19e7f8f24b4c15da91f793730dfdee5eeb54b4d3910f1de57301",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"conference\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"f9bfd6e66ed5c85307e81bd28d6ab1fdd6bb763210a707b2e55289092bb16853c95f98e5b11d19e7f8f24b4c15da91f793730dfdee5eeb54b4d3910f1de57301\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"ukNb4viO7fP-V25TErS-nZ9ziRhSeeRBKP5vRcb5T2E.\",\"98vXJeD2lsS8-ES-BcJERZ8v0wuAq_rW0lygsLqmbrM.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "video_ring_no_media",
+    "note" : "no media = a video ring, the pre-S0 bytes (same inputs as audio_ring)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.",
+      "k" : null,
+      "media" : null,
+      "audio_ring" : false,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a226c57656545696a54337a4d6c583466323662316134714f32446b586676555269326261785a3975666749302e222c226d6f6465223a227374616e64617264222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "media_null",
+    "note" : "video_ring_no_media with \"media\":null spliced in: null = absent, so sg still verifies; canonical and push_ring are those of video_ring_no_media (re-serialised from the parsed object, never the raw text)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":null,\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.",
+      "k" : null,
+      "media" : null,
+      "audio_ring" : false,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a226c57656545696a54337a4d6c583466323662316134714f32446b586676555269326261785a3975666749302e222c226d6f6465223a227374616e64617264222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "media_video",
+    "note" : "validly signed media:\"video\": the only allowed value is audio",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"video\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"f257088ad46488bb4e1bec2ad634cb127f37bb0c8296811021d6e7af335ec460e5e06728b7c8498e258c100ee2cd91b899fb846301a65b9779e0034e0de48109\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_empty",
+    "note" : "validly signed media:\"\"",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"51bf28b28686a52610db1d92eeac20fdbddf530ae72ace07e155e853fd5721146b252e79474c5ac1830b29e4073de00b09522a8d76520c824cc8f4ec3c4df609\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_wrong_case",
+    "note" : "validly signed media:\"Audio\": the value is case-sensitive",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"Audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"096bed707588c318a9646f45845c0f1826f76bc97c3256f5a13a6fa5213339772a1e95715db88e974a25acc20d747374c66a80c35f58e291b626ba4c0772f005\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_with_k_answered",
+    "note" : "an answered notice (signed by the callee, to=[f]) with media",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"k\":\"answered\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"c114ebba5dcafd96e53a7aa7b0819d066de5088452648d65bb16e077931df0b31f59f16a846b29170a4b55298c2e95b0e12d201d0bc5b847ecb63c271e1e610c\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_with_k_cancelled",
+    "note" : "the caller's cancel with media",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"cancelled\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7c63f92aea8c5bfeb4b6c948b7cb6a5d18ada2e651d96e25f3055faef85245af632b9ff6d6a048d47e5f6a18170d525caa7b95d697ec042f8edb3f9b5d45a801\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_video_26_callees",
+    "note" : "order of the checks: 26 callees (over ring_to_max) AND media:\"video\" is bad_signature \"ring media\", not rate_limited \"ring_to_max\" (media is checked before to)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"video\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"0cb83b9648c670bb124c303aff043128aab89a534a36e4f3bb2044f1e77c933e6728ad72daf0d39354d045012a9c28dd53c0f31d775f298638dea289de783f02\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"ukNb4viO7fP-V25TErS-nZ9ziRhSeeRBKP5vRcb5T2E.\",\"98vXJeD2lsS8-ES-BcJERZ8v0wuAq_rW0lygsLqmbrM.\",\"_GhSFiNmTE1w6G76Hs0toQnMcHbSwMlQ7nW6qz_n1F4.\",\"xLwW2EaOUC-CYk-EXGTiSf7FctuD0lbsLzdx9RvTpOo.\",\"6FA3S5HEnb3E_TfbT-Pf23zbFIK6y1V5z-HACumDfu0.\",\"ISq1ZsH5BS_XvnBt4aUIGrR2TGrC6om3mX05Gpn017A.\",\"tL03Hbr-yRwQ8aYfbM_pXCDN_vp-4Fdy3sTXxFVy5TE.\",\"MwjYbik_ZcaHq33ZYmVFdQ3deMS8a9r0WELPFzLcAJM.\",\"33nkRKOKn-KGw87OKYmW91fcnSh9qjIlivEOEyftrN4.\",\"1yoJOz7R9Beq-0PorhD8huA8iAFPo_6QsATuBqS9MXE.\",\"aZ6o59QnarY8sel2sLlA-pCSn2lIsXSxF_U5K4F4ohY.\",\"QMI8w2v_iBlLE421JVtNwc9XXZA_4r_vdJ_0skpshOE.\",\"2PoGJ0mEMja3-486DCMq61e86OmgoeyX8kxRBSAZKzk.\",\"ly1HS2ldwRSArm0aaX4Yi2jZXgpEerVZ8nQcG4sO1sw.\",\"LPwBeG4K8oZrVNhApQ4DBDRDX4R-Y3UA-4AzkBIdUdM.\",\"jHvfJjI0RiTjG2gqIIPwx9fkV7fVJ8A6NnVDs94GcX0.\",\"9ISyJevYdyGQPkTw7T60zqdBSdw-DSMvoXfJiKLDHMY.\",\"dd5VctiGUG10lKCFQVIb2ovseTBEoAf08Ln-igD6XUA.\",\"0l6doGwSMOnAzoCkbWjZtOTmdmBOUwGh7u0lvcBPFVg.\",\"FbOPUssqicwtuTJcfPRdE7onUt6lSFOt0TUXeiWbdEw.\",\"mvl8oMvXILoO5Z2s2MIQMUlj6tmiVXtH6rVRRLN9tJM.\",\"yeklssFK_3Mw83kj8519koNR5aPR9j1YMkrekAuRpMc.\",\"aEnaAMdIAXniwtX5bJ4Jdx1EO0xtcvb6Dp9DUMPmBjU.\",\"fA2ilibUb1XfXcDSAsAazfgMjyuzbQ789Ef0m4Y3_gM.\",\"d9TVUJJuFZp7cP2waQbWB1BXpbjVjtTlW5cxbHccnjo.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "media_with_unknown_k",
+    "note" : "order of the checks: k:\"hungup\" AND media:\"audio\" is \"ring media\", not \"ring k\" (k is checked last)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"hungup\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"5f30e628943174ab1e4bf92b4406c02c496961bf86b482897df53e39ddb746c0ebce39c636a2389cf073b9f3449a7e52ba361d199a01bd46fcba57ee1739b20f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring media"
+    }
+  }, {
+    "name" : "k_answered_no_media",
+    "note" : "control: the same answered notice without media is accepted",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"k\":\"answered\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"145fbd1327ccd0f52dc11449f3e76a852e7e35be049b066a276a608debc67abb19e7dd6a19794e6a83018baa1cd0627cc362a0461667338f7d0be0ec39dfda0a\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.",
+      "k" : "answered",
+      "media" : null,
+      "audio_ring" : false,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"k\":\"answered\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e222c226b223a22616e737765726564222c226d6f6465223a227374616e64617264222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "145fbd1327ccd0f52dc11449f3e76a852e7e35be049b066a276a608debc67abb19e7dd6a19794e6a83018baa1cd0627cc362a0461667338f7d0be0ec39dfda0a",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\",\"k\":\"answered\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"145fbd1327ccd0f52dc11449f3e76a852e7e35be049b066a276a608debc67abb19e7dd6a19794e6a83018baa1cd0627cc362a0461667338f7d0be0ec39dfda0a\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "k_cancelled_no_media",
+    "note" : "control: the same cancel without media is accepted",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"38ac69b58cad276dfb7b7cafd6846f1e640e7ed4e72d35ce14b8a345ffeca788d6759d08a2bbb4b390b128354da05ba60faaba6bf5b2bdaf13b859676a180f09\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : true,
+      "stage" : "ok",
+      "f" : "lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.",
+      "k" : "cancelled",
+      "media" : null,
+      "audio_ring" : false,
+      "canonical" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+      "signing_octets_hex" : "746b6d2d63616c6c2f76312f72696e67007b22617564223a227273636861743a74657374222c2263616c6c223a2261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162222c2266223a226c57656545696a54337a4d6c583466323662316134714f32446b586676555269326261785a3975666749302e222c226b223a2263616e63656c6c6564222c226d6f6465223a227374616e64617264222c226e223a2230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030306363222c22737663223a226c6f6e646f6e2d746573742d31222c2274223a2272696e67222c22746f223a5b22683333354a4262614358715f6355486a7a36386241303353755f63734b45526e71313655367258556170492e225d2c227473223a313730303030303030303030302c2276223a317d",
+      "sg" : "38ac69b58cad276dfb7b7cafd6846f1e640e7ed4e72d35ce14b8a345ffeca788d6759d08a2bbb4b390b128354da05ba60faaba6bf5b2bdaf13b859676a180f09",
+      "push_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"38ac69b58cad276dfb7b7cafd6846f1e640e7ed4e72d35ce14b8a345ffeca788d6759d08a2bbb4b390b128354da05ba60faaba6bf5b2bdaf13b859676a180f09\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}"
+    }
+  }, {
+    "name" : "unknown_k_no_media",
+    "note" : "k:\"hungup\" without media: refused by checkRing as \"ring k\" on both sides (pins the unknown-k refusal by a shared vector, not only by Java asserts; 83, 11-19)",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"k\":\"hungup\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"0dc46a27297d49185285db55dcde0ca88fed68720152509e9f241f281b75d234bd1c264320505baecef6f842f815073774b127d88f00a6ca7fded9c783716303\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "shape",
+      "error" : "bad_signature",
+      "reason" : "ring k"
+    }
+  }, {
+    "name" : "unknown_extra_field",
+    "note" : "audio_ring plus an unknown member: the schema stays closed",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1,\"x\":\"1\"}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "parse"
+    }
+  }, {
+    "name" : "unknown_extra_field_video",
+    "note" : "audio_ring plus \"video\":true: no sibling field exists",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1,\"video\":true}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "parse"
+    }
+  }, {
+    "name" : "duplicate_media",
+    "note" : "audio_ring with media twice",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "parse"
+    }
+  }, {
+    "name" : "media_not_a_string",
+    "note" : "video_ring_no_media with media:true spliced in",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":true,\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "parse"
+    }
+  }, {
+    "name" : "media_added_after_signing",
+    "note" : "video_ring_no_media with media:\"audio\" spliced in: sg does not cover it",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"7711a0cd56ce05f65758410b710aec2393a8a37164f7b8ac1ff475fc56cff8e346730fc8a38c3518c65d876880b26f7549469a7278602f77da3f89ed89bdf905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "signature"
+    }
+  }, {
+    "name" : "media_stripped_after_signing",
+    "note" : "audio_ring with media removed: sg covered it",
+    "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"b1e2d1e89bd3b5be2505e66366191d2a3b20b5cb92bbac1df223327a76f35529d3d4ae96531a655edb0c8915500883f99db19e1bed68f175ff83beb28e5b9a0f\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "signature"
+    }
+  }, {
+    "name" : "wrong_audience",
+    "note" : "audio_ring signed for rschat:prod",
+    "ring" : "{\"aud\":\"rschat:prod\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"lWeeEijT3zMlX4f26b1a4qO2DkXfvURi2baxZ9ufgI0.\",\"media\":\"audio\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000cc\",\"sg\":\"c1bd21330b17567860d52c02b16c4d983d8e5e8307ae102be7546d567e99c050658c5d8e7578d2a59adb2271f1bda1049a89246fe8e93d14ab9bb7bb1ba1180a\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"h335JBbaCXq_cUHjz68bA03Su_csKERnq16U6rXUapI.\"],\"ts\":1700000000000,\"v\":1}",
+    "expect" : {
+      "ok" : false,
+      "stage" : "signature"
+    }
+  } ],
+  "body_cases" : [ {
+    "name" : "media_audio",
+    "note" : "the sender declares audio only",
+    "body" : "{\"h\":\"media\",\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : "audio",
+      "declaration" : "audio",
+      "known_value" : true,
+      "canonical" : "{\"h\":\"media\",\"media\":\"audio\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "media_video",
+    "note" : "the sender declares video",
+    "body" : "{\"h\":\"media\",\"media\":\"video\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : "video",
+      "declaration" : "video",
+      "known_value" : true,
+      "canonical" : "{\"h\":\"media\",\"media\":\"video\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22766964656f227d"
+    }
+  }, {
+    "name" : "media_audio_other_key_order",
+    "note" : "key order as received is free; the canonical form is one",
+    "body" : "{\"media\":\"audio\",\"h\":\"media\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : "audio",
+      "declaration" : "audio",
+      "known_value" : true,
+      "canonical" : "{\"h\":\"media\",\"media\":\"audio\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "media_unknown_value",
+    "note" : "forward compatibility: an unknown value parses, known_value=false",
+    "body" : "{\"h\":\"media\",\"media\":\"screen\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : "screen",
+      "declaration" : "screen",
+      "known_value" : false,
+      "canonical" : "{\"h\":\"media\",\"media\":\"screen\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a2273637265656e227d"
+    }
+  }, {
+    "name" : "unknown_extra_field_ms",
+    "note" : "there is no ms counter: an unknown body field is refused",
+    "body" : "{\"h\":\"media\",\"media\":\"audio\",\"ms\":1}",
+    "expect" : {
+      "ok" : false
+    }
+  }, {
+    "name" : "duplicate_media",
+    "note" : "media twice",
+    "body" : "{\"h\":\"media\",\"media\":\"audio\",\"media\":\"video\"}",
+    "expect" : {
+      "ok" : false
+    }
+  }, {
+    "name" : "media_not_a_string",
+    "note" : "media as a number",
+    "body" : "{\"h\":\"media\",\"media\":1}",
+    "expect" : {
+      "ok" : false
+    }
+  }, {
+    "name" : "media_absent",
+    "note" : "h:\"media\" without media: accepted, no declaration (= unknown cause)",
+    "body" : "{\"h\":\"media\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : null,
+      "declaration" : null,
+      "known_value" : false,
+      "canonical" : "{\"h\":\"media\"}",
+      "plaintext_hex" : "7b2268223a226d65646961227d"
+    }
+  }, {
+    "name" : "media_null",
+    "note" : "media:null = absent: accepted, no declaration, canonical {\"h\":\"media\"}",
+    "body" : "{\"h\":\"media\",\"media\":null}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : null,
+      "declaration" : null,
+      "known_value" : false,
+      "canonical" : "{\"h\":\"media\"}",
+      "plaintext_hex" : "7b2268223a226d65646961227d"
+    }
+  }, {
+    "name" : "media_empty_string",
+    "note" : "media:\"\": accepted, a declaration with an unknown value",
+    "body" : "{\"h\":\"media\",\"media\":\"\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "media",
+      "media" : "",
+      "declaration" : "",
+      "known_value" : false,
+      "canonical" : "{\"h\":\"media\",\"media\":\"\"}",
+      "plaintext_hex" : "7b2268223a226d65646961222c226d65646961223a22227d"
+    }
+  }, {
+    "name" : "media_without_h",
+    "note" : "media without h parses, but a receiver reads media only when h == \"media\": no declaration",
+    "body" : "{\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : null,
+      "media" : "audio",
+      "declaration" : null,
+      "known_value" : null,
+      "canonical" : "{\"media\":\"audio\"}",
+      "plaintext_hex" : "7b226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "media_on_catchup",
+    "note" : "media on another body kind parses, but is not a declaration",
+    "body" : "{\"epoch\":17,\"h\":\"catchup\",\"media\":\"audio\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "catchup",
+      "media" : "audio",
+      "declaration" : null,
+      "known_value" : null,
+      "canonical" : "{\"epoch\":17,\"h\":\"catchup\",\"media\":\"audio\"}",
+      "plaintext_hex" : "7b2265706f6368223a31372c2268223a2263617463687570222c226d65646961223a22617564696f227d"
+    }
+  }, {
+    "name" : "catchup_unchanged",
+    "note" : "control: a pre-S0 body carries no media and keeps its bytes",
+    "body" : "{\"epoch\":17,\"h\":\"catchup\"}",
+    "expect" : {
+      "ok" : true,
+      "h" : "catchup",
+      "media" : null,
+      "declaration" : null,
+      "known_value" : null,
+      "canonical" : "{\"epoch\":17,\"h\":\"catchup\"}",
+      "plaintext_hex" : "7b2265706f6368223a31372c2268223a2263617463687570227d"
+    }
+  } ]
+}

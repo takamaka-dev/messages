@@ -155,6 +155,39 @@ public final class CallConstants {
      * §6.4 step 4 handover. The spec names the request, not its object: resolution C-1 of the X-1/X-2 fix report.
      */
     public static final String H_CATCHUP = "catchup";
+
+    // ---- audio-only calls, slice S0 (design AUDIO_ONLY_CALLS_DESIGN_2026-11-19; spec §5.3, §7.1, §8.6) ----
+    /**
+     * The protocol version (spec §8.6, the manifest's signed {@code ver} range) of every client before S0. Kept for
+     * the meaning of the range: a service serving {@code 1.0/1.0} admits only these.
+     */
+    public static final String PROTOCOL_VERSION_1_0 = "1.0";
+    /**
+     * Protocol version 1.1 = an S0 RECEIVER: it accepts the ring's {@code media} (§7.1) and the pairwise channel body
+     * {@code h:"media"} (§5.3). A pre-S0 client refuses both (its schemas are closed), so the service's range is the
+     * upgrade gate (ruling R-2).
+     */
+    public static final String PROTOCOL_VERSION_1_1 = "1.1";
+    /**
+     * The protocol version THIS implementation speaks: a client checks that the served manifest range
+     * {@code ver{min,max}} includes it and refuses the service otherwise (the check itself lives in the clients —
+     * rsclient {@code CallClientState}, the Dart port — not here).
+     */
+    public static final String PROTOCOL_VERSION = PROTOCOL_VERSION_1_1;
+    /**
+     * §7.1 (S0): the ONLY allowed value of the ring's optional {@code media} — the caller's own intent at ring time is
+     * audio-only. Absent = a video ring, byte-identical to a pre-S0 ring.
+     */
+    public static final String RING_MEDIA_AUDIO = "audio";
+    /**
+     * §5.3 (S0): the {@code h} of the media notice, a pairwise channel-message body {@code {"h":"media","media":…}} —
+     * the sender's own declared media intent; labelling only, speakers only, never gates rendering.
+     */
+    public static final String H_MEDIA = "media";
+    /** §5.3 (S0): {@code media} of the media notice — the sender intends to send video. */
+    public static final String MEDIA_VIDEO = "video";
+    /** §5.3 (S0): {@code media} of the media notice — the sender intends audio only (no camera track by choice). */
+    public static final String MEDIA_AUDIO = "audio";
     /** [0.2] §6.2: at most this many {@code epoch_taken} refusals in a row before a leg asks for the catch-up. */
     public static final int EPOCH_TAKEN_MAX_IN_ROW = 3;
     /** Lifetime of a grant (spec §8.4: {@code exp = ts + 60000}). */
