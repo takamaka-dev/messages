@@ -29,6 +29,9 @@ import java.util.Arrays;
  * {@code true} into {@code "true"} and {@code 1} into {@code "1"}, which the Dart port refuses as {@code not a
  * string}). This matters most for the UNSIGNED objects (the channel body, the service wire): on a signed object a
  * coerced value would not match the signature anyway.
+ * Trailing content after the top-level value ({@code {"h":"future"} x}, {@code {}{}}) is refused
+ * ({@code FAIL_ON_TRAILING_TOKENS}, on {@code readValue} and {@code readTree} alike); surrounding whitespace is JSON
+ * and stays accepted. One string is one call object: nothing parses a stream of concatenated objects through here.
  * A verifier rebuilds the signed octets from the parsed bean, so any field it does not know could not be covered
  * anyway.
  *
@@ -41,6 +44,9 @@ public final class CallJson {
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+            // N1: nothing but whitespace after the top-level value, as the Dart StrictJson ('trailing content').
+            // Honoured by readValue AND readTree on this mapper (ObjectMapper._readTreeAndClose checks it).
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
             .withCoercionConfig(LogicalType.Textual, cfg -> cfg
                     .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
