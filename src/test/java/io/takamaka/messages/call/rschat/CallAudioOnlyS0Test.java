@@ -304,6 +304,38 @@ class CallAudioOnlyS0Test {
     }
 
     @Test
+    void aReceiverReadsMediaOnlyWhenHIsMedia() throws Exception {
+        assertEquals("audio", mediaBody("audio").declaredMedia());
+        assertEquals("video", mediaBody("video").declaredMedia());
+        // an unknown value (the empty string included) is a declaration: the receiver shows «unknown cause»
+        assertEquals("screen", mediaBody("screen").declaredMedia());
+        assertEquals("", CallJson.parse("{\"h\":\"media\",\"media\":\"\"}", CallChannelBodyBean.class).declaredMedia());
+        // h:"media" without media (absent or null): no declaration
+        assertNull(mediaBody(null).declaredMedia());
+        assertNull(CallJson.parse("{\"h\":\"media\"}", CallChannelBodyBean.class).declaredMedia());
+        CallChannelBodyBean nul = CallJson.parse("{\"h\":\"media\",\"media\":null}", CallChannelBodyBean.class);
+        assertNull(nul.declaredMedia());
+        assertEquals("{\"h\":\"media\"}", CallJson.canonical(nul));
+        // media under any other h, or without h, parses but is NOT a declaration
+        CallChannelBodyBean noH = CallJson.parse("{\"media\":\"audio\"}", CallChannelBodyBean.class);
+        assertEquals("audio", noH.getMedia());
+        assertNull(noH.declaredMedia());
+        CallChannelBodyBean catchup = CallJson.parse("{\"epoch\":17,\"h\":\"catchup\",\"media\":\"audio\"}", CallChannelBodyBean.class);
+        assertEquals("audio", catchup.getMedia());
+        assertNull(catchup.declaredMedia());
+        for (String h : List.of("epoch", "broadcast", "Media", "MEDIA", "media ", "")) {
+            CallChannelBodyBean b = mediaBody("audio");
+            b.setH(h);
+            assertNull(b.declaredMedia(), h);
+        }
+        assertNull(new CallChannelBodyBean().declaredMedia());
+        assertNull(Commits.catchUpRequest(17).declaredMedia());
+        // the helper is not a bean property: it never reaches the wire
+        assertEquals("{\"h\":\"media\",\"media\":\"audio\"}", CallJson.canonical(mediaBody("audio")));
+        assertFalse(CallJson.toWire(mediaBody("audio")).contains("declared"));
+    }
+
+    @Test
     void mediaMustBeAJsonStringInBothObjects() throws Exception {
         // Jackson would otherwise read true as "true" and 1 as "1"; the Dart schema refuses a non-string
         String ring = CallRschat.pushRing(signed(CALLER, callees(1), CallConstants.MODE_STANDARD, null, null));
@@ -380,7 +412,11 @@ class CallAudioOnlyS0Test {
         e.put("ok", true);
         e.put("h", b.getH());
         e.put("media", b.getMedia());
-        e.put("known_value", CallConstants.MEDIA_AUDIO.equals(b.getMedia()) || CallConstants.MEDIA_VIDEO.equals(b.getMedia()));
+        // what a receiver takes: media is read only when h == "media" (CallChannelBodyBean.declaredMedia)
+        String declared = b.declaredMedia();
+        e.put("declaration", declared);
+        e.put("known_value", CallConstants.H_MEDIA.equals(b.getH())
+                ? (Object) (CallConstants.MEDIA_AUDIO.equals(declared) || CallConstants.MEDIA_VIDEO.equals(declared)) : null);
         e.put("canonical", canonical);
         e.put("plaintext_hex", CallBytes.hex(CallBytes.ascii(canonical)));
         return e;
@@ -418,7 +454,11 @@ class CallAudioOnlyS0Test {
                 + "ASCII(\"tkm-call/v1/ring\") || 00 || canonical, `sg` = Ed25519 (deterministic) over them, `push_ring` = JCS of the "
                 + "whole bean (CallRschat.pushRing), `media` = the verified field (null = a video ring). `body_cases`: `body` is the "
                 + "plaintext of a pairwise channel box as received; `expect.ok` = strict parse of CallChannelBodyBean; `canonical` / "
-                + "`plaintext_hex` = the bytes a sender seals (JCS, ASCII); `known_value` false = the receiver shows «unknown cause». "
+                + "`plaintext_hex` = the bytes a sender seals (JCS, ASCII); `media` = the parsed field; `declaration` = what a RECEIVER "
+                + "takes (CallChannelBodyBean.declaredMedia): the media value ONLY when h == \"media\", else null — null also for "
+                + "h:\"media\" without media (no declaration = unknown cause); `known_value` is emitted only when h == \"media\" "
+                + "(else null): true for video/audio, false = the receiver shows «unknown cause». In `ring_cases` a JSON "
+                + "\"media\":null is the absent field (same canonical and push_ring as the ring without it). "
                 + "Keys: seeds are SHA3-256(ASCII(\"tkm-call/v1/vectors/identity/\" + name)) (CallTestKeys.identity).");
         root.put("protocol_version", CallConstants.PROTOCOL_VERSION);
         root.put("aud", AUD);
@@ -443,6 +483,9 @@ class CallAudioOnlyS0Test {
         rings.add(ringCase("audio_ring_conference_three_callees", "mode conference, three callees: accepted",
                 CallRschat.pushRing(signed(CALLER, callees(3), CallConstants.MODE_CONFERENCE, null, "audio"))));
         rings.add(ringCase("video_ring_no_media", "no media = a video ring, the pre-S0 bytes (same inputs as audio_ring)", video));
+        rings.add(ringCase("media_null", "video_ring_no_media with \"media\":null spliced in: null = absent, so sg still verifies; "
+                + "canonical and push_ring are those of video_ring_no_media (re-serialised from the parsed object, never the raw text)",
+                video.replace(",\"mode\":", ",\"media\":null,\"mode\":")));
         rings.add(ringCase("media_video", "validly signed media:\"video\": the only allowed value is audio",
                 CallRschat.pushRing(signed(CALLER, one, std, null, "video"))));
         rings.add(ringCase("media_empty", "validly signed media:\"\"", CallRschat.pushRing(signed(CALLER, one, std, null, ""))));
@@ -452,6 +495,12 @@ class CallAudioOnlyS0Test {
                 CallRschat.pushRing(signed(callee(1), List.of(me), std, CallConstants.RING_K_ANSWERED, "audio"))));
         rings.add(ringCase("media_with_k_cancelled", "the caller's cancel with media",
                 CallRschat.pushRing(signed(CALLER, one, std, CallConstants.RING_K_CANCELLED, "audio"))));
+        rings.add(ringCase("media_video_26_callees", "order of the checks: 26 callees (over ring_to_max) AND media:\"video\" is "
+                + "bad_signature \"ring media\", not rate_limited \"ring_to_max\" (media is checked before to)",
+                CallRschat.pushRing(signed(CALLER, callees(26), std, null, "video"))));
+        rings.add(ringCase("media_with_unknown_k", "order of the checks: k:\"hungup\" AND media:\"audio\" is \"ring media\", not "
+                + "\"ring k\" (k is checked last)",
+                CallRschat.pushRing(signed(CALLER, one, std, "hungup", "audio"))));
         rings.add(ringCase("k_answered_no_media", "control: the same answered notice without media is accepted",
                 CallRschat.pushRing(signed(callee(1), List.of(me), std, CallConstants.RING_K_ANSWERED, null))));
         rings.add(ringCase("k_cancelled_no_media", "control: the same cancel without media is accepted",
@@ -481,6 +530,15 @@ class CallAudioOnlyS0Test {
                 "{\"h\":\"media\",\"media\":\"audio\",\"ms\":1}"));
         bodies.add(bodyCase("duplicate_media", "media twice", "{\"h\":\"media\",\"media\":\"audio\",\"media\":\"video\"}"));
         bodies.add(bodyCase("media_not_a_string", "media as a number", "{\"h\":\"media\",\"media\":1}"));
+        bodies.add(bodyCase("media_absent", "h:\"media\" without media: accepted, no declaration (= unknown cause)", "{\"h\":\"media\"}"));
+        bodies.add(bodyCase("media_null", "media:null = absent: accepted, no declaration, canonical {\"h\":\"media\"}",
+                "{\"h\":\"media\",\"media\":null}"));
+        bodies.add(bodyCase("media_empty_string", "media:\"\": accepted, a declaration with an unknown value",
+                "{\"h\":\"media\",\"media\":\"\"}"));
+        bodies.add(bodyCase("media_without_h", "media without h parses, but a receiver reads media only when h == \"media\": "
+                + "no declaration", "{\"media\":\"audio\"}"));
+        bodies.add(bodyCase("media_on_catchup", "media on another body kind parses, but is not a declaration",
+                "{\"epoch\":17,\"h\":\"catchup\",\"media\":\"audio\"}"));
         bodies.add(bodyCase("catchup_unchanged", "control: a pre-S0 body carries no media and keeps its bytes",
                 CallJson.canonical(Commits.catchUpRequest(17))));
         root.put("body_cases", bodies);
@@ -532,11 +590,14 @@ class CallAudioOnlyS0Test {
         want.put("audio_ring", "ok:audio");
         want.put("audio_ring_conference_three_callees", "ok:audio");
         want.put("video_ring_no_media", "ok:-");
+        want.put("media_null", "ok:-");
         want.put("media_video", "shape:bad_signature:ring media");
         want.put("media_empty", "shape:bad_signature:ring media");
         want.put("media_wrong_case", "shape:bad_signature:ring media");
         want.put("media_with_k_answered", "shape:bad_signature:ring media");
         want.put("media_with_k_cancelled", "shape:bad_signature:ring media");
+        want.put("media_video_26_callees", "shape:bad_signature:ring media");
+        want.put("media_with_unknown_k", "shape:bad_signature:ring media");
         want.put("k_answered_no_media", "ok:-");
         want.put("k_cancelled_no_media", "ok:-");
         want.put("unknown_extra_field", "parse");
@@ -551,19 +612,38 @@ class CallAudioOnlyS0Test {
         Map<String, String> bodies = new LinkedHashMap<>();
         for (JsonNode c : root.get("body_cases")) {
             JsonNode e = c.get("expect");
+            // canonical | declaration (<none> = JSON null) | known_value (- = JSON null: not a media body)
             bodies.put(c.get("name").asText(), e.get("ok").asBoolean()
-                    ? e.get("canonical").asText() + (e.get("known_value").asBoolean() ? "" : " ?") : "refused");
+                    ? e.get("canonical").asText()
+                    + " | " + (e.get("declaration").isNull() ? "<none>" : "'" + e.get("declaration").asText() + "'")
+                    + " | " + (e.get("known_value").isNull() ? "-" : e.get("known_value").asText()) : "refused");
         }
         Map<String, String> wantBodies = new LinkedHashMap<>();
-        wantBodies.put("media_audio", "{\"h\":\"media\",\"media\":\"audio\"}");
-        wantBodies.put("media_video", "{\"h\":\"media\",\"media\":\"video\"}");
-        wantBodies.put("media_audio_other_key_order", "{\"h\":\"media\",\"media\":\"audio\"}");
-        wantBodies.put("media_unknown_value", "{\"h\":\"media\",\"media\":\"screen\"} ?");
+        wantBodies.put("media_audio", "{\"h\":\"media\",\"media\":\"audio\"} | 'audio' | true");
+        wantBodies.put("media_video", "{\"h\":\"media\",\"media\":\"video\"} | 'video' | true");
+        wantBodies.put("media_audio_other_key_order", "{\"h\":\"media\",\"media\":\"audio\"} | 'audio' | true");
+        wantBodies.put("media_unknown_value", "{\"h\":\"media\",\"media\":\"screen\"} | 'screen' | false");
         wantBodies.put("unknown_extra_field_ms", "refused");
         wantBodies.put("duplicate_media", "refused");
         wantBodies.put("media_not_a_string", "refused");
-        wantBodies.put("catchup_unchanged", "{\"epoch\":17,\"h\":\"catchup\"} ?");
+        wantBodies.put("media_absent", "{\"h\":\"media\"} | <none> | false");
+        wantBodies.put("media_null", "{\"h\":\"media\"} | <none> | false");
+        wantBodies.put("media_empty_string", "{\"h\":\"media\",\"media\":\"\"} | '' | false");
+        wantBodies.put("media_without_h", "{\"media\":\"audio\"} | <none> | -");
+        wantBodies.put("media_on_catchup", "{\"epoch\":17,\"h\":\"catchup\",\"media\":\"audio\"} | <none> | -");
+        wantBodies.put("catchup_unchanged", "{\"epoch\":17,\"h\":\"catchup\"} | <none> | -");
         assertEquals(wantBodies, bodies);
+        // "media":null on a ring is the absent field: the video ring's canonical form, signature and push text
+        JsonNode nul = root.get("ring_cases").get(3);
+        assertEquals("media_null", nul.get("name").asText());
+        assertTrue(nul.get("ring").asText().contains("\"media\":null"));
+        JsonNode vid = root.get("ring_cases").get(2).get("expect");
+        assertEquals(root.get("ring_cases").get(2).get("ring").asText(), vid.get("push_ring").asText());
+        for (String f : List.of("canonical", "push_ring", "sg", "signing_octets_hex")) {
+            assertEquals(vid.get(f), nul.get("expect").get(f), f);
+        }
+        assertTrue(nul.get("expect").get("media").isNull());
+        assertFalse(nul.get("expect").get("audio_ring").asBoolean());
         // the audio ring and the video ring differ ONLY by the media member (and so by sg)
         JsonNode a = root.get("ring_cases").get(0).get("expect");
         JsonNode v = root.get("ring_cases").get(2).get("expect");

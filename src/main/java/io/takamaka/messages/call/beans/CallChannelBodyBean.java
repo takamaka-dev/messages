@@ -85,4 +85,18 @@ public class CallChannelBodyBean {
     @JsonProperty("media")
     @JsonDeserialize(using = CallStrictStringDeserializer.class)
     private String media;
+
+    /**
+     * The media declaration a RECEIVER takes from this body (audio-only S0, ruling of 2026-11-19): {@code media} is
+     * read ONLY when {@code h} is exactly {@code "media"} ({@link io.takamaka.messages.call.CallConstants#H_MEDIA}).
+     *
+     * @return the declared value as received — {@code "audio"}, {@code "video"}, or any other string (an unknown
+     * value, the empty string included: «unknown cause») — and {@code null} when the body declares nothing: any body
+     * whose {@code h} is not {@code "media"} (absent, {@code catchup}, a handover, … — a {@code media} member there is
+     * ignored), and an {@code h:"media"} body without {@code media} (absent or JSON {@code null}; «no declaration» =
+     * unknown cause). Not a bean property: it is never serialised.
+     */
+    public String declaredMedia() {
+        return io.takamaka.messages.call.CallConstants.H_MEDIA.equals(h) ? media : null;
+    }
 }
