@@ -244,7 +244,7 @@ public class ServerInfoResponseBean {
     /**
      * DR-063 §3.3 (design F2 §3.1, PS-6): the sealed-push suites this server seals call pushes with, e.g.
      * {@code ["tkm-push/v1"]} ({@code io.takamaka.messages.call.PushSeal.SUITE}). Advertised ONLY when FCM is enabled
-     * AND calls are enabled; otherwise absent. Wire name {@code push_seal_suites}; OMITTED when null or empty
+     * AND calls are enabled; otherwise absent. Wire name {@code pushSealSuites} (camelCase, as every other manifest field); OMITTED when null or empty
      * ({@code NON_EMPTY} on this field only), so every existing manifest serialises byte-identically.
      *
      * <p>A client sends {@code push_key} / {@code push_seal} at {@code registerfcmtoken} only when this list holds its
@@ -252,7 +252,6 @@ public class ServerInfoResponseBean {
      * The client keeps the value per endpoint in three states (DR-063 §4.4, PS-5): unknown (not read, or the read
      * failed: never drop a key because of it), none (absent or empty), listed. Unsigned, like the whole manifest.</p>
      */
-    @com.fasterxml.jackson.annotation.JsonProperty("push_seal_suites")
     @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
     private java.util.List<String> pushSealSuites;
 

@@ -41,7 +41,7 @@ import org.bouncycastle.util.encoders.UrlBase64;
 /**
  * Generates {@code java_fcm_push_key_vectors.json} (DR-063 §3.3 / §8, W1): the canonical form of the FCM registration
  * content with and without {@code push_key} / {@code push_seal}, the {@code push_key_id} echo of the response, and
- * the {@code push_seal_suites} member of {@code serverinfo}. Deterministic: the fixed input of
+ * the {@code pushSealSuites} member of {@code serverinfo}. Deterministic: the fixed input of
  * {@code FcmCanonicalVectorTest} and the {@code dev-1} key of {@code call/push_seal_vectors_v1.json}.
  *
  * <p>Regenerate deliberately: {@code mvn -o test -Dtest=FcmPushKeyVectorFileTest -Dfcm.push.key.vectors.write=true}.
@@ -128,7 +128,7 @@ public final class FcmPushKeyVectorGenerator {
         root.put("generated_by", "FcmPushKeyVectorGenerator.java");
         root.put("source", "Messages (Java reference)");
         root.put("decision", "DR-063 draft 1 §3.3: push_key + push_seal in the signed FCM registration content, "
-                + "push_key_id in the response, serverinfo.push_seal_suites");
+                + "push_key_id in the response, serverinfo.pushSealSuites");
 
         ObjectNode k = root.putObject("constants");
         k.put("endpoint", ChatServerEndpoints.REGISTER_FCM_TOKEN);
@@ -137,14 +137,14 @@ public final class FcmPushKeyVectorGenerator {
         k.put("push_key_key", "push_key");
         k.put("push_seal_key", "push_seal");
         k.put("push_key_id_key", "push_key_id");
-        k.put("serverinfo_key", "push_seal_suites");
+        k.put("serverinfo_key", "pushSealSuites");
         k.put("suite", PushSeal.SUITE);
         k.put("note", "push_key: Base64URL with '.' padding, 32 bytes = 44 chars, checked by PushSeal.validatePushKey "
                 + "(push_key_check: OK or the refusal reason; the server answers INVALID_PUSH_KEY). push_seal: the "
                 + "exact ASCII suite id. Both are OMITTED from the signed content when null (NON_NULL on each field "
                 + "only; device_id keeps its explicit null, cap its NON_EMPTY): an old client's canonical form is "
                 + "byte-identical to today's (rows P0, P0n). A client sends them only to a server whose "
-                + "serverinfo.push_seal_suites lists the suite. push_key_id = lower hex of "
+                + "serverinfo.pushSealSuites lists the suite. push_key_id = lower hex of "
                 + "SHA3-256('tkm-push/v1/kid' || key)[0..8], computed by the server, echoed only when stored.");
 
         ObjectNode in = root.putObject("fixed_input");
@@ -179,7 +179,7 @@ public final class FcmPushKeyVectorGenerator {
         si.set("with_suite", M.valueToTree(serverInfo(List.of(PushSeal.SUITE))));
         si.set("without_suite", M.valueToTree(serverInfo(null)));
         si.set("empty_suite_list", M.valueToTree(serverInfo(List.of())));
-        si.put("note", "push_seal_suites is advertised only when FCM AND calls are enabled; absent (never [] or null) "
+        si.put("note", "pushSealSuites is advertised only when FCM AND calls are enabled; absent (never [] or null) "
                 + "otherwise. A client keeps it in three states per endpoint: unknown (not read), none, listed.");
 
         DefaultPrettyPrinter pp = new DefaultPrettyPrinter();

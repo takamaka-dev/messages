@@ -186,10 +186,10 @@ class FcmPushKeyVectorFileTest {
         assertEquals(resp.get("stored").get("push_key_id").asText(), parsed.getPushKeyId());
 
         JsonNode si = root.get("serverinfo_vectors");
-        assertEquals("tkm-push/v1", si.get("with_suite").get("push_seal_suites").get(0).asText());
-        assertEquals(1, si.get("with_suite").get("push_seal_suites").size());
-        assertFalse(si.get("without_suite").has("push_seal_suites"));
-        assertFalse(si.get("empty_suite_list").has("push_seal_suites"));
+        assertEquals("tkm-push/v1", si.get("with_suite").get("pushSealSuites").get(0).asText());
+        assertEquals(1, si.get("with_suite").get("pushSealSuites").size());
+        assertFalse(si.get("without_suite").has("pushSealSuites"));
+        assertFalse(si.get("empty_suite_list").has("pushSealSuites"));
         assertEquals(List.of("tkm-push/v1"), FcmPushKeyVectorGenerator.M.treeToValue(si.get("with_suite"),
                 ServerInfoResponseBean.class).getPushSealSuites());
         assertNull(FcmPushKeyVectorGenerator.M.treeToValue(si.get("without_suite"), ServerInfoResponseBean.class)

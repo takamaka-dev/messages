@@ -95,7 +95,7 @@ public final class PushSeal {
     private PushSeal() {
     }
 
-    /** The suite id, the {@code push_seal} value of the registration and of {@code serverinfo.push_seal_suites}. */
+    /** The suite id, the {@code push_seal} value of the registration and of {@code serverinfo.pushSealSuites}. */
     public static final String SUITE = "tkm-push/v1";
     /** The version byte, first byte of the header. */
     public static final int VERSION = 0x01;

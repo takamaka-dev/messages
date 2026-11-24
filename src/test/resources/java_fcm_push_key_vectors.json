@@ -2,7 +2,7 @@
   "version" : "1.0.0",
   "generated_by" : "FcmPushKeyVectorGenerator.java",
   "source" : "Messages (Java reference)",
-  "decision" : "DR-063 draft 1 \u00A73.3: push_key + push_seal in the signed FCM registration content, push_key_id in the response, serverinfo.push_seal_suites",
+  "decision" : "DR-063 draft 1 \u00A73.3: push_key + push_seal in the signed FCM registration content, push_key_id in the response, serverinfo.pushSealSuites",
   "constants" : {
     "endpoint" : "registerfcmtoken",
     "message_type" : "FCM_TOKEN_REGISTRATION",
@@ -10,9 +10,9 @@
     "push_key_key" : "push_key",
     "push_seal_key" : "push_seal",
     "push_key_id_key" : "push_key_id",
-    "serverinfo_key" : "push_seal_suites",
+    "serverinfo_key" : "pushSealSuites",
     "suite" : "tkm-push/v1",
-    "note" : "push_key: Base64URL with '.' padding, 32 bytes = 44 chars, checked by PushSeal.validatePushKey (push_key_check: OK or the refusal reason; the server answers INVALID_PUSH_KEY). push_seal: the exact ASCII suite id. Both are OMITTED from the signed content when null (NON_NULL on each field only; device_id keeps its explicit null, cap its NON_EMPTY): an old client's canonical form is byte-identical to today's (rows P0, P0n). A client sends them only to a server whose serverinfo.push_seal_suites lists the suite. push_key_id = lower hex of SHA3-256('tkm-push/v1/kid' || key)[0..8], computed by the server, echoed only when stored."
+    "note" : "push_key: Base64URL with '.' padding, 32 bytes = 44 chars, checked by PushSeal.validatePushKey (push_key_check: OK or the refusal reason; the server answers INVALID_PUSH_KEY). push_seal: the exact ASCII suite id. Both are OMITTED from the signed content when null (NON_NULL on each field only; device_id keeps its explicit null, cap its NON_EMPTY): an old client's canonical form is byte-identical to today's (rows P0, P0n). A client sends them only to a server whose serverinfo.pushSealSuites lists the suite. push_key_id = lower hex of SHA3-256('tkm-push/v1/kid' || key)[0..8], computed by the server, echoed only when stored."
   },
   "fixed_input" : {
     "nonce" : {
@@ -137,7 +137,7 @@
       "fcmTokenCapabilities" : [
         "calls"
       ],
-      "push_seal_suites" : [
+      "pushSealSuites" : [
         "tkm-push/v1"
       ]
     },
@@ -181,6 +181,6 @@
         "calls"
       ]
     },
-    "note" : "push_seal_suites is advertised only when FCM AND calls are enabled; absent (never [] or null) otherwise. A client keeps it in three states per endpoint: unknown (not read), none, listed."
+    "note" : "pushSealSuites is advertised only when FCM AND calls are enabled; absent (never [] or null) otherwise. A client keeps it in three states per endpoint: unknown (not read), none, listed."
   }
 }

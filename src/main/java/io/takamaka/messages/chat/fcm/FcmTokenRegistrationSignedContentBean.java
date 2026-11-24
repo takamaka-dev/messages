@@ -85,7 +85,7 @@ public class FcmTokenRegistrationSignedContentBean {
 
     /**
      * DR-063 §3.3: the suite of {@link #pushKey}, the ASCII id {@code tkm-push/v1} ({@code PushSeal.SUITE}), matched
-     * exactly against the server's {@code push_seal_suites}. OMITTED when null ({@code NON_NULL} on this field only).
+     * exactly against the server's {@code pushSealSuites}. OMITTED when null ({@code NON_NULL} on this field only).
      */
     @JsonProperty("push_seal")
     @JsonInclude(JsonInclude.Include.NON_NULL)   // on THIS FIELD ONLY, never on the class (see the class doc)
