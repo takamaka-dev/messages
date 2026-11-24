@@ -241,4 +241,33 @@ public class ServerInfoResponseBean {
      */
     private java.util.Set<String> fcmTokenCapabilities;
 
+    /**
+     * DR-063 §3.3 (design F2 §3.1, PS-6): the sealed-push suites this server seals call pushes with, e.g.
+     * {@code ["tkm-push/v1"]} ({@code io.takamaka.messages.call.PushSeal.SUITE}). Advertised ONLY when FCM is enabled
+     * AND calls are enabled; otherwise absent. Wire name {@code push_seal_suites}; OMITTED when null or empty
+     * ({@code NON_EMPTY} on this field only), so every existing manifest serialises byte-identically.
+     *
+     * <p>A client sends {@code push_key} / {@code push_seal} at {@code registerfcmtoken} only when this list holds its
+     * suite: an older server would drop the unknown fields, re-canonicalise without them and refuse the signature.
+     * The client keeps the value per endpoint in three states (DR-063 §4.4, PS-5): unknown (not read, or the read
+     * failed: never drop a key because of it), none (absent or empty), listed. Unsigned, like the whole manifest.</p>
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("push_seal_suites")
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+    private java.util.List<String> pushSealSuites;
+
+    /**
+     * The manifest without {@link #pushSealSuites} (the 1.8 field set); kept explicitly so existing callers (rschat's
+     * {@code serverinfo} route) compile unchanged.
+     */
+    public ServerInfoResponseBean(String serverVersion, String protocolCurrent, int protocolMajor, int protocolMinMinor,
+            int protocolMaxMinor, String manifestVersion, long maxFramePayloadLength, long maxAttachmentSizeBytes,
+            int messageBurst, int messagePerMinute, long editDeleteWindowMs, java.util.Set<String> supportedRoutes,
+            long maxEncryptedContentSizeBytes, io.takamaka.messages.chat.profile.ProfileLimitsBean profile,
+            String audience, java.util.Set<String> fcmTokenCapabilities) {
+        this(serverVersion, protocolCurrent, protocolMajor, protocolMinMinor, protocolMaxMinor, manifestVersion,
+                maxFramePayloadLength, maxAttachmentSizeBytes, messageBurst, messagePerMinute, editDeleteWindowMs,
+                supportedRoutes, maxEncryptedContentSizeBytes, profile, audience, fcmTokenCapabilities, null);
+    }
+
 }

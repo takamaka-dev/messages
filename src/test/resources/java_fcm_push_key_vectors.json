@@ -1,0 +1,186 @@
+{
+  "version" : "1.0.0",
+  "generated_by" : "FcmPushKeyVectorGenerator.java",
+  "source" : "Messages (Java reference)",
+  "decision" : "DR-063 draft 1 \u00A73.3: push_key + push_seal in the signed FCM registration content, push_key_id in the response, serverinfo.push_seal_suites",
+  "constants" : {
+    "endpoint" : "registerfcmtoken",
+    "message_type" : "FCM_TOKEN_REGISTRATION",
+    "content_key" : "fcm_token_registration_signed_content",
+    "push_key_key" : "push_key",
+    "push_seal_key" : "push_seal",
+    "push_key_id_key" : "push_key_id",
+    "serverinfo_key" : "push_seal_suites",
+    "suite" : "tkm-push/v1",
+    "note" : "push_key: Base64URL with '.' padding, 32 bytes = 44 chars, checked by PushSeal.validatePushKey (push_key_check: OK or the refusal reason; the server answers INVALID_PUSH_KEY). push_seal: the exact ASCII suite id. Both are OMITTED from the signed content when null (NON_NULL on each field only; device_id keeps its explicit null, cap its NON_EMPTY): an old client's canonical form is byte-identical to today's (rows P0, P0n). A client sends them only to a server whose serverinfo.push_seal_suites lists the suite. push_key_id = lower hex of SHA3-256('tkm-push/v1/kid' || key)[0..8], computed by the server, echoed only when stored."
+  },
+  "fixed_input" : {
+    "nonce" : {
+      "nonce" : "11111111-2222-3333-4444-555555555555",
+      "timestamp" : 1700000000000,
+      "liveness" : 60000
+    },
+    "fcm_token" : "fixed-fcm-token-XYZ",
+    "platform" : "android"
+  },
+  "vectors" : [
+    {
+      "id" : "P0",
+      "description" : "old client: no push fields, no cap (= FcmCanonicalVectorTest.VECTOR_WITH_DEVICE)",
+      "device_id" : "device-01",
+      "push_key" : null,
+      "push_seal" : null,
+      "push_key_check" : "ABSENT",
+      "canonical" : "{\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}"
+    },
+    {
+      "id" : "P0n",
+      "description" : "old client, device_id null (= FcmCanonicalVectorTest.VECTOR_NULL_DEVICE)",
+      "device_id" : null,
+      "push_key" : null,
+      "push_seal" : null,
+      "push_key_check" : "ABSENT",
+      "canonical" : "{\"device_id\":null,\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\"}"
+    },
+    {
+      "id" : "P1",
+      "description" : "push_key + push_seal",
+      "device_id" : "device-01",
+      "push_key" : "pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.",
+      "push_seal" : "tkm-push/v1",
+      "push_key_check" : "OK",
+      "push_key_id" : "f3b4055f87d4f7b1",
+      "canonical" : "{\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\",\"push_key\":\"pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.\",\"push_seal\":\"tkm-push/v1\"}"
+    },
+    {
+      "id" : "P2",
+      "description" : "push_key + push_seal + cap [calls]",
+      "device_id" : "device-01",
+      "cap" : [
+        "calls"
+      ],
+      "push_key" : "pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.",
+      "push_seal" : "tkm-push/v1",
+      "push_key_check" : "OK",
+      "push_key_id" : "f3b4055f87d4f7b1",
+      "canonical" : "{\"cap\":[\"calls\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\",\"push_key\":\"pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.\",\"push_seal\":\"tkm-push/v1\"}"
+    },
+    {
+      "id" : "P3",
+      "description" : "push_key + push_seal with device_id null: device_id's null stays signed",
+      "device_id" : null,
+      "cap" : [
+        "calls"
+      ],
+      "push_key" : "pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.",
+      "push_seal" : "tkm-push/v1",
+      "push_key_check" : "OK",
+      "push_key_id" : "f3b4055f87d4f7b1",
+      "canonical" : "{\"cap\":[\"calls\"],\"device_id\":null,\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\",\"push_key\":\"pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.\",\"push_seal\":\"tkm-push/v1\"}"
+    },
+    {
+      "id" : "P4",
+      "description" : "a low-order push key (u = 0): signable, refused by the server (LOW_ORDER)",
+      "device_id" : "device-01",
+      "cap" : [
+        "calls"
+      ],
+      "push_key" : "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.",
+      "push_seal" : "tkm-push/v1",
+      "push_key_check" : "LOW_ORDER",
+      "canonical" : "{\"cap\":[\"calls\"],\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\",\"push_key\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.\",\"push_seal\":\"tkm-push/v1\"}"
+    },
+    {
+      "id" : "P5",
+      "description" : "push_key alone (no push_seal): signable, refused by the server (both or neither)",
+      "device_id" : "device-01",
+      "push_key" : "pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.",
+      "push_seal" : null,
+      "push_key_check" : "OK",
+      "push_key_id" : "f3b4055f87d4f7b1",
+      "canonical" : "{\"device_id\":\"device-01\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"android\",\"push_key\":\"pk3lwCPa20BAO709jj6C_K4R0meCiiCKNcMQ-SElx3k.\"}"
+    }
+  ],
+  "response_vectors" : {
+    "stored" : {
+      "success" : true,
+      "message" : "FCM token registered successfully",
+      "error_code" : null,
+      "registration_time" : 1700000000123,
+      "push_key_id" : "f3b4055f87d4f7b1"
+    },
+    "not_stored" : {
+      "success" : true,
+      "message" : "FCM token registered successfully",
+      "error_code" : null,
+      "registration_time" : 1700000000123
+    },
+    "note" : "push_key_id present only when the server stored the key; absent otherwise (never null)."
+  },
+  "serverinfo_vectors" : {
+    "with_suite" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.8",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1",
+      "fcmTokenCapabilities" : [
+        "calls"
+      ],
+      "push_seal_suites" : [
+        "tkm-push/v1"
+      ]
+    },
+    "without_suite" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.8",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1",
+      "fcmTokenCapabilities" : [
+        "calls"
+      ]
+    },
+    "empty_suite_list" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.8",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1",
+      "fcmTokenCapabilities" : [
+        "calls"
+      ]
+    },
+    "note" : "push_seal_suites is advertised only when FCM AND calls are enabled; absent (never [] or null) otherwise. A client keeps it in three states per endpoint: unknown (not read), none, listed."
+  }
+}

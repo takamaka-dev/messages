@@ -30,7 +30,8 @@ import lombok.NoArgsConstructor;
  * <p><b>Null handling is per field and load-bearing.</b> The server verifies by re-serialising the PARSED bean
  * through a mapper that includes nulls, so every member's null form is part of the signed bytes:
  * {@code device_id} is signed as {@code "device_id":null} when absent (pinned by {@code FcmCanonicalVectorTest}),
- * while {@code cap} is OMITTED when null or empty ({@code NON_EMPTY} on that field only). Never put
+ * while {@code cap} is OMITTED when null or empty ({@code NON_EMPTY} on that field only), and {@code push_key} /
+ * {@code push_seal} (DR-063) are OMITTED when null ({@code NON_NULL} on those fields only). Never put
  * {@code @JsonInclude} on the class: it would drop the {@code "device_id":null} today's clients sign.</p>
  *
  * @author Giovanni Antino giovanni.antino@takamaka.io
@@ -72,10 +73,38 @@ public class FcmTokenRegistrationSignedContentBean {
     private List<String> cap;
 
     /**
+     * DR-063 §3.3 (design F2 §3.1, §1.5): the install's X25519 push public key for sealed call pushes
+     * ({@code io.takamaka.messages.call.PushSeal}), Base64URL with {@code .} padding, 32 bytes = 44 characters.
+     * Sent together with {@link #pushSeal} or not at all, and only to a server whose {@code serverinfo} lists the
+     * suite. The server checks it with {@code PushSeal.validatePushKey} ({@code INVALID_PUSH_KEY}). OMITTED when null
+     * ({@code NON_NULL} on this field only), so an old client's canonical form is unchanged.
+     */
+    @JsonProperty("push_key")
+    @JsonInclude(JsonInclude.Include.NON_NULL)   // on THIS FIELD ONLY, never on the class (see the class doc)
+    private String pushKey;
+
+    /**
+     * DR-063 §3.3: the suite of {@link #pushKey}, the ASCII id {@code tkm-push/v1} ({@code PushSeal.SUITE}), matched
+     * exactly against the server's {@code push_seal_suites}. OMITTED when null ({@code NON_NULL} on this field only).
+     */
+    @JsonProperty("push_seal")
+    @JsonInclude(JsonInclude.Include.NON_NULL)   // on THIS FIELD ONLY, never on the class (see the class doc)
+    private String pushSeal;
+
+    /**
      * The registration without {@code cap}: its canonical form is byte-identical to the content signed before
      * DR-074 amendment 1.
      */
     public FcmTokenRegistrationSignedContentBean(NonceResponseBean nonce, String fcmToken, String platform, String deviceId) {
         this(nonce, fcmToken, platform, deviceId, null);
+    }
+
+    /**
+     * The registration without a push key (DR-074 amendment 1 form): its canonical form is byte-identical to the
+     * content signed before DR-063. Kept explicitly so existing callers compile unchanged.
+     */
+    public FcmTokenRegistrationSignedContentBean(NonceResponseBean nonce, String fcmToken, String platform, String deviceId,
+            List<String> cap) {
+        this(nonce, fcmToken, platform, deviceId, cap, null, null);
     }
 }
