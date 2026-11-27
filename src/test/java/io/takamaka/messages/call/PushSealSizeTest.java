@@ -23,8 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * nonce (32 bytes, the §8.1 form), a 13-digit {@code ts}, a 128-hex signature. Escaping adds nothing: every value
  * is ASCII without quotes or backslashes, except the {@code ring} string itself whose quotes JCS escapes.
  * The network name of {@code aud} is the deployment's: measured for {@code test} / {@code prod}, for
- * {@code production} (the longest production name rschat knows) and for the 32-character maximum
- * {@code CallRschat.audience} admits — which does NOT fit (open question for DR-063 §3.1 / §10).
+ * {@code production} (a 10-character name) and for the 32-character maximum {@code CallRschat.audience} admits —
+ * which does NOT fit. DR-063 draft 2 settles that case with no cap on the name: rschat's boot check
+ * ({@code CallGate.worstCaseJ}, this test's computation) refuses any configuration whose worst case exceeds
+ * {@code PAD − 2} (§3.2), and an oversize push is never sent (§3.1).
  *
  * <p>Iris §7.194 measured 2039 B; this test measures 2031 B at a 4-character network WITH {@code media = audio}.
  * The design's 2011 B (design §1.4) already included {@code aud} (the vector ring carries it), so 2011 + 20
@@ -104,7 +106,11 @@ class PushSealSizeTest {
         assertTrue(data <= CallRschat.FCM_DATA_MAX_BYTES, "data " + data);
     }
 
-    /** The longest production network name rschat knows ({@code CallGate.isProductionNetwork}: prod, production, main, mainnet). */
+    /**
+     * A 10-character production network name. rschat has no list of production names any more: under DR-063 §3.2
+     * {@code CallGate.isNonProductionNetwork} allow-lists {@code test}, {@code dev}, {@code localhost} and
+     * {@code rig*}, and every other name is production. This one is a sample, not a maximum.
+     */
     static final String PRODUCTION = "production";
     /** The longest name {@link CallRschat#audience} admits ({@code [a-z0-9-]{1,32}}). */
     static final String NET32 = "n".repeat(32);
@@ -133,7 +139,8 @@ class PushSealSizeTest {
         assertEquals(2037, production);
         assertEquals(19, fitting, "each network character adds one byte to J");
         assertTrue(production <= PushSeal.MAX_J, "worst-case ring J " + production + " > " + PushSeal.MAX_J);
-        // a 32-character network name does NOT fit (2059 > 2046): DR-063 §3.1 then seals the ring without `ring`
+        // a 32-character network name does NOT fit (2059 > 2046): DR-063 §3.2's boot check refuses that configuration,
+        // and §3.1 sends nothing for an oversize push (no ring is sealed without `ring`); here the seal refuses it
         assertEquals(2059, net32);
         Map<String, String> tooLong = worstRingMap(NET32);
         assertEquals(PushSeal.Reason.TOO_LONG, org.junit.jupiter.api.Assertions.assertThrows(

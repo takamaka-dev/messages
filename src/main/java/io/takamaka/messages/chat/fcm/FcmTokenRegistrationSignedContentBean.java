@@ -77,10 +77,12 @@ public class FcmTokenRegistrationSignedContentBean {
      * ({@code io.takamaka.messages.call.PushSeal}), Base64URL with {@code .} padding, 32 bytes = 44 characters.
      * Sent together with {@link #pushSeal} or not at all, and only to a server whose {@code serverinfo} lists the
      * suite. The server checks it with {@code PushSeal.validatePushKey} ({@code INVALID_PUSH_KEY}). OMITTED when null
-     * ({@code NON_NULL} on this field only), so an old client's canonical form is unchanged.
+     * ({@code NON_NULL} on this field only), so an old client's canonical form is unchanged. Never logged (§3.5),
+     * so it is left out of the Lombok {@code toString}; serialisation and the signed bytes are untouched.
      */
     @JsonProperty("push_key")
     @JsonInclude(JsonInclude.Include.NON_NULL)   // on THIS FIELD ONLY, never on the class (see the class doc)
+    @lombok.ToString.Exclude
     private String pushKey;
 
     /**
