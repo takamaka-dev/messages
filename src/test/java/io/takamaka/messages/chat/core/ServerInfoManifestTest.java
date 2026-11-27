@@ -29,7 +29,9 @@ class ServerInfoManifestTest {
     void manifestVersionIsCurrent() {
         // 1.5 adds maxEncryptedContentSizeBytes (§PREVIEW-CONFORMANCE W5).
         // 1.6 adds the nested `profile` limits object (DR-032).
-        assertEquals("1.6", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
+        // 1.7 adds `audience` (DR-074 §5.8).
+        // 1.8 adds `fcmTokenCapabilities` (DR-074 amendment 1, A-17).
+        assertEquals("1.8", ServerInfoResponseBean.MANIFEST_VERSION_CURRENT,
                 "bump this when a field is ADDED — clients gate optional fields on it");
     }
 
@@ -157,5 +159,31 @@ class ServerInfoManifestTest {
 
         assertEquals("9.9", back.getServerVersion(),
                 "manifest growth must never strand an older client — that is what 'additive' buys");
+    }
+
+    /** DR-074 amendment 1, A-17: the member travels under its Java name, like {@code supportedRoutes}. */
+    @Test
+    void fcmTokenCapabilitiesRoundTripsUnderItsWireName() throws Exception {
+        ServerInfoResponseBean bean = new ServerInfoResponseBean();
+        bean.setManifestVersion(ServerInfoResponseBean.MANIFEST_VERSION_CURRENT);
+        bean.setFcmTokenCapabilities(java.util.Set.of(io.takamaka.messages.chat.fcm.FcmCapabilities.CALLS));
+
+        String json = mapper.writeValueAsString(bean);
+        assertTrue(json.contains("\"fcmTokenCapabilities\":[\"calls\"]"), json);
+
+        ServerInfoResponseBean back = mapper.readValue(json, ServerInfoResponseBean.class);
+        assertEquals(java.util.Set.of("calls"), back.getFcmTokenCapabilities());
+        assertEquals("1.8", back.getManifestVersion());
+    }
+
+    /** A 1.7 server says nothing about {@code cap}: absent reads as null (= send no cap), never as an error. */
+    @Test
+    void anOlderManifestWithoutFcmTokenCapabilitiesParsesAsAbsent() throws Exception {
+        String pre18 = "{\"serverVersion\":\"0.11.0\",\"manifestVersion\":\"1.7\",\"audience\":\"rschat:rig1\"}";
+
+        ServerInfoResponseBean back = mapper.readValue(pre18, ServerInfoResponseBean.class);
+
+        assertNull(back.getFcmTokenCapabilities(), "a pre-1.8 server stores no cap: the client must send none");
+        assertEquals("rschat:rig1", back.getAudience());
     }
 }

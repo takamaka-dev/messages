@@ -1,0 +1,1032 @@
+{
+  "version" : "1.0.0",
+  "generated_by" : "VoipTokenVectorGenerator.java",
+  "source" : "Messages (Java reference)",
+  "decision" : "DR-074 revision 3: registervoiptoken / unregistervoiptoken, serverinfo.audience (manifest 1.7)",
+  "voip_token_constants" : {
+    "endpoint_register" : "registervoiptoken",
+    "endpoint_unregister" : "unregistervoiptoken",
+    "message_type" : "VOIP_TOKEN_REGISTRATION",
+    "signature_type" : "Ed25519BC",
+    "content_key" : "voip_token_signed_content",
+    "op_register" : "register",
+    "op_unregister" : "unregister",
+    "env_sandbox" : "sandbox",
+    "env_production" : "production",
+    "vt_pattern" : "^[0-9a-f]{64,200}$ and an even length",
+    "tp_pattern" : "^[A-Za-z0-9.-]{1,155}$",
+    "did_pattern" : "^[A-Za-z0-9._-]{8,128}$",
+    "token_hash_domain" : "tkm-voip-token-v1",
+    "server_audience" : "rschat:rig1",
+    "note" : "All seven content members are required and non-null. The server normalises nothing. 'expected' is the Java reference verdict on 'route' for a server whose audience is server_audience: OK or the error_code. Order: signature, then missing member, unknown key, op, aud, vt, env, tp, did. No refusal listed here consumes the nonce.",
+    "error_codes" : [
+      "RATE_LIMIT_EXCEEDED",
+      "VALIDATION_ERROR",
+      "SIGNATURE_ERROR",
+      "NONCE_INVALID",
+      "VOIP_FIELD_MISSING",
+      "OP_MISMATCH",
+      "AUD_MISMATCH",
+      "VOIP_DISABLED",
+      "VOIP_TOPIC_REFUSED",
+      "VOIP_ENV_REFUSED",
+      "VOIP_TOKEN_IDENTITY_CAP",
+      "USER_NOT_REGISTERED",
+      "VOIP_TOKEN_ERROR"
+    ]
+  },
+  "signer_identity" : {
+    "mnemonic" : "sample half mammal radar hold fit era dilemma manage movie razor saddle point dial sadness north item naive gate hockey sample script embark purse myth",
+    "key_index" : 4,
+    "signer_public_key" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc."
+  },
+  "nonce" : {
+    "nonce" : "11111111-2222-3333-4444-555555555555",
+    "timestamp" : 1700000000000,
+    "liveness" : 60000
+  },
+  "positive_vectors" : [
+    {
+      "name" : "register_sandbox",
+      "desc" : "register, a sandbox token of 64 hex characters",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OK",
+      "token_hash" : "8a4f77c751a0463710c2664c34fba3e2e7573936e82e8a6df6e4c90f5c241171"
+    },
+    {
+      "name" : "register_production",
+      "desc" : "register, a production token",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"production\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2270726f64756374696f6e222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "SKctJbN1UA89BOcJVCvZdOCLkK7YVG-jqcpsVLMHAGtRHpU9z1SV-WZ3cYFLlwU36UjEx5lk0ccJHcevTSiYAA..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "SKctJbN1UA89BOcJVCvZdOCLkK7YVG-jqcpsVLMHAGtRHpU9z1SV-WZ3cYFLlwU36UjEx5lk0ccJHcevTSiYAA..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "production",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OK",
+      "token_hash" : "65b39f6ac81c035f93424c011d2fad4ef1cd723975cfa5562097898ae7f9eb91"
+    },
+    {
+      "name" : "unregister",
+      "desc" : "unregister of the same token",
+      "route" : "unregistervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"unregister\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a22756e7265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "b3AgNfLyYzSRBg_HQalX0oXNzX-UQx1KWaBNHD_TL24NsthME1N8cHZswX6ZQHg8sr5jqwOztAuyrqWbm6IkCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "b3AgNfLyYzSRBg_HQalX0oXNzX-UQx1KWaBNHD_TL24NsthME1N8cHZswX6ZQHg8sr5jqwOztAuyrqWbm6IkCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "unregister",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OK",
+      "token_hash" : "8a4f77c751a0463710c2664c34fba3e2e7573936e82e8a6df6e4c90f5c241171"
+    },
+    {
+      "name" : "register_token_200",
+      "desc" : "register, a token of 200 hex characters (the upper bound)",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"production\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2270726f64756374696f6e222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a226131623263336434653566363037313832393361346235633664376538663930613162326333643465356636303731383239336134623563366437653866393061316232633364346535663630373138323933613462356336643765386639306131623263336434653566363037313832393361346235633664376538663930613162326333643465356636303731383239336134623563366437653866393061316232633364346535663630373138323933613462356336643765386639306131623263336434227d",
+      "signature_b64url" : "rRVZo-ltquE150e5jF8CQPXctEUM62xzVQs7P8N1zK--qrsmGg0OraXHm_fQQqRl7p_9pa--0Ur5VZUxvu0nCg..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "rRVZo-ltquE150e5jF8CQPXctEUM62xzVQs7P8N1zK--qrsmGg0OraXHm_fQQqRl7p_9pa--0Ur5VZUxvu0nCg..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4",
+          "env" : "production",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OK",
+      "token_hash" : "008c1c191e9d903a2ff7ff6f0f6bee97774838168177702091ba2535b00183e4"
+    },
+    {
+      "name" : "register_did_sha256_hex",
+      "desc" : "register, did = a 64-character hex id (the wallet's Android-id form)",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"env\":\"production\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.wallet\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2239663836643038313838346337643635396132666561613063353561643031356133626634663162326230623832326364313564366331356230663030613038222c22656e76223a2270726f64756374696f6e222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e77616c6c6574222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "astAkjwV20FEBPKZMLvgbltGZSExQRIBbzrpo_1VE2xTxacyj_Sl5PvQP0HlI1C0gxS3MkhK-hM2BPjBGRNbBg..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "astAkjwV20FEBPKZMLvgbltGZSExQRIBbzrpo_1VE2xTxacyj_Sl5PvQP0HlI1C0gxS3MkhK-hM2BPjBGRNbBg..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "production",
+          "tp" : "io.takamaka.wallet",
+          "did" : "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+        }
+      },
+      "expected" : "OK",
+      "token_hash" : "11ca8fc4c3127fcb3cd80aae5a4fb7da5241f1a5acac2c36fe066df41f750dfc"
+    }
+  ],
+  "negative_vectors" : [
+    {
+      "name" : "vt_uppercase_hex",
+      "desc" : "uppercase hex in vt: refused, never lowercased",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839414243444546303132333435363738394142434445463031323334353637383941424344454630313233343536373839414243444546227d",
+      "signature_b64url" : "a0mE3rMKGbnYoMQfKzYmhBzUN4O2fBnYiCQ8UKyNZfymtJk_6fogVOtvNVQ3NRxSot2yZa2iQgF4NqBKJ3R6Dw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "a0mE3rMKGbnYoMQfKzYmhBzUN4O2fBnYiCQ8UKyNZfymtJk_6fogVOtvNVQ3NRxSot2yZa2iQgF4NqBKJ3R6Dw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "vt_odd_length",
+      "desc" : "vt of 65 characters",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdefa\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a223031323334353637383961626364656630313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656661227d",
+      "signature_b64url" : "SCDpvU3M_XIN5WRXlsnu60kDaSuL7QEFIqJKFS2nvmK6NdZ7uVw5u3ZmCefKyQV465ykaWIr7Jco3Q7_nVYnAw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "SCDpvU3M_XIN5WRXlsnu60kDaSuL7QEFIqJKFS2nvmK6NdZ7uVw5u3ZmCefKyQV465ykaWIr7Jco3Q7_nVYnAw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdefa",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "vt_too_short",
+      "desc" : "vt of 62 characters",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a223233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "E0pWi27Xx153x-FcKfqCLRWaGJ-zd6rRVJ1qY6D9aYU4-vg69VK9x4PoBydFbl7LlwtdurJu7WoxaHAcvEG1Aw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "E0pWi27Xx153x-FcKfqCLRWaGJ-zd6rRVJ1qY6D9aYU4-vg69VK9x4PoBydFbl7LlwtdurJu7WoxaHAcvEG1Aw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "op_not_the_routes",
+      "desc" : "a validly signed unregister sent to registervoiptoken",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"unregister\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a22756e7265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "b3AgNfLyYzSRBg_HQalX0oXNzX-UQx1KWaBNHD_TL24NsthME1N8cHZswX6ZQHg8sr5jqwOztAuyrqWbm6IkCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "b3AgNfLyYzSRBg_HQalX0oXNzX-UQx1KWaBNHD_TL24NsthME1N8cHZswX6ZQHg8sr5jqwOztAuyrqWbm6IkCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "unregister",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OP_MISMATCH",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "op_not_the_routes_reverse",
+      "desc" : "a validly signed register sent to unregistervoiptoken",
+      "route" : "unregistervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OP_MISMATCH",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "op_unknown",
+      "desc" : "op = delete",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"delete\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a2264656c657465222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "DbZMcFzK1bL037pAQBtU6VIk_NcVuxItWEc_mnjFQIGbmEQLA1YCx73lamtpNqGLrbLADhuld20r76I05VKCBg..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "DbZMcFzK1bL037pAQBtU6VIk_NcVuxItWEc_mnjFQIGbmEQLA1YCx73lamtpNqGLrbLADhuld20r76I05VKCBg..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "delete",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "OP_MISMATCH",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "env_unknown",
+      "desc" : "env = development",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"development\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a22646576656c6f706d656e74222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "uOcC1iDhInVj3alFxsPkfo1mJcSYEj_egHCjeBgXzf4mKxxqxbQUw8r6hCK1ZIsUZLGW-Sg8mfFPmGQBwZE0BA..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "uOcC1iDhInVj3alFxsPkfo1mJcSYEj_egHCjeBgXzf4mKxxqxbQUw8r6hCK1ZIsUZLGW-Sg8mfFPmGQBwZE0BA..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "development",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "tp_forbidden_character",
+      "desc" : "a topic with a slash",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka/tkmchat\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612f746b6d63686174222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "SEam1BVavYqZwDz29lUCB9xz3X6WhfyF2E-4gr787-BbI1Kn7w6ZaHHkmSdzPq5_Nx2wsZ6HnJVcS1aJf4gNBw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "SEam1BVavYqZwDz29lUCB9xz3X6WhfyF2E-4gr787-BbI1Kn7w6ZaHHkmSdzPq5_Nx2wsZ6HnJVcS1aJf4gNBw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka/tkmchat",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "did_too_short",
+      "desc" : "did of 7 characters",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"abcdefg\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2261626364656667222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "G9PbR6wXCQuFQL175q9HGu2CFA7p7wX3vDBeAmpAhdx1gXltNrbg9RYhHwHk-UDEEFpxFRDMHlKdKwzPPGd2Ag..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "G9PbR6wXCQuFQL175q9HGu2CFA7p7wX3vDBeAmpAhdx1gXltNrbg9RYhHwHk-UDEEFpxFRDMHlKdKwzPPGd2Ag..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "abcdefg"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "aud_wrong",
+      "desc" : "aud of another network, validly signed: the nonce is NOT consumed",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig2\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696732222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "kgwOk0-k9KR7xvyhyLXQkjSRF0eL-nLteZBejk_jRlt_M8XKdXD1W_gm1rGsqx-E_w-2U30-e1rZNuF42OzeCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "kgwOk0-k9KR7xvyhyLXQkjSRF0eL-nLteZBejk_jRlt_M8XKdXD1W_gm1rGsqx-E_w-2U30-e1rZNuF42OzeCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig2",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "AUD_MISMATCH",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "did_null",
+      "desc" : "the client signed a canonical form containing \"did\":null: the signature VERIFIES (the Java mapper keeps nulls), the refusal comes from the field check after it",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":null,\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a6e756c6c2c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "R-UBTok4tlUI5N1Qs6PpU6eK-CKoEFpKj2WPhToF3KKbhc1WkBXM-T6WTF66LmjncHML870lZ1Iad0isTmLOCA..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "R-UBTok4tlUI5N1Qs6PpU6eK-CKoEFpKj2WPhToF3KKbhc1WkBXM-T6WTF66LmjncHML870lZ1Iad0isTmLOCA..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : null
+        }
+      },
+      "expected" : "VOIP_FIELD_MISSING",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "did_absent",
+      "desc" : "the client signed a canonical form without the did key: the server re-derives \"did\":null from the parsed bean, so the signature fails",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "F_8i21S8qwRZDkZMZsjrNQdKdPR9EIVumzhcO2jN_YeQK_4u_gs4JR2XDnWBpgO5F2XAzjL32YJF_AXqspeTAg..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "F_8i21S8qwRZDkZMZsjrNQdKdPR9EIVumzhcO2jN_YeQK_4u_gs4JR2XDnWBpgO5F2XAzjL32YJF_AXqspeTAg..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR",
+      "refused_at" : "signature",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "extra_key_signed",
+      "desc" : "an eighth key inside the signed canonical form: the server's re-derived form lacks it, so the signature fails",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"platform\":\"ios\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c22706c6174666f726d223a22696f73222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "FyI6ZBAO_3at3ayxrulBiT12JZSkhR8G-YVSHgJrzJ36v3S-pEVRJmjOr3luaJHHKFgHxJsn8ofBX8rg9H2EBg..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "FyI6ZBAO_3at3ayxrulBiT12JZSkhR8G-YVSHgJrzJ36v3S-pEVRJmjOr3luaJHHKFgHxJsn8ofBX8rg9H2EBg..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c",
+          "platform" : "ios"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR",
+      "refused_at" : "signature",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "extra_key_unsigned",
+      "desc" : "an eighth key added to the wire object but not signed: the signature verifies over the seven, and the content check refuses the unknown key",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c",
+          "platform" : "ios"
+        }
+      },
+      "expected" : "VALIDATION_ERROR",
+      "refused_at" : "content_check",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "content_changed_after_signing",
+      "desc" : "the last character of vt changed after signing",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcde0",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR",
+      "refused_at" : "signature",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "voip_content_under_fcm_type",
+      "desc" : "a valid VoIP content with message_type = FCM_TOKEN_REGISTRATION sent to registervoiptoken: refused (the route accepts its own type only)",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"aud\":\"rschat:rig1\",\"did\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"env\":\"sandbox\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"op\":\"register\",\"tp\":\"io.takamaka.tkmchat.test\",\"vt\":\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}",
+      "signed_canonical_utf8_hex" : "7b22617564223a227273636861743a72696731222c22646964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c22656e76223a2273616e64626f78222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c226f70223a227265676973746572222c227470223a22696f2e74616b616d616b612e746b6d636861742e74657374222c227674223a2230313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566227d",
+      "signature_b64url" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "FCM_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR",
+      "refused_at" : "signature",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "fcm_content_under_voip_type",
+      "desc" : "a valid FCM registration content with message_type = VOIP_TOKEN_REGISTRATION sent to registervoiptoken",
+      "route" : "registervoiptoken",
+      "signed_canonical_jcs" : "{\"device_id\":\"3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c\",\"fcm_token\":\"fixed-fcm-token-XYZ\",\"nonce\":{\"liveness\":60000,\"nonce\":\"11111111-2222-3333-4444-555555555555\",\"timestamp\":1700000000000},\"platform\":\"ios\"}",
+      "signed_canonical_utf8_hex" : "7b226465766963655f6964223a2233663261396331652d376234642d346538612d396332662d356436653766386139623063222c2266636d5f746f6b656e223a2266697865642d66636d2d746f6b656e2d58595a222c226e6f6e6365223a7b226c6976656e657373223a36303030302c226e6f6e6365223a2231313131313131312d323232322d333333332d343434342d353535353535353535353535222c2274696d657374616d70223a313730303030303030303030307d2c22706c6174666f726d223a22696f73227d",
+      "signature_b64url" : "Y9zoa5TTtxdf0jA1mJk04ZncLuVYzywlFJz6WKCETnoJzshv8zAFt3QTdKKCrzlJ5h50dZos63-WRwkj30dSBw..",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "Y9zoa5TTtxdf0jA1mJk04ZncLuVYzywlFJz6WKCETnoJzshv8zAFt3QTdKKCrzlJ5h50dZos63-WRwkj30dSBw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "fcm_token_registration_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "platform" : "ios",
+          "fcm_token" : "fixed-fcm-token-XYZ",
+          "device_id" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR",
+      "refused_at" : "signature",
+      "nonce_consumed" : false
+    }
+  ],
+  "cross_type_vectors" : [
+    {
+      "name" : "voip_envelope_on_an_fcm_route",
+      "desc" : "the valid register_sandbox envelope, as is, sent to registerfcmtoken: its type has no FCM content",
+      "route" : "registerfcmtoken",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "VOIP_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR"
+    },
+    {
+      "name" : "voip_content_relabelled_fcm_on_an_fcm_route",
+      "desc" : "the same content relabelled FCM_TOKEN_REGISTRATION, sent to registerfcmtoken: the FCM case reads fcm_token_registration_signed_content only",
+      "route" : "registerfcmtoken",
+      "envelope_json" : {
+        "from" : "el3xvxJnLv9S9aWD0ei3g96YGOAvdYW_yn5z1eIvCDc.",
+        "signature" : "aI26qnSSp8cncxZlUI8o1gFr656Ea5uidaeozNedpZoFzH9CtlHB8_5mwpbGFC_4xL_HApjbgjP4QTwY5eyUCw..",
+        "message_type" : "FCM_TOKEN_REGISTRATION",
+        "signature_type" : "Ed25519BC",
+        "voip_token_signed_content" : {
+          "nonce" : {
+            "nonce" : "11111111-2222-3333-4444-555555555555",
+            "timestamp" : 1700000000000,
+            "liveness" : 60000
+          },
+          "op" : "register",
+          "aud" : "rschat:rig1",
+          "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "env" : "sandbox",
+          "tp" : "io.takamaka.tkmchat.test",
+          "did" : "3f2a9c1e-7b4d-4e8a-9c2f-5d6e7f8a9b0c"
+        }
+      },
+      "expected" : "SIGNATURE_ERROR"
+    }
+  ],
+  "server_refusal_vectors" : [
+    {
+      "name" : "apns_off",
+      "desc" : "the server's APNs sender is off: never a success that stores nothing",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : false,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_DISABLED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "apns_off_unregister_still_works",
+      "desc" : "unregister works whatever the switch says",
+      "envelope_of_positive_vector" : "unregister",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : false,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "OK",
+      "nonce_consumed" : true
+    },
+    {
+      "name" : "topic_not_on_the_allow_list",
+      "desc" : "tp is a bundle id the operator did not list",
+      "envelope_of_positive_vector" : "register_did_sha256_hex",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_TOPIC_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "env_not_accepted_by_this_server",
+      "desc" : "a sandbox token on a server that accepts production only",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_ENV_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "env_without_a_key_for_the_topics_team",
+      "desc" : "the server accepts sandbox, but the team that owns this topic has a production key only (another team holds the sandbox key): the row could never be pushed to",
+      "envelope_of_positive_vector" : "register_sandbox",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          },
+          {
+            "team_id" : "TEAMB",
+            "environments" : [
+              "sandbox"
+            ],
+            "topics" : [
+              "io.takamaka.wallet"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : true
+      },
+      "expected" : "VOIP_ENV_REFUSED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "from_not_registered",
+      "desc" : "from is not a registered user: checked before the nonce is consumed",
+      "envelope_of_positive_vector" : "register_production",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : false,
+        "nonce_is_usable" : true
+      },
+      "expected" : "USER_NOT_REGISTERED",
+      "nonce_consumed" : false
+    },
+    {
+      "name" : "nonce_unknown_or_spent",
+      "desc" : "the nonce is unknown, expired or already used",
+      "envelope_of_positive_vector" : "register_production",
+      "server" : {
+        "audience" : "rschat:rig1",
+        "apns_enabled" : true,
+        "accepted_environments" : [
+          "sandbox",
+          "production"
+        ],
+        "keys" : [
+          {
+            "team_id" : "TEAMA",
+            "environments" : [
+              "sandbox",
+              "production"
+            ],
+            "topics" : [
+              "io.takamaka.tkmchat.test"
+            ]
+          }
+        ],
+        "from_is_registered" : true,
+        "nonce_is_usable" : false
+      },
+      "expected" : "NONCE_INVALID",
+      "nonce_consumed" : false
+    }
+  ],
+  "token_hash_vectors" : [
+    {
+      "env" : "sandbox",
+      "tp" : "io.takamaka.tkmchat.test",
+      "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "preimage_utf8_hex" : "746b6d2d766f69702d746f6b656e2d76310a73616e64626f780a696f2e74616b616d616b612e746b6d636861742e746573740a30313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566",
+      "token_hash" : "8a4f77c751a0463710c2664c34fba3e2e7573936e82e8a6df6e4c90f5c241171"
+    },
+    {
+      "env" : "production",
+      "tp" : "io.takamaka.tkmchat.test",
+      "vt" : "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "preimage_utf8_hex" : "746b6d2d766f69702d746f6b656e2d76310a70726f64756374696f6e0a696f2e74616b616d616b612e746b6d636861742e746573740a30313233343536373839616263646566303132333435363738396162636465663031323334353637383961626364656630313233343536373839616263646566",
+      "token_hash" : "65b39f6ac81c035f93424c011d2fad4ef1cd723975cfa5562097898ae7f9eb91"
+    },
+    {
+      "env" : "production",
+      "tp" : "io.takamaka.wallet",
+      "vt" : "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4",
+      "preimage_utf8_hex" : "746b6d2d766f69702d746f6b656e2d76310a70726f64756374696f6e0a696f2e74616b616d616b612e77616c6c65740a6131623263336434653566363037313832393361346235633664376538663930613162326333643465356636303731383239336134623563366437653866393061316232633364346535663630373138323933613462356336643765386639306131623263336434653566363037313832393361346235633664376538663930613162326333643465356636303731383239336134623563366437653866393061316232633364346535663630373138323933613462356336643765386639306131623263336434",
+      "token_hash" : "249bb667191454f21fad820e9fd87c411920faa43108b43880a6984d48620e7c"
+    }
+  ],
+  "serverinfo_vectors" : {
+    "manifest_version_current" : "1.7",
+    "audience_member" : "audience",
+    "manifest_1_7_json" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.7",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null,
+      "audience" : "rschat:rig1"
+    },
+    "manifest_1_7_expected_audience" : "rschat:rig1",
+    "manifest_1_6_json" : {
+      "serverVersion" : "0.11.0-SNAPSHOT",
+      "protocolCurrent" : "1.2",
+      "protocolMajor" : 1,
+      "protocolMinMinor" : 0,
+      "protocolMaxMinor" : 2,
+      "manifestVersion" : "1.6",
+      "maxFramePayloadLength" : 0,
+      "maxAttachmentSizeBytes" : 0,
+      "messageBurst" : 0,
+      "messagePerMinute" : 0,
+      "editDeleteWindowMs" : 0,
+      "supportedRoutes" : null,
+      "maxEncryptedContentSizeBytes" : 0,
+      "profile" : null
+    },
+    "manifest_1_6_expected_audience" : null,
+    "note" : "A 1.6 server has no 'audience' member: a port must read it as no audience (null), never as an error and never as an empty string."
+  }
+}

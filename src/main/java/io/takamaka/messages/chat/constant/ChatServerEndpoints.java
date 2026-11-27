@@ -128,6 +128,21 @@ public class ChatServerEndpoints {
     public static final String DELETE_ALL_FCM_TOKENS = "deleteallfcmtokens";
 
     /**
+     * DR-074: registers the PushKit (VoIP) token of one iOS install for the signing identity. Request-response;
+     * envelope {@code VOIP_TOKEN_REGISTRATION} with {@code op = register}; the server-issued nonce is consumed.
+     * Answers {@code VoipTokenResponseBean}; {@code VOIP_DISABLED} when the server's APNs sender is off (never a
+     * success that stores nothing).
+     */
+    public static final String REGISTER_VOIP_TOKEN = "registervoiptoken";
+
+    /**
+     * DR-074: hard-deletes the signing identity's row for one PushKit token. Same envelope with
+     * {@code op = unregister}. Idempotent. Works whatever the state of the calls switch and of the APNs switch: a
+     * row is always removable by the identity that owns it.
+     */
+    public static final String UNREGISTER_VOIP_TOKEN = "unregistervoiptoken";
+
+    /**
      * The relative path for the server capabilities endpoint. Public and
      * unauthenticated (no nonce, no signature): returns the server build
      * version and the supported wire-protocol range so clients can negotiate
@@ -255,5 +270,52 @@ public class ChatServerEndpoints {
      * Messages 1.12.0 / rschat 0.9.1.
      */
     public static final String WITHDRAW_ATTACHMENT = "withdrawattachment";
+
+
+    // ---- C182 E2EE calls (tkm-call/v1, DR-055): the three rschat routes of the protocol --------------------------
+    // Payloads/answers are call objects and io.takamaka.messages.call.service.CallReplyBean as JSON TEXT, parsed with
+    // the strict call parser (io.takamaka.messages.call.CallJson); refusals are typed spec §11 codes, never free text.
+    // rschat stores nothing for any of them (no row, no log of the lookup; spec §7.1 N9, §8.3).
+
+    /**
+     * rschat's call nonce (request-response, no payload): the stateless §8.1 form bound to {@code aud = rschat:<net>},
+     * held in memory for its 60 s window only — no {@code nonces} row. Answer: {@code CallReplyBean} {@code n}, {@code aud}.
+     * Every {@code ring} and {@code lookup} carries one ({@code n}).
+     */
+    public static final String CALL_NONCE = "callnonce";
+
+    /**
+     * Ring (spec §7.1, request-response): a caller-signed {@code ring} object (signature context {@code tkm-call/v1/ring},
+     * {@code aud = rschat:<net>}). rschat verifies the signature, the nonce, that the caller and every {@code to} are
+     * registered, and 10 per minute / 100 per day per verified caller; then delivers {@code CALL_RING} live on each
+     * callee's notification stream, or as an FCM push carrying {@code call_id}, {@code svc}, {@code f}, {@code mode}
+     * only. No row. Answer: {@code CallReplyBean} ok, or a typed error.
+     *
+     * <p>[0.2] (C-16): the same route takes the ANSWERED NOTICE — a {@code ring} with {@code k = "answered"} signed by
+     * the callee, {@code to = [f]} — checked like a ring and charged to the ring limits of {@code f}; rschat delivers
+     * {@code CALL_ANSWERED} to {@code f}'s own devices (live, else a push of {@code call_id} only), never stored.
+     *
+     * <p>P2 (caller cancel, 2026-11-05): and the CALLER'S CANCEL — a {@code ring} with {@code k = "cancelled"} signed by
+     * the caller with its ring's {@code call}, {@code svc}, {@code to}, {@code mode}. Signature, nonce, allow-list and
+     * the caller's registration are checked; no ring budget is charged. rschat relays {@code CALL_CANCELLED} (live with
+     * {@code signed_ring}, and a silent Android push with {@code data.ring}) only to the callees of a ring it admitted
+     * with the same caller and call id in the last 90 s, at most once each; anything else is dropped silently. Answer:
+     * ok (it never says what matched).
+     */
+    public static final String CALL_RING = "callring";
+    /**
+     * [0.4] tkm-call/v1 §7.11 (M9, 2026-11-03): the ad-hoc MEET NOTICE — a {@code meetnotice} object signed by the meet's
+     * owner (or acting owner), checked like a ring (signature under the call context, rschat nonce, {@code svc} on the
+     * allow-list, every {@code to} registered, {@code to} ≤ 100), charged as ring units, delivered as {@code CALL_MEET}
+     * live or as a SILENT push, never rings and never occupies the callee's receive slots; no row stored.
+     */
+    public static final String CALL_MEETNOTICE = "callmeetnotice";
+
+    /**
+     * Registration lookup (spec §8.3, service → rschat, request-response): a {@code lookup} object signed by a call
+     * service key on rschat's allow-list ({@code rschat.calls.services}), one identity per request. Answer:
+     * {@code CallReplyBean} {@code reg} (the registration record verbatim) or {@code not_registered}. Not logged.
+     */
+    public static final String CALL_LOOKUP = "calllookup";
 
 }

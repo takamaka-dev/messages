@@ -56,5 +56,37 @@ public enum NOTIFICATION_TYPES {
      *
      * <p>Align this literal with the Flutter client.</p>
      */
-    PROFILE_UPDATE
+    PROFILE_UPDATE,
+    /**
+     * C182 (tkm-call/v1 §7.1, DR-055): an incoming call. Delivered on the live notification stream or as an FCM
+     * push, and <b>never stored</b> (N9): no {@code user_notifications} row, so it never appears in
+     * {@code notificationhistory}. The notification carries {@code ring} = {@code call}, {@code svc}, {@code f},
+     * {@code mode} and nothing else; the callee shows the caller as verified only after fetching and verifying the
+     * creation record from the call service (N7). Align this literal with the Flutter client.
+     */
+    CALL_RING,
+    /**
+     * C182 [0.2] (tkm-call/v1 §7.1, C-16 answered elsewhere): a device of THIS identity accepted the call named by
+     * {@code ring.call}; a device still ringing for it dismisses the ring ({@code elsewhere}). Delivered like
+     * {@link #CALL_RING} — live or as a push, never stored — to the callee's own devices only. A separate type so that
+     * a client that knows only {@code CALL_RING} ignores it instead of ringing. Align this literal with the Flutter
+     * client.
+     */
+    CALL_ANSWERED,
+    /**
+     * [0.4] tkm-call/v1 §7.11 (M9, 2026-11-03): the meet notice of an ad-hoc meet — delivered to each {@code to} of a
+     * verified {@code meetnotice}, live or as a silent push ({@code type=CALL_MEET}, {@code call_id}, {@code v=1});
+     * never rings. A client that knows only {@code CALL_RING} ignores it.
+     */
+    CALL_MEET,
+    /**
+     * P2 (caller cancel, 2026-11-05): the caller of {@code ring.call} gave up before anyone answered — a callee device
+     * still ringing for that call FROM that caller stops ({@code cancelled}). Delivered by rschat only to the callees of
+     * a ring it ADMITTED with the same caller and call id, at most once each, live (the notification carries the
+     * caller's signed cancel in {@code signed_ring}) and as a silent push carrying it in {@code data.ring}; never stored.
+     * A device acts only on a cancel that VERIFIES (the caller's signature under its pinned audience, its own identity
+     * in {@code to}, fresh) — a notice without the signed object is ignored. A client that knows only {@code CALL_RING}
+     * ignores it. Align this literal with the Flutter client.
+     */
+    CALL_CANCELLED
 }

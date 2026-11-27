@@ -1,0 +1,618 @@
+{
+  "spec" : "tkm-call/v1 [0.3] S-4 served-params bounds (CallParamsBounds)",
+  "version" : "1.0.0",
+  "generator" : "Messages io.takamaka.messages.call.CallParamsBoundsVectorGenerator (feat/C182-calls-v1)",
+  "about" : "Every client refuses a served parameter profile outside these bounds with bad_params at first contact (the manifest), at create (the manifest) and at join (the creation record). For each case the client's CallParamsBounds.violation(params) must equal `reason` (null = in bounds); check(params, where) must throw bad_params with `where: reason`. Rules are checked in a fixed order and the FIRST violated one names the reason. Integer division: refuse_below's lower limit is commit_delay/2 rounded down. A missing field (other than rotation_max) is a violation. Not covered here on purpose: the manifest ver range and the S-5 rank cap are not param bounds.",
+  "bounds" : {
+    "rotation_min_ms" : 1000,
+    "commit_delay_min_ms" : 3000,
+    "commit_delay_max_ms" : 120000,
+    "backstop_max_ms" : 300000,
+    "retention_max_ms" : 30000,
+    "committer_timeout_min_ms" : 500,
+    "committer_timeout_max_ms" : 10000,
+    "grace_min_ms" : 1000,
+    "grace_max_ms" : 120000,
+    "cap_min" : 2,
+    "cap_max" : 100,
+    "devices_min" : 1,
+    "devices_max" : 5
+  },
+  "rule_order" : [ "rotation", "commit_delay", "refuse_below", "backstop", "rotation_max", "retention", "committer_timeout", "grace", "absence_window", "cap", "devices_per_identity" ],
+  "cases" : [ {
+    "name" : "default profile (London TEST since C-30): the \u00A74.1 initial values + rotation_max 300 s",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "initial values without rotation_max (optional field)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "loop profile (local test loop, rotation_max 6 s, backstop 30 s)",
+    "params" : {
+      "grace" : 6000,
+      "rotation" : 6000,
+      "commit_delay" : 6600,
+      "refuse_below" : 5400,
+      "absence_window" : 500,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 30000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 6000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "loopadaptive profile (rotation_max 60 s, backstop 60 s)",
+    "params" : {
+      "grace" : 6000,
+      "rotation" : 6000,
+      "commit_delay" : 6600,
+      "refuse_below" : 5400,
+      "absence_window" : 500,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 60000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 60000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "callsvc test profile (grace 1.5 s, absence 0.4 s, rotation = commit_delay 3 s, refuse_below 1.5 s = cd/2)",
+    "params" : {
+      "grace" : 1500,
+      "rotation" : 3000,
+      "commit_delay" : 3000,
+      "refuse_below" : 1500,
+      "absence_window" : 400,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "rotation 0 = adaptive (the committer's engine chooses), rotation_max still bounded by backstop",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 0,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "the clients' fast test profile (tkm_calls C-29 tests): rotation 3 s, commit_delay 3 s, refuse_below 1.5 s, backstop 5 s",
+    "params" : {
+      "grace" : 1000,
+      "rotation" : 3000,
+      "commit_delay" : 3000,
+      "refuse_below" : 1500,
+      "absence_window" : 200,
+      "committer_timeout" : 500,
+      "retention" : 2000,
+      "backstop" : 5000,
+      "cap" : 50,
+      "devices_per_identity" : 3
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "boundary: commit_delay = 3000 with rotation 1000, refuse_below = 1500 (= cd/2), backstop = commit_delay",
+    "params" : {
+      "grace" : 1000,
+      "rotation" : 1000,
+      "commit_delay" : 3000,
+      "refuse_below" : 1500,
+      "absence_window" : 0,
+      "committer_timeout" : 500,
+      "retention" : 0,
+      "backstop" : 3000,
+      "cap" : 2,
+      "devices_per_identity" : 1,
+      "rotation_max" : 1000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "boundary: commit_delay = 120000 (max), refuse_below = commit_delay, backstop = 300000 (max), rotation_max = backstop",
+    "params" : {
+      "grace" : 120000,
+      "rotation" : 120000,
+      "commit_delay" : 120000,
+      "refuse_below" : 120000,
+      "absence_window" : 120000,
+      "committer_timeout" : 10000,
+      "retention" : 30000,
+      "backstop" : 300000,
+      "cap" : 100,
+      "devices_per_identity" : 5,
+      "rotation_max" : 300000
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "boundary: refuse_below = 1500 with commit_delay 3001 (integer division: 3001/2 = 1500)",
+    "params" : {
+      "grace" : 1000,
+      "rotation" : 1000,
+      "commit_delay" : 3001,
+      "refuse_below" : 1500,
+      "absence_window" : 0,
+      "committer_timeout" : 500,
+      "retention" : 0,
+      "backstop" : 3001,
+      "cap" : 2,
+      "devices_per_identity" : 1
+    },
+    "expect" : "pass",
+    "reason" : null
+  }, {
+    "name" : "hostile: commit_delay 3 h (the HANDOFF example)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 10800000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "commit_delay must be in [max(3000, rotation), 120000] ms",
+    "rule" : "commit_delay"
+  }, {
+    "name" : "hostile: rotation_max 400 s > backstop",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 400000
+    },
+    "expect" : "fail",
+    "reason" : "rotation_max must be in [rotation, backstop]",
+    "rule" : "rotation_max"
+  }, {
+    "name" : "hostile: refuse_below 0 (a commit refused never)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 0,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "refuse_below must be in [commit_delay/2, commit_delay]",
+    "rule" : "refuse_below"
+  }, {
+    "name" : "hostile: refuse_below 66001 > commit_delay",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 66001,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "refuse_below must be in [commit_delay/2, commit_delay]",
+    "rule" : "refuse_below"
+  }, {
+    "name" : "hostile: backstop 1 h with rotation 0",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 0,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 3600000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "backstop must be in [commit_delay, 300000] ms",
+    "rule" : "backstop"
+  }, {
+    "name" : "hostile: backstop 300001 (max + 1)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300001,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "backstop must be in [commit_delay, 300000] ms",
+    "rule" : "backstop"
+  }, {
+    "name" : "hostile: retention 10 min",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 600000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "retention must be in [0, 30000] ms",
+    "rule" : "retention"
+  }, {
+    "name" : "hostile: rotation 500 ms (< 1 s and not 0)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 500,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "rotation must be 0 or >= 1000 ms",
+    "rule" : "rotation"
+  }, {
+    "name" : "hostile: rotation 90 s > commit_delay 66 s (names commit_delay, the first rule that fails)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 90000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "commit_delay must be in [max(3000, rotation), 120000] ms",
+    "rule" : "commit_delay"
+  }, {
+    "name" : "hostile: commit_delay 2999 (min - 1)",
+    "params" : {
+      "grace" : 1000,
+      "rotation" : 1000,
+      "commit_delay" : 2999,
+      "refuse_below" : 1500,
+      "absence_window" : 0,
+      "committer_timeout" : 500,
+      "retention" : 0,
+      "backstop" : 3000,
+      "cap" : 2,
+      "devices_per_identity" : 1
+    },
+    "expect" : "fail",
+    "reason" : "commit_delay must be in [max(3000, rotation), 120000] ms",
+    "rule" : "commit_delay"
+  }, {
+    "name" : "hostile: commit_delay 120001 (max + 1)",
+    "params" : {
+      "grace" : 120000,
+      "rotation" : 120000,
+      "commit_delay" : 120001,
+      "refuse_below" : 120000,
+      "absence_window" : 120000,
+      "committer_timeout" : 10000,
+      "retention" : 30000,
+      "backstop" : 300000,
+      "cap" : 100,
+      "devices_per_identity" : 5
+    },
+    "expect" : "fail",
+    "reason" : "commit_delay must be in [max(3000, rotation), 120000] ms",
+    "rule" : "commit_delay"
+  }, {
+    "name" : "hostile: refuse_below 1499 with commit_delay 3001 (below the rounded-down half)",
+    "params" : {
+      "grace" : 1000,
+      "rotation" : 1000,
+      "commit_delay" : 3001,
+      "refuse_below" : 1499,
+      "absence_window" : 0,
+      "committer_timeout" : 500,
+      "retention" : 0,
+      "backstop" : 3001,
+      "cap" : 2,
+      "devices_per_identity" : 1
+    },
+    "expect" : "fail",
+    "reason" : "refuse_below must be in [commit_delay/2, commit_delay]",
+    "rule" : "refuse_below"
+  }, {
+    "name" : "hostile: committer_timeout 100 ms",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 100,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "committer_timeout must be in [500, 10000] ms",
+    "rule" : "committer_timeout"
+  }, {
+    "name" : "hostile: committer_timeout 10001 (max + 1)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 10001,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "committer_timeout must be in [500, 10000] ms",
+    "rule" : "committer_timeout"
+  }, {
+    "name" : "hostile: grace 0",
+    "params" : {
+      "grace" : 0,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "grace must be in [1000, 120000] ms",
+    "rule" : "grace"
+  }, {
+    "name" : "hostile: grace 120001 (max + 1)",
+    "params" : {
+      "grace" : 120001,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "grace must be in [1000, 120000] ms",
+    "rule" : "grace"
+  }, {
+    "name" : "hostile: absence_window 61 s > grace 60 s",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 61000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "absence_window must be in [0, grace]",
+    "rule" : "absence_window"
+  }, {
+    "name" : "hostile: retention -1",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : -1,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "retention must be in [0, 30000] ms",
+    "rule" : "retention"
+  }, {
+    "name" : "hostile: cap 1000",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 1000,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "cap must be in [2, 100]",
+    "rule" : "cap"
+  }, {
+    "name" : "hostile: cap 1 (min - 1)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 1,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "cap must be in [2, 100]",
+    "rule" : "cap"
+  }, {
+    "name" : "hostile: devices_per_identity 0",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 0,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "devices_per_identity must be in [1, 5]",
+    "rule" : "devices_per_identity"
+  }, {
+    "name" : "hostile: devices_per_identity 6 (max + 1)",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 6,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "devices_per_identity must be in [1, 5]",
+    "rule" : "devices_per_identity"
+  }, {
+    "name" : "hostile: grace missing (a missing field is a violation)",
+    "params" : {
+      "rotation" : 60000,
+      "commit_delay" : 66000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 50,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "grace must be in [1000, 120000] ms",
+    "rule" : "grace"
+  }, {
+    "name" : "hostile: two rules broken (commit_delay 3 h AND cap 1000): the FIRST in the order names the reason",
+    "params" : {
+      "grace" : 60000,
+      "rotation" : 60000,
+      "commit_delay" : 10800000,
+      "refuse_below" : 54000,
+      "absence_window" : 5000,
+      "committer_timeout" : 2000,
+      "retention" : 10000,
+      "backstop" : 300000,
+      "cap" : 1000,
+      "devices_per_identity" : 3,
+      "rotation_max" : 300000
+    },
+    "expect" : "fail",
+    "reason" : "commit_delay must be in [max(3000, rotation), 120000] ms",
+    "rule" : "commit_delay"
+  } ]
+}

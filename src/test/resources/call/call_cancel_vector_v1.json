@@ -1,0 +1,648 @@
+{
+  "_origin" : "Messages CallCancelTest (P2 caller cancel, 2026-11-05; Iris §7.123 I2/RA-5): the caller's signed cancel (ring with k=cancelled). Each case is the silent push `data` AND the live `notification` a device receives for the same cancel; ONE verifier (CallRschat.checkCancel: signed object, call id, f, me) gives `expect.verified` for both under `aud`; `expect.fresh` = isFreshPushRing at `now_ms`; `expect.after_ring` = isNotOlderThanRing against the ring's signed ts `ring_ts`. A verified cancel stops a ring only when its f is that ring's VERIFIED caller (co_callee_cancel verifies as the co-callee, never as the caller). Keys: seeds are SHA3-256(ASCII(\"tkm-call/v1/vectors/identity/\" + name)) (CallTestKeys.identity).",
+  "aud" : "rschat:test",
+  "now_ms" : 1700000030000,
+  "ring_ts" : 1700000000000,
+  "max_age_ms" : 90000,
+  "max_skew_ms" : 60000,
+  "fcm_data_max_bytes" : 4096,
+  "keys" : {
+    "p2-caller" : {
+      "seed_hex" : "867f5062123427f078e7e9d1093b9eb3af259a97e745f3610694591d35355c29",
+      "identity" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE."
+    },
+    "p2-callee-1" : {
+      "seed_hex" : "6f71fe8877ce6cd4aede76e8143252bad0b83ae7216b2172a9cc29cbaaa37b02",
+      "identity" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4."
+    },
+    "p2-callee-2" : {
+      "seed_hex" : "a50ac75c894c400c62b97dfc6b7aef270ffb0537cc47f8e3c18fa18d5317046c",
+      "identity" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g."
+    },
+    "p2-callee-3" : {
+      "seed_hex" : "ddc40463987b95aa0d847f020752592074c49f9841994449f66392de1ff62613",
+      "identity" : "ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ."
+    },
+    "p2-callee-4" : {
+      "seed_hex" : "b3ed54b046a3399e2bf3cf813ae44cc9ccb9da36a95bd21c73e7d729d97fa509",
+      "identity" : "GLjJIwAVTrg2xVTb77HcCdYaFZBXwMOW3h_lyte87d8."
+    },
+    "p2-callee-5" : {
+      "seed_hex" : "16b9d724fb207124e1d277a8b49e3e5f72b3639c1fd9c3e5fdcd3872b7625a8c",
+      "identity" : "pi41i-qIAJNRkhouN0RtcmhbOzxs8hSIvRqYL74KhUg."
+    },
+    "p2-callee-6" : {
+      "seed_hex" : "6fa8d6626bc47f00b5c6cc8f0dd2b14fa2879c04aa6d6ca064d99a6b052f06a8",
+      "identity" : "o50vng_Hg9k-kNq0ivbUtyBZ8buuxkjCyY2D_c8ffaQ."
+    },
+    "p2-callee-7" : {
+      "seed_hex" : "e07f6a965a5de5ed9f9cab930ce977414dd0b51b0001ccd2bb25bb11c474607d",
+      "identity" : "Rtp2w4tF6IIKP24SRZnHDBHRlZJf5_Epn5SL4BwwPQ0."
+    },
+    "p2-callee-8" : {
+      "seed_hex" : "66dc91f8d3895a9eb11526ded72479e5166845718c70c8649cc2ea4857e5dfa1",
+      "identity" : "rjKyQyAlWfUI9bhwMitChaO9PGEUyEWSErBCg7HfBQ8."
+    },
+    "p2-callee-9" : {
+      "seed_hex" : "965723060aca0b8e51c301fde03f9b4ff972d22ad54258312f4e35ef17800d51",
+      "identity" : "LZBQaBKlipj0IyXoygue6CRPz5XRStMATU5IEqGv-Fc."
+    },
+    "p2-callee-10" : {
+      "seed_hex" : "702fc4afd37b331f04573febfdfba61cd471037de80c727fcdd3c4a36cffede5",
+      "identity" : "N5_QYfg-8AJJ-Bf3HIeOrPDB8jeHem2ITqNlBLbWGDo."
+    },
+    "p2-callee-11" : {
+      "seed_hex" : "b0f7b9b24af95aa188b8e74ef3cd87e7d3b978407432d4c276b004a92d313d68",
+      "identity" : "qvX2AUpsVPl_ktcVfCK0afZDM6lf8uEctJOPCz1tkck."
+    },
+    "p2-callee-12" : {
+      "seed_hex" : "0cb96da39ce8f29b7124b2094b5021a1365f04cded965b2d32f97f7e1eaa0b2c",
+      "identity" : "g0CFsUS54oQE_UxKzYQ-IQDg6yy3mPV_ShyfctlwniI."
+    },
+    "p2-callee-13" : {
+      "seed_hex" : "3743e3e160b5f8df2d92cbaaf9d8f05859973f7136e3f516767c67f875969dc9",
+      "identity" : "1XePSG4sR6WfhIPc45IUNwaDLnotFhqImwR7syYAHrU."
+    },
+    "p2-callee-14" : {
+      "seed_hex" : "b96cdb3fb10ad92d2fd367e4764fb3d72e2fc8b31076d1293b8e26a2a66aeeea",
+      "identity" : "EO5-u4TYwqhw3MQa3cx42bV7YCWM-gpaGuD1qPu2M9M."
+    },
+    "p2-callee-15" : {
+      "seed_hex" : "d01379f59fe57d31d408b1e2e7247c82d99d086d5fe63deb00cc301d3e178870",
+      "identity" : "Kd20_iqnVorjgHxNp_Oam8HAp9q5vKegNU2qYT1DUJA."
+    },
+    "p2-callee-16" : {
+      "seed_hex" : "011857efde8e95c753e4a69d2497f40ce6a4b35d41cc1a9bf56a4bc22ccfa2f8",
+      "identity" : "GpV8YN16us3fNGViKySoR-0I7BubUI9pnk_CCQLALsw."
+    },
+    "p2-callee-17" : {
+      "seed_hex" : "f56f1d6bd2ebc09e89bd2a15777c77c7d7590beaa7e7261591a0b57f17a432e7",
+      "identity" : "f3ljNhKftasTHcNzw3OFzEMfJclRU-EeI9fs3zeJ8l0."
+    },
+    "p2-callee-18" : {
+      "seed_hex" : "83e5d1caab40075d76b58ca80213c6210d50ecc3ef64fbf1b4017599a93e46b2",
+      "identity" : "0-tc8TiqiXZwQDDHxAhe5wiT4xXrNK5UXByi9c9zW9U."
+    },
+    "p2-callee-19" : {
+      "seed_hex" : "a557894c731ecea8534ab724428692cc31d93e6f8baf91cfb8d87482c4a044c4",
+      "identity" : "wWRoWXGwkXTlOcBcwAFt6RmWfDnFXOoPyMnoCc8tibo."
+    },
+    "p2-callee-20" : {
+      "seed_hex" : "60a8034b1b177a74716bdd11f3ae32ae54eb5ccee29a3baace0b679a1854af1e",
+      "identity" : "3hn122NSVoaTcVdVgmHOYUyTKAfWbfjYepyagYvM668."
+    },
+    "p2-callee-21" : {
+      "seed_hex" : "7199d54685999b7dc164602de1e151473790cc3637c1996dc5ff1b98cb5ff736",
+      "identity" : "3MZ2tOg570F0X9t5_ERxDn-cVssdv0WwO52PcJaPors."
+    },
+    "p2-callee-22" : {
+      "seed_hex" : "3330d7495868696bfab9b537e32fa5801801c12b3007ab36437e5398a4501c44",
+      "identity" : "_p6fy92b5ypWdBagvOxtFi9spmS6zlhPJbMoiZ85gN4."
+    },
+    "p2-callee-23" : {
+      "seed_hex" : "5b0352238d36d4994632d752ed0c07d9c4dae5b3770c28b177cbc031ea91b29a",
+      "identity" : "ydFGQr6DzhG3f6Axq3xgmYuwcUbYw2TIZL9eqhOHwHQ."
+    },
+    "p2-callee-24" : {
+      "seed_hex" : "78afa1184d85cd8ab6cebdfc55a6ca4b92c5a92a6d68192cdc7502703e7807ec",
+      "identity" : "MMIMGbgN1t56IHz01A3Q1gF1mgDCwysPBQI6kKx7XZI."
+    },
+    "p2-callee-25" : {
+      "seed_hex" : "5ca83e6da16f91fbd6881c4cecdfc11b800c4b8132f613b67386b8a7df358411",
+      "identity" : "wWbR7IqmDKNjgMV6dS-dQDaWeXIZsqwW4p0YEnRNaYY."
+    }
+  },
+  "cases" : [ {
+    "name" : "one_callee",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "ts" : 1700000020000,
+      "fresh" : true,
+      "after_ring" : true
+    }
+  }, {
+    "name" : "twenty_five_callees",
+    "me" : "wWbR7IqmDKNjgMV6dS-dQDaWeXIZsqwW4p0YEnRNaYY.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"41c2271bce4017d305b093ae1b18653e2bfef12b166653379e50d5e02c27dce1e853c26925df76f8f8c9c3ddd48e1855b0836e329a1e5709d511eeec60f2070d\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\",\"ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ.\",\"GLjJIwAVTrg2xVTb77HcCdYaFZBXwMOW3h_lyte87d8.\",\"pi41i-qIAJNRkhouN0RtcmhbOzxs8hSIvRqYL74KhUg.\",\"o50vng_Hg9k-kNq0ivbUtyBZ8buuxkjCyY2D_c8ffaQ.\",\"Rtp2w4tF6IIKP24SRZnHDBHRlZJf5_Epn5SL4BwwPQ0.\",\"rjKyQyAlWfUI9bhwMitChaO9PGEUyEWSErBCg7HfBQ8.\",\"LZBQaBKlipj0IyXoygue6CRPz5XRStMATU5IEqGv-Fc.\",\"N5_QYfg-8AJJ-Bf3HIeOrPDB8jeHem2ITqNlBLbWGDo.\",\"qvX2AUpsVPl_ktcVfCK0afZDM6lf8uEctJOPCz1tkck.\",\"g0CFsUS54oQE_UxKzYQ-IQDg6yy3mPV_ShyfctlwniI.\",\"1XePSG4sR6WfhIPc45IUNwaDLnotFhqImwR7syYAHrU.\",\"EO5-u4TYwqhw3MQa3cx42bV7YCWM-gpaGuD1qPu2M9M.\",\"Kd20_iqnVorjgHxNp_Oam8HAp9q5vKegNU2qYT1DUJA.\",\"GpV8YN16us3fNGViKySoR-0I7BubUI9pnk_CCQLALsw.\",\"f3ljNhKftasTHcNzw3OFzEMfJclRU-EeI9fs3zeJ8l0.\",\"0-tc8TiqiXZwQDDHxAhe5wiT4xXrNK5UXByi9c9zW9U.\",\"wWRoWXGwkXTlOcBcwAFt6RmWfDnFXOoPyMnoCc8tibo.\",\"3hn122NSVoaTcVdVgmHOYUyTKAfWbfjYepyagYvM668.\",\"3MZ2tOg570F0X9t5_ERxDn-cVssdv0WwO52PcJaPors.\",\"_p6fy92b5ypWdBagvOxtFi9spmS6zlhPJbMoiZ85gN4.\",\"ydFGQr6DzhG3f6Axq3xgmYuwcUbYw2TIZL9eqhOHwHQ.\",\"MMIMGbgN1t56IHz01A3Q1gF1mgDCwysPBQI6kKx7XZI.\",\"wWbR7IqmDKNjgMV6dS-dQDaWeXIZsqwW4p0YEnRNaYY.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 1767,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "wWbR7IqmDKNjgMV6dS-dQDaWeXIZsqwW4p0YEnRNaYY.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"41c2271bce4017d305b093ae1b18653e2bfef12b166653379e50d5e02c27dce1e853c26925df76f8f8c9c3ddd48e1855b0836e329a1e5709d511eeec60f2070d\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\",\"ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ.\",\"GLjJIwAVTrg2xVTb77HcCdYaFZBXwMOW3h_lyte87d8.\",\"pi41i-qIAJNRkhouN0RtcmhbOzxs8hSIvRqYL74KhUg.\",\"o50vng_Hg9k-kNq0ivbUtyBZ8buuxkjCyY2D_c8ffaQ.\",\"Rtp2w4tF6IIKP24SRZnHDBHRlZJf5_Epn5SL4BwwPQ0.\",\"rjKyQyAlWfUI9bhwMitChaO9PGEUyEWSErBCg7HfBQ8.\",\"LZBQaBKlipj0IyXoygue6CRPz5XRStMATU5IEqGv-Fc.\",\"N5_QYfg-8AJJ-Bf3HIeOrPDB8jeHem2ITqNlBLbWGDo.\",\"qvX2AUpsVPl_ktcVfCK0afZDM6lf8uEctJOPCz1tkck.\",\"g0CFsUS54oQE_UxKzYQ-IQDg6yy3mPV_ShyfctlwniI.\",\"1XePSG4sR6WfhIPc45IUNwaDLnotFhqImwR7syYAHrU.\",\"EO5-u4TYwqhw3MQa3cx42bV7YCWM-gpaGuD1qPu2M9M.\",\"Kd20_iqnVorjgHxNp_Oam8HAp9q5vKegNU2qYT1DUJA.\",\"GpV8YN16us3fNGViKySoR-0I7BubUI9pnk_CCQLALsw.\",\"f3ljNhKftasTHcNzw3OFzEMfJclRU-EeI9fs3zeJ8l0.\",\"0-tc8TiqiXZwQDDHxAhe5wiT4xXrNK5UXByi9c9zW9U.\",\"wWRoWXGwkXTlOcBcwAFt6RmWfDnFXOoPyMnoCc8tibo.\",\"3hn122NSVoaTcVdVgmHOYUyTKAfWbfjYepyagYvM668.\",\"3MZ2tOg570F0X9t5_ERxDn-cVssdv0WwO52PcJaPors.\",\"_p6fy92b5ypWdBagvOxtFi9spmS6zlhPJbMoiZ85gN4.\",\"ydFGQr6DzhG3f6Axq3xgmYuwcUbYw2TIZL9eqhOHwHQ.\",\"MMIMGbgN1t56IHz01A3Q1gF1mgDCwysPBQI6kKx7XZI.\",\"wWbR7IqmDKNjgMV6dS-dQDaWeXIZsqwW4p0YEnRNaYY.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "ts" : 1700000020000,
+      "fresh" : true,
+      "after_ring" : true
+    }
+  }, {
+    "name" : "no_push_identity_known",
+    "me" : null,
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "not_for_me",
+    "me" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "tampered_signature",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"0000fe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"0000fe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "callee_swapped_after_signing",
+    "me" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "call_id_mismatch",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "caller_mismatch",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "ZGP9V0O1fdu_SOP-hR0r4KLKgkVFCm2snsPSmDixMzQ.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"194dfe8160286db13486954047a527bdffc3354dd28f1cb9b1c0359d7c0f9da25eaf18372f32c2e0d937f4759d0dc41136d809c6e839a115d3a88bfdca62fa04\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "wrong_audience",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:prod\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"73247cc14e2af4e17a125698070890ac8a3127ae6bea05e530d2cddae4c60949ed4099ef5d7351e936e86367b581f9e2ac8c5ccef01f49659a298b6c7fd1a30b\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:prod\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"73247cc14e2af4e17a125698070890ac8a3127ae6bea05e530d2cddae4c60949ed4099ef5d7351e936e86367b581f9e2ac8c5ccef01f49659a298b6c7fd1a30b\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "a_ring_is_not_a_cancel",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"c9dc0d54ee074260fb9b09afb6bc6e5f3ea0e446d2ceed847bc8c9ec3fddbbcf55f8c83259c86fae703bd090048184e4d03078d4df4b12968fec67b98ba47c09\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 623,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"c9dc0d54ee074260fb9b09afb6bc6e5f3ea0e446d2ceed847bc8c9ec3fddbbcf55f8c83259c86fae703bd090048184e4d03078d4df4b12968fec67b98ba47c09\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "answered_notice",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"k\":\"answered\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"03dbdee5b97bde47484f4647e4264606efb6b3aa7de38088c1f58a0af7e2e5d17ce43f541869c00e8492399acd515a5e5ec167e9225d4eccd48e7e9f7ee80603\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 638,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"k\":\"answered\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"03dbdee5b97bde47484f4647e4264606efb6b3aa7de38088c1f58a0af7e2e5d17ce43f541869c00e8492399acd515a5e5ec167e9225d4eccd48e7e9f7ee80603\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "to_names_the_caller",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"c955399db5b9dc7241541e848a76bb7742a4fd5f64b6992acc6f1b0c1d76ff895f73d879bdd6c66fd76bc1533262664815998573a5ff3ee751cd36091b40e103\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 686,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"c955399db5b9dc7241541e848a76bb7742a4fd5f64b6992acc6f1b0c1d76ff895f73d879bdd6c66fd76bc1533262664815998573a5ff3ee751cd36091b40e103\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\",\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : false
+    }
+  }, {
+    "name" : "co_callee_cancel",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"1d9048585cd7f32817ca05ba46056c3cf450fe777c96a035da96da669c8222208d6637374f08c8d16efe3f64a05a30b44e109f4eecbef2e0a80b5b74e4ce4f02\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"1d9048585cd7f32817ca05ba46056c3cf450fe777c96a035da96da669c8222208d6637374f08c8d16efe3f64a05a30b44e109f4eecbef2e0a80b5b74e4ce4f02\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000020000,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "yZ3AXAJ1j147RZ6iUxhMwzQLyjyjMIoY1yEHNlDEj2g.",
+      "ts" : 1700000020000,
+      "fresh" : true,
+      "after_ring" : true
+    }
+  }, {
+    "name" : "stale",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"3f52f7b3e02b15c1c2127bb17c23e81a7e2cd41798cfaedbf738beec05b2598c4e03b57f05096fb2359b446379e986f136d5045f939510bc7194440a0c94cb05\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1699999939999,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"3f52f7b3e02b15c1c2127bb17c23e81a7e2cd41798cfaedbf738beec05b2598c4e03b57f05096fb2359b446379e986f136d5045f939510bc7194440a0c94cb05\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1699999939999,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "ts" : 1699999939999,
+      "fresh" : false,
+      "after_ring" : false
+    }
+  }, {
+    "name" : "from_the_future",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"9afc63eee99509891cd975bd04c55ca71146234e3915ebf79dc8a1fcc280266f81fbf80711b999fabf61c083b09a6bc43b86ddc511225a855a6a979425570207\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000090001,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"9afc63eee99509891cd975bd04c55ca71146234e3915ebf79dc8a1fcc280266f81fbf80711b999fabf61c083b09a6bc43b86ddc511225a855a6a979425570207\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1700000090001,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "ts" : 1700000090001,
+      "fresh" : false,
+      "after_ring" : true
+    }
+  }, {
+    "name" : "older_than_the_ring",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1",
+      "ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"66ff8f46291a8337906aff6d4db28c78359b959be23d6267ce8fbc1bd0b3c5af362de2ec5618ed0ac299856ba203f574c2c983075cc76e312a18ee88c8cd4905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1699999999999,\"v\":1}"
+    },
+    "data_bytes" : 639,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      },
+      "signed_ring" : "{\"aud\":\"rschat:test\",\"call\":\"abababababababababababababababababababababababababababababababab\",\"f\":\"7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.\",\"k\":\"cancelled\",\"mode\":\"standard\",\"n\":\"00000000000000000000000000000000000000000000000000000000000000bb\",\"sg\":\"66ff8f46291a8337906aff6d4db28c78359b959be23d6267ce8fbc1bd0b3c5af362de2ec5618ed0ac299856ba203f574c2c983075cc76e312a18ee88c8cd4905\",\"svc\":\"london-test-1\",\"t\":\"ring\",\"to\":[\"s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.\"],\"ts\":1699999999999,\"v\":1}"
+    },
+    "expect" : {
+      "verified" : true,
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "ts" : 1699999999999,
+      "fresh" : true,
+      "after_ring" : false
+    }
+  }, {
+    "name" : "no_ring_field",
+    "me" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+    "data" : {
+      "type" : "CALL_CANCELLED",
+      "call_id" : "abababababababababababababababababababababababababababababababab",
+      "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "v" : "1"
+    },
+    "data_bytes" : 136,
+    "notification" : {
+      "notification_hash" : "00000000000000000000000000000000",
+      "sender_key" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+      "receiver_key" : "s3Jqc9BYL37sJBBijTxflVnPhpS083DouxBQvSZK2f4.",
+      "submission_time" : 1700000020000,
+      "notification_type" : "CALL_CANCELLED",
+      "conversation_hash_name" : null,
+      "read" : false,
+      "ring" : {
+        "call" : "abababababababababababababababababababababababababababababababab",
+        "svc" : "london-test-1",
+        "f" : "7_dyPP0gYB4ocxmV9yFRyInX1-HV3jqB-aXxQzMyFqE.",
+        "mode" : "standard"
+      }
+    },
+    "expect" : {
+      "verified" : false
+    }
+  } ]
+}

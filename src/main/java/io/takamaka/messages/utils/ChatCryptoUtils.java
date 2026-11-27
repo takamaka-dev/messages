@@ -77,8 +77,11 @@ import io.takamaka.messages.chat.receipt.ReadReceiptSubscribeSignedContentBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeBean;
 import io.takamaka.messages.chat.typing.TypingSubscribeSignedContentBean;
 import io.takamaka.messages.chat.core.NonceResponseBean;
+import io.takamaka.messages.chat.fcm.FcmCapabilities;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationRequestBean;
 import io.takamaka.messages.chat.fcm.FcmTokenRegistrationSignedContentBean;
+import io.takamaka.messages.chat.voip.VoipTokenRequestBean;
+import io.takamaka.messages.chat.voip.VoipTokenSignedContentBean;
 import io.takamaka.messages.chat.message.RetrieveMessagesResponseBean;
 import io.takamaka.messages.chat.attachment.ChatMediaPlaceholderBean;
 import io.takamaka.messages.chat.attachment.InlineContentLimits;
@@ -111,6 +114,7 @@ import io.takamaka.wallet.exceptions.WalletException;
 import io.takamaka.wallet.utils.KeyContexts;
 import io.takamaka.wallet.utils.TkmSignUtils;
 import io.takamaka.wallet.utils.TkmTextUtils;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
@@ -864,8 +868,35 @@ public class ChatCryptoUtils {
     }
 
     public static final FcmTokenRegistrationRequestBean getSignedFcmTokenRegistrationRequest(NonceResponseBean nonceResponseBean, String fcmToken, String platform, String deviceId, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        return getSignedFcmTokenRegistrationRequest(nonceResponseBean, fcmToken, platform, deviceId, null, signIwk, sigIwkIndex);
+    }
+
+    /**
+     * DR-074 amendment 1: the FCM registration with the capabilities this install declares ({@code cap}). The list
+     * is checked with {@link FcmCapabilities#validate} (shape only) BEFORE signing: a list the server would refuse
+     * is never signed. Nothing is sorted or normalised; a {@code null} or empty list is sent as no {@code cap} at all
+     * (the canonical form is then byte-identical to the 6-argument overload's). The list is copied, so a later
+     * change to the caller's list cannot alter the signed content.
+     *
+     * @param cap the capabilities, already in canonical form (e.g. {@code List.of(FcmCapabilities.CALLS)}), or null
+     * @throws MessageException with a message starting {@code INVALID_CAP} when {@code cap} is not canonical
+     */
+    public static final FcmTokenRegistrationRequestBean getSignedFcmTokenRegistrationRequest(NonceResponseBean nonceResponseBean, String fcmToken, String platform, String deviceId, List<String> cap, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        // ONE read of the caller's list: copy first, validate the copy, sign the copy. A list that changes between
+        // reads (or a hostile one) can never get a value signed that was not validated, nor throw outside the check.
+        final List<String> copy;
         try {
-            FcmTokenRegistrationSignedContentBean fcmTokenRegistrationSignedContentBean = new FcmTokenRegistrationSignedContentBean(nonceResponseBean, fcmToken, platform, deviceId);
+            copy = cap == null ? null : new ArrayList<>(cap);
+        } catch (RuntimeException ex) {
+            throw new MessageException(FcmCapabilities.ERROR_INVALID_CAP + ": cap could not be read", ex);
+        }
+        final String refused = FcmCapabilities.refusalReason(copy, null);
+        if (refused != null) {
+            throw new MessageException(FcmCapabilities.ERROR_INVALID_CAP + ": " + refused);
+        }
+        final List<String> signedCap = (copy == null || copy.isEmpty()) ? null : List.copyOf(copy);
+        try {
+            FcmTokenRegistrationSignedContentBean fcmTokenRegistrationSignedContentBean = new FcmTokenRegistrationSignedContentBean(nonceResponseBean, fcmToken, platform, deviceId, signedCap);
             String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(fcmTokenRegistrationSignedContentBean), signIwk, sigIwkIndex);
             FcmTokenRegistrationRequestBean fcmTokenRegistrationRequestBean = new FcmTokenRegistrationRequestBean(
                     fcmTokenRegistrationSignedContentBean,
@@ -880,6 +911,34 @@ public class ChatCryptoUtils {
         } catch (WalletException ex) {
             log.error("wallet error ", ex);
             throw new MessageException("wallet error ", ex);
+        }
+    }
+
+    /**
+     * DR-074 §5.3: builds a signed {@code registervoiptoken} / {@code unregistervoiptoken} request. Nothing is
+     * validated or normalised here (the server refuses what breaks {@code VoipTokenRules}); tests and vectors build
+     * refused contents through this same method.
+     *
+     * @param nonceResponseBean the nonce of the {@code nonce} route
+     * @param op {@code register} or {@code unregister}
+     * @param aud the server audience, from {@code serverinfo.audience}
+     * @param vt the PushKit token, lowercase hex
+     * @param env {@code sandbox} or {@code production}
+     * @param tp the bundle id, without {@code .voip}
+     * @param did the per-install id (the FCM {@code device_id})
+     */
+    public static final VoipTokenRequestBean getSignedVoipTokenRequest(NonceResponseBean nonceResponseBean, String op, String aud, String vt, String env, String tp, String did, InstanceWalletKeystoreInterface signIwk, int sigIwkIndex) throws MessageException {
+        try {
+            VoipTokenSignedContentBean content = new VoipTokenSignedContentBean(nonceResponseBean, op, aud, vt, env, tp, did);
+            String messageSignature = SimpleRequestHelper.signChatMessage(SimpleRequestHelper.getCanonicalJson(content), signIwk, sigIwkIndex);
+            return new VoipTokenRequestBean(
+                    content,
+                    signIwk.getPublicKeyAtIndexURL64(sigIwkIndex),
+                    messageSignature,
+                    CHAT_MESSAGE_TYPES.VOIP_TOKEN_REGISTRATION.name(),
+                    signIwk.getWalletCypher().name());
+        } catch (JsonProcessingException | WalletException ex) {
+            throw new MessageException("voip token request error ", ex);
         }
     }
 
@@ -1560,6 +1619,16 @@ public class ChatCryptoUtils {
                     final FcmTokenRegistrationRequestBean fromJsonToFcmTokenRegistrationRequestBean = ChatUtils.fromJsonToFcmTokenRegistrationRequestBean(messageJson);
                     jsonCanonical = SimpleRequestHelper.getCanonicalJson(fromJsonToFcmTokenRegistrationRequestBean.getFcmTokenRegistrationSignedContentBean());
                     returnObj = fromJsonToFcmTokenRegistrationRequestBean;
+                }
+                case "VOIP_TOKEN_REGISTRATION" -> {
+                    // DR-074 §5.3: its OWN case — the canonical form is derived from voip_token_signed_content only,
+                    // so an FCM content sent under this type (or the reverse) has no content to verify and is refused.
+                    final VoipTokenRequestBean voipTokenRequestBean = ChatUtils.fromJsonToVoipTokenRequestBean(messageJson);
+                    if (voipTokenRequestBean.getVoipTokenSignedContentBean() == null) {
+                        throw new InvalidChatMessageSignatureException("missing voip_token_signed_content");
+                    }
+                    jsonCanonical = SimpleRequestHelper.getCanonicalJson(voipTokenRequestBean.getVoipTokenSignedContentBean());
+                    returnObj = voipTokenRequestBean;
                 }
 
                 default ->

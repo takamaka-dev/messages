@@ -15,6 +15,7 @@
  */
 package io.takamaka.messages.chat.fcm;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -51,6 +52,41 @@ public class FcmTokenRegistrationResponseBean {
      */
     @JsonProperty("registration_time")
     private Long registrationTime;
+
+    /**
+     * DR-063 §3.3: the key id of the push key the server STORED for this registration, lower hex of
+     * {@code PushSeal.kid} (16 characters), computed by the server itself. Echoed only when stored; OMITTED otherwise
+     * ({@code NON_NULL} on this field only). The echo is the device's proof that sealing is active for its row, and
+     * what its «closed-app calls» state reads (DR-063 §4.6).
+     */
+    @JsonProperty("push_key_id")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String pushKeyId;
+
+    /** The response without {@code push_key_id} (the form before DR-063); kept so existing callers compile unchanged. */
+    public FcmTokenRegistrationResponseBean(boolean success, String message, String errorCode, Long registrationTime) {
+        this(success, message, errorCode, registrationTime, null);
+    }
+
+    /**
+     * True when the refusal is {@code RATE_LIMIT_EXCEEDED} (a bucket of the connection or of the identity was empty):
+     * the request was not judged and its nonce was not spent. Retry later with a fresh nonce. Not a wire member.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isRetryLater() {
+        return !success && "RATE_LIMIT_EXCEEDED".equals(errorCode);
+    }
+
+    /**
+     * True when the refusal is {@link FcmCapabilities#ERROR_INVALID_CAP} (DR-074 amendment 1, A-13): the signed
+     * {@code cap} broke the canonical form or named a value this server does not advertise. The nonce was not
+     * spent. A client retries ONCE without {@code cap} (A-22) and never rotates its token on this code. Not a wire
+     * member.
+     */
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public boolean isCapRefused() {
+        return !success && FcmCapabilities.ERROR_INVALID_CAP.equals(errorCode);
+    }
 
     /**
      * Create a success response.

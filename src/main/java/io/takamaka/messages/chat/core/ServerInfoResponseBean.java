@@ -83,7 +83,7 @@ public class ServerInfoResponseBean {
      * changes to this bean. Decoupled from {@code MessageProtocolVersion}.
      * Absent on pre-1.1 servers ⇒ clients treat as {@code "1.0"}.
      */
-    public static final String MANIFEST_VERSION_CURRENT = "1.6";
+    public static final String MANIFEST_VERSION_CURRENT = "1.8";
 
     /** Server build version, e.g. {@code "0.5.0-SNAPSHOT"} (rschat Maven version). */
     private String serverVersion;
@@ -212,5 +212,61 @@ public class ServerInfoResponseBean {
      * SMALLER of this and the compiled-in constant.</p>
      */
     private io.takamaka.messages.chat.profile.ProfileLimitsBean profile;
+
+    /**
+     * The server audience, the ASCII string {@code rschat:<net>} ({@code CallRschat.audience}): the value the signed
+     * {@code aud} of the VoIP-token routes (DR-074 §5.8) and of the call beans is compared with, byte for byte.
+     * Manifest {@code 1.7+}: always present, never empty, whatever the calls switch and the APNs switch say, so a
+     * client can sign {@code unregistervoiptoken} when {@code callnonce} refuses. {@code null} &rArr; a server older
+     * than 1.7 (it has no VoIP route either). Unsigned, like the whole manifest: a client with a pinned audience for
+     * this server prefers the pin.
+     */
+    private String audience;
+
+    /**
+     * Manifest {@code 1.8+} (DR-074 amendment 1, A-17): the {@code cap} values this server VALIDATES, STORES and
+     * HONOURS at {@code registerfcmtoken}, e.g. {@code ["calls"]} ({@code FcmCapabilities.CALLS}). A wire and storage
+     * capability, advertised whatever the calls, FCM and APNs switches say.
+     *
+     * <p><b>It is NOT «calls are available».</b> A client must never read it so: that is the job of the call-service
+     * pin and the call manifest. A client sends {@code cap} = (its own capabilities) &cap; (this set, read on this
+     * connection), never more (A-18). {@code null} or empty &rArr; the server knows no value (a server older than
+     * 1.8 refuses any {@code cap} with {@code SIGNATURE_ERROR}): send no {@code cap}. Unsigned, like the whole
+     * manifest: a relay that removes a value costs the device that capability; one that adds a value makes the server
+     * refuse ({@code INVALID_CAP}) and the client retry once without {@code cap} (A-19, A-22).</p>
+     *
+     * <p><b>A set: the order on the wire is not significant.</b> Servers send it sorted (a {@code TreeSet}); a client
+     * reads it as a set and never relies on the order. (The order of the SIGNED {@code cap} is a different rule:
+     * strictly ascending, refused otherwise.)</p>
+     */
+    private java.util.Set<String> fcmTokenCapabilities;
+
+    /**
+     * DR-063 §3.3 (design F2 §3.1, PS-6): the sealed-push suites this server seals call pushes with, e.g.
+     * {@code ["tkm-push/v1"]} ({@code io.takamaka.messages.call.PushSeal.SUITE}). Advertised ONLY when FCM is enabled
+     * AND calls are enabled; otherwise absent. Wire name {@code pushSealSuites} (camelCase, as every other manifest field); OMITTED when null or empty
+     * ({@code NON_EMPTY} on this field only), so every existing manifest serialises byte-identically.
+     *
+     * <p>A client sends {@code push_key} / {@code push_seal} at {@code registerfcmtoken} only when this list holds its
+     * suite: an older server would drop the unknown fields, re-canonicalise without them and refuse the signature.
+     * The client keeps the value per endpoint in three states (DR-063 §4.4, PS-5): unknown (not read, or the read
+     * failed: never drop a key because of it), none (absent or empty), listed. Unsigned, like the whole manifest.</p>
+     */
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+    private java.util.List<String> pushSealSuites;
+
+    /**
+     * The manifest without {@link #pushSealSuites} (the 1.8 field set); kept explicitly so existing callers (rschat's
+     * {@code serverinfo} route) compile unchanged.
+     */
+    public ServerInfoResponseBean(String serverVersion, String protocolCurrent, int protocolMajor, int protocolMinMinor,
+            int protocolMaxMinor, String manifestVersion, long maxFramePayloadLength, long maxAttachmentSizeBytes,
+            int messageBurst, int messagePerMinute, long editDeleteWindowMs, java.util.Set<String> supportedRoutes,
+            long maxEncryptedContentSizeBytes, io.takamaka.messages.chat.profile.ProfileLimitsBean profile,
+            String audience, java.util.Set<String> fcmTokenCapabilities) {
+        this(serverVersion, protocolCurrent, protocolMajor, protocolMinMinor, protocolMaxMinor, manifestVersion,
+                maxFramePayloadLength, maxAttachmentSizeBytes, messageBurst, messagePerMinute, editDeleteWindowMs,
+                supportedRoutes, maxEncryptedContentSizeBytes, profile, audience, fcmTokenCapabilities, null);
+    }
 
 }
